@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MiniScape</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Courier New', monospace; }
+  canvas { image-rendering: pixelated; border: 2px solid #3e3529; }
+  #ui {
+    position: fixed; top: 10px; right: 10px; color: #ff981f; font-size: 13px;
+    background: rgba(59,50,38,0.92); border: 2px solid #3e3529; padding: 10px; min-width: 180px;
+    border-radius: 3px; pointer-events: none; z-index: 10;
+  }
+  #ui h3 { color: #ffff00; margin-bottom: 6px; font-size: 14px; }
+  #ui .stat { margin: 2px 0; }
+  #ui .stat span { color: #00ff00; }
+  #combat-ui {
+    position: fixed; top: 10px; left: 10px; color: #ff981f; font-size: 13px;
+    background: rgba(59,50,38,0.92); border: 2px solid #3e3529; padding: 10px; min-width: 160px;
+    border-radius: 3px; display: none; z-index: 10; pointer-events: none;
+  }
+  #combat-ui .hp-bar { width: 100%; height: 12px; background: #600; margin: 4px 0; border: 1px solid #333; }
+  #combat-ui .hp-fill { height: 100%; background: #0a0; transition: width 0.1s; }
+  #log {
+    position: fixed; bottom: 10px; left: 10px; color: #fff; font-size: 11px;
+    background: rgba(0,0,0,0.8); border: 2px solid #3e3529; padding: 8px; width: 340px; height: 120px;
+    overflow-y: auto; border-radius: 3px; z-index: 10; pointer-events: auto;
+  }
+  #log .msg { margin: 1px 0; }
+  #inv {
+    position: fixed; bottom: 10px; right: 10px; color: #ff981f; font-size: 12px;
+    background: rgba(59,50,38,0.92); border: 2px solid #3e3529; padding: 8px; min-width: 180px;
+    border-radius: 3px; pointer-events: none; z-index: 10;
+  }
+  #inv h3 { color: #ffff00; margin-bottom: 4px; font-size: 13px; }
+  #inv .item { color: #ccc; margin: 1px 0; }
+  #toolbar {
+    position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.85); border: 1px solid #3e3529; border-radius: 4px;
+    padding: 6px 10px; display: flex; gap: 6px; align-items: center; z-index: 10;
+    font-family: 'Courier New', monospace; font-size: 12px; color: #ccc;
+  }
+  #toolbar button {
+    background: #2a2a2a; color: #ccc; border: 1px solid #555; border-radius: 3px;
+    padding: 4px 8px; cursor: pointer; font-family: inherit; font-size: 11px;
+  }
+  #toolbar button:hover { background: #3a3a3a; }
+  #toolbar button.active { background: #ff981f; color: #000; border-color: #ff981f; }
+  #palette { display: flex; gap: 2px; margin-left: 6px; }
+  #palette .swatch {
+    width: 16px; height: 16px; border: 1px solid #555; cursor: pointer; border-radius: 2px;
+  }
+  #palette .swatch.selected { border: 2px solid #fff; }
+  #toolbar .sep { width: 1px; height: 20px; background: #555; margin: 0 4px; }
+  #toolbar .current-color { width: 20px; height: 20px; border: 2px solid #fff; border-radius: 2px; }
+  #conn {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    color: #ff981f; font-size: 18px; z-index: 100; text-align: center;
+  }
+  #modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200;
+    justify-content: center; align-items: center;
+  }
+  #modal-overlay.visible { display: flex; }
+  #modal {
+    background: #1a1a1a; border: 1px solid #3e3529; border-radius: 6px; padding: 16px 20px;
+    color: #ccc; font-family: 'Courier New', monospace; min-width: 280px;
+  }
+  #modal .modal-title { color: #ff981f; font-weight: bold; font-size: 14px; margin-bottom: 10px; }
+  #modal input {
+    width: 100%; padding: 6px 8px; background: #2a2a2a; border: 1px solid #555;
+    color: #fff; font-family: inherit; font-size: 13px; border-radius: 3px; margin-bottom: 10px;
+  }
+  #modal .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+  #modal .modal-btns button {
+    background: #2a2a2a; color: #ccc; border: 1px solid #555; border-radius: 3px;
+    padding: 4px 12px; cursor: pointer; font-family: inherit; font-size: 12px;
+  }
+  #modal .modal-btns button.primary { background: #ff981f; color: #000; border-color: #ff981f; }
+</style>
+</head>
+<body>
+<div id="conn">Connecting to server...</div>
+<div id="combat-ui">
+  <h3 id="target-name">Target</h3>
+  <div class="hp-bar"><div class="hp-fill" id="target-hp" style="width:100%"></div></div>
+  <div id="target-hp-text" style="color:#0a0;font-size:12px"></div>
+</div>
+<div id="ui" style="display:none">
+  <h3>Skills</h3>
+  <div id="stats"></div>
+</div>
+<div id="inv" style="display:none">
+  <h3>Inventory</h3>
+  <div id="inv-list"></div>
+</div>
+<div id="log" style="display:none"></div>
+<div id="toolbar" style="display:none">
+  <button id="btn-pencil" title="Pencil (P)">Pencil</button>
+  <button id="btn-bucket" title="Bucket Fill (B)">Bucket</button>
+  <button id="btn-bucket-all" title="Recolor all matching tiles globally">Bucket All</button>
+  <button id="btn-bucket-new" title="Recolor all + rename tile type">Bucket New</button>
+  <button id="btn-picker" title="Screen Picker (I)">Picker</button>
+  <div class="sep"></div>
+  <div class="current-color" id="cur-color"></div>
+  <div class="sep"></div>
+  <div id="palette"></div>
+  <div class="sep"></div>
+  <div class="sep"></div>
+  <button id="btn-grid" title="Toggle Grid (G)">Grid</button>
+  <div class="sep"></div>
+  <span style="color:#666;font-size:10px">Ctrl+Z / Ctrl+Y</span>
+</div>
+<div id="modal-overlay">
+  <div id="modal">
+    <div class="modal-title">Rename Tile Type</div>
+    <input id="modal-name" type="text" placeholder="Enter new name..." maxlength="30">
+    <div class="modal-btns">
+      <button id="modal-cancel">Cancel</button>
+      <button id="modal-ok" class="primary">Apply</button>
+    </div>
+  </div>
+</div>
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const logEl = document.getElementById('log');
+const invEl = document.getElementById('inv-list');
+const connEl = document.getElementById('conn');
+
+const WORLD_W = 200, WORLD_H = 200;
+let TILE = 5;
+const MIN_TILE = 2, MAX_TILE = 64;
+const VIEW_W = 160, VIEW_H = 120;
+canvas.width = VIEW_W * TILE;
+canvas.height = VIEW_H * TILE;
+
+function resizeCanvas() { canvas.width = VIEW_W * TILE; canvas.height = VIEW_H * TILE; }
+
+const T = {
+  GRASS: 0, WATER: 1, TREE: 2, PATH: 3, ROCK: 4, SAND: 5, WALL: 6,
+  FLOOR: 7, DOOR: 8, BRIDGE: 9, FISH_SPOT: 10, FLOWER: 11, BUSH: 12,
+  DARK_GRASS: 13, CUSTOM: 14
+};
+const COLORS = {
+  [T.GRASS]: '#395a1f', [T.WATER]: '#2851a4', [T.TREE]: '#00642d', [T.PATH]: '#534b4b',
+  [T.ROCK]: '#7c7c7c', [T.SAND]: '#c8b464', [T.WALL]: '#fefefe', [T.FLOOR]: '#8b7355',
+  [T.DOOR]: '#f40000', [T.BRIDGE]: '#6b5b3a', [T.FISH_SPOT]: '#4a8fe7', [T.FLOWER]: '#d4a0d4',
+  [T.BUSH]: '#2d7a1f', [T.DARK_GRASS]: '#2d4a17', [T.CUSTOM]: '#ff00ff',
+};
+const TILE_NAMES = {
+  [T.GRASS]: 'Grass', [T.WATER]: 'Water', [T.TREE]: 'Tree', [T.PATH]: 'Path',
+  [T.ROCK]: 'Rock', [T.SAND]: 'Sand', [T.WALL]: 'Wall', [T.FLOOR]: 'Floor',
+  [T.DOOR]: 'Door', [T.BRIDGE]: 'Bridge', [T.FISH_SPOT]: 'Fish Spot',
+  [T.FLOWER]: 'Flower', [T.BUSH]: 'Bush', [T.DARK_GRASS]: 'Dark Grass', [T.CUSTOM]: 'Custom',
+};
+// ── OSRS World Map Background ────────────────────────────────────────────────
+const OSRS_ORIGIN_X = 3222 - 100; // our x=0 -> OSRS 3122
+const OSRS_ORIGIN_Y = 3218 + 100; // our y=0 (top/north) -> OSRS 3318
+let showOsrsMap = false;
+const osrsTileCache = new Map();
+
+function loadOsrsTile(z, fileX, fileY) {
+  const key = `${z}_${fileX}_${fileY}`;
+  if (osrsTileCache.has(key)) return osrsTileCache.get(key);
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.src = `https://raw.githubusercontent.com/mejrs/layers_osrs/refs/heads/master/mapsquares/-1/${z}/0_${fileX}_${fileY}.png`;
+  img.onload = () => { osrsTileCache.set(key, img); };
+  img.onerror = () => { osrsTileCache.set(key, 'err'); };
+  osrsTileCache.set(key, 'loading');
+  return 'loading';
+}
+
+function osrsTileInfo(osrsX, osrsY, z) {
+  const tilesPerImg = 256 / Math.pow(2, z);
+  const leafX = Math.floor(osrsX / tilesPerImg);
+  const leafY = Math.floor(-osrsY / tilesPerImg);
+  const fileX = leafX;
+  const fileY = -(1 + leafY);
+  return { fileX, fileY, tilesPerImg };
+}
+
+function toOsrs(gx, gy) {
+  return { ox: OSRS_ORIGIN_X + gx, oy: OSRS_ORIGIN_Y - gy };
+}
+
+const EXAMINE = {
+  [T.GRASS]: 'Some well-kept grass.', [T.WATER]: 'It looks deep and cold.',
+  [T.TREE]: 'A tree. I could chop this down.', [T.PATH]: 'A well-worn path.',
+  [T.ROCK]: 'A rock. I could mine this.', [T.SAND]: 'Warm, golden sand.',
+  [T.WALL]: 'A solid stone wall.', [T.FLOOR]: 'A wooden floor.',
+  [T.DOOR]: 'A sturdy wooden door.', [T.BRIDGE]: 'A rickety wooden bridge.',
+  [T.FISH_SPOT]: 'I can see fish jumping. I could fish here.',
+  [T.FLOWER]: 'A pretty flower.', [T.BUSH]: 'A prickly bush.',
+  [T.DARK_GRASS]: 'Thick, overgrown grass.', [T.CUSTOM]: 'Someone painted this.',
+};
+
+// ── Client World Cache ─────────────────────────────────────────────────────────
+let world = null;           // Uint8Array
+let customColors = new Map();
+let myId = 0;
+let myX = 100, myY = 100;
+let mySmX = 100, mySmY = 100; // smoothed display position
+let otherPlayers = [];
+let npcList = [];
+let lastTickTime = 0; // timestamp of last state update
+const TICK_MS = 600; // match server tick for interpolation
+// Smooth position maps: id -> {x, y, tx, ty} (current smooth pos + target pos)
+const playerSmooth = new Map();
+const npcSmooth = new Map();
+let destX = -1, destY = -1; // click destination tile
+let targetGlow = null; // {x, y, w, h} — object you clicked on (can span multiple tiles)
+let myStats = { hp: 10, maxHp: 10, skills: {}, inv: [] };
+let myGender = 'male'; // toggle with T
+let customNameMap = {};  // tileKey -> display name
+let groundItemList = [];
+let openDoorList = []; // [{ox,oy,sx,sy}] doors currently open (original + swung pos)
+let connected = false;
+
+function tileAt(x, y) {
+  if (!world) return T.WATER;
+  return (x >= 0 && x < WORLD_W && y >= 0 && y < WORLD_H) ? world[y * WORLD_W + x] : T.WATER;
+}
+function getColor(x, y, tile) {
+  if (tile === T.CUSTOM) return customColors.get(y * WORLD_W + x) || '#ff00ff';
+  return COLORS[tile] || '#000';
+}
+function clientTileKey(x, y) {
+  const t = tileAt(x, y);
+  if (t === T.CUSTOM) return 'c:' + (customColors.get(y * WORLD_W + x) || '#ff00ff');
+  return 't:' + t;
+}
+function getExamineName(x, y) {
+  const key = clientTileKey(x, y);
+  if (customNameMap[key]) return customNameMap[key];
+  return null;
+}
+
+// ── WebSocket ──────────────────────────────────────────────────────────────────
+let ws;
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}`);
+  ws.onopen = () => { connEl.textContent = 'Connected! Loading world...'; };
+  ws.onclose = () => {
+    connected = false;
+    connEl.style.display = 'block';
+    connEl.textContent = 'Disconnected. Reconnecting...';
+    setTimeout(connect, 2000);
+  };
+  ws.onmessage = (e) => handleServerMsg(JSON.parse(e.data));
+}
+
+function sendMsg(msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+}
+
+function handleServerMsg(msg) {
+  switch (msg.t) {
+    case 'welcome':
+      myId = msg.id; myX = msg.x; myY = msg.y;
+      // Decode world
+      const bin = atob(msg.world);
+      world = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) world[i] = bin.charCodeAt(i);
+      // Custom colors
+      customColors.clear();
+      for (const [k, v] of Object.entries(msg.customColors)) customColors.set(parseInt(k), v);
+      customNameMap = msg.customNames || {};
+      connected = true;
+      connEl.style.display = 'none';
+      document.getElementById('ui').style.display = '';
+      document.getElementById('inv').style.display = '';
+      document.getElementById('log').style.display = '';
+      document.getElementById('toolbar').style.display = 'flex';
+      showChat('Welcome to MiniScape!', '#ffff44');
+      showChat('Click to move. Click NPCs to attack.', '#ffff44');
+      showChat('Click trees to chop, rocks to mine.', '#ffff44');
+      break;
+    case 'state':
+      lastTickTime = Date.now();
+      // Update entities
+      for (const p of msg.players) {
+        if (p.id === myId) {
+          myX = p.x; myY = p.y; myGender = p.g || 'male';
+          if (myX === destX && myY === destY) { destX = -1; destY = -1; }
+        }
+        else {
+          const sm = playerSmooth.get(p.id);
+          if (sm) { sm.tx = p.x; sm.ty = p.y; }
+          else playerSmooth.set(p.id, { x: p.x, y: p.y, tx: p.x, ty: p.y });
+        }
+      }
+      // Clean up disconnected players
+      const activeIds = new Set(msg.players.map(p => p.id));
+      for (const id of playerSmooth.keys()) if (!activeIds.has(id)) playerSmooth.delete(id);
+      otherPlayers = msg.players.filter(p => p.id !== myId);
+      // NPC smoothing
+      for (const n of msg.npcs) {
+        const sm = npcSmooth.get(n.id);
+        if (sm) { sm.tx = n.x; sm.ty = n.y; }
+        else npcSmooth.set(n.id, { x: n.x, y: n.y, tx: n.x, ty: n.y });
+      }
+      const activeNpcs = new Set(msg.npcs.map(n => n.id));
+      for (const id of npcSmooth.keys()) if (!activeNpcs.has(id)) npcSmooth.delete(id);
+      npcList = msg.npcs;
+      groundItemList = msg.items || [];
+      openDoorList = msg.doors || [];
+      updateStatsUI();
+      break;
+    case 'doors':
+      openDoorList = msg.doors || [];
+      break;
+    case 'tiles':
+      // Apply tile changes to local cache
+      for (const c of msg.changes) {
+        if (world && c.x >= 0 && c.x < WORLD_W && c.y >= 0 && c.y < WORLD_H) {
+          world[c.y * WORLD_W + c.x] = c.tile;
+          const k = c.y * WORLD_W + c.x;
+          if (c.tile === T.CUSTOM && c.color) customColors.set(k, c.color);
+          else customColors.delete(k);
+        }
+      }
+      break;
+    case 'bucket_undo':
+      // Server sends us the old tiles so we can undo
+      if (pendingBucketUndo) {
+        pendingBucketUndo.resolve(msg.changes);
+        pendingBucketUndo = null;
+      }
+      break;
+    case 'stats':
+      myStats.hp = msg.hp; myStats.maxHp = msg.maxHp;
+      myStats.skills = msg.skills; myStats.inv = msg.inv;
+      updateStatsUI();
+      break;
+    case 'names':
+      customNameMap = msg.names || {};
+      break;
+    case 'chat':
+      showChat(msg.msg, msg.color);
+      break;
+  }
+}
+
+let pendingBucketUndo = null;
+let bucketNewTarget = null;
+
+// ── Hitsplats ─────────────────────────────────────────────────────────────────
+let hitsplats = []; // {x, y, text, color, born}
+
+function spawnHitsplat(wx, wy, text, bg, onMe) {
+  hitsplats.push({ x: wx, y: wy, text, bg, onMe: !!onMe, born: Date.now() });
+}
+
+// ── UI ─────────────────────────────────────────────────────────────────────────
+function showChat(msg, color = '#ff0') {
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.style.color = color;
+  div.textContent = msg;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+  if (logEl.children.length > 50) logEl.removeChild(logEl.firstChild);
+
+  // Parse hits for hitsplats
+  // "You hit X for N" — bright red splat on combat target NPC
+  const youHit = msg.match(/^You hit (.+) for (\d+)$/);
+  if (youHit) {
+    const npc = combatTargetId !== null ? npcList.find(n => n.id === combatTargetId) : npcList.find(n => n.name === youHit[1]);
+    if (npc) spawnHitsplat(npc.x, npc.y, youHit[2], '#ff2020', false);
+    else spawnHitsplat(myX, myY - 1, youHit[2], '#ff2020', false); // fallback near player
+  }
+  // "You miss X" — blue splat on combat target NPC
+  const youMiss = msg.match(/^You miss (.+)$/);
+  if (youMiss) {
+    const npc = combatTargetId !== null ? npcList.find(n => n.id === combatTargetId) : npcList.find(n => n.name === youMiss[1]);
+    if (npc) spawnHitsplat(npc.x, npc.y, '0', '#2244cc', false);
+  }
+  // "X hits you for N" — darker red splat on player
+  const npcHit = msg.match(/hits you for (\d+)$/);
+  if (npcHit) spawnHitsplat(myX, myY, npcHit[1], '#991010', true);
+  // "You killed X!" — clear combat target
+  if (msg.match(/^You killed /)) combatTargetId = null;
+}
+
+let combatTargetId = null; // track which NPC we're fighting
+
+function updateStatsUI() {
+  const s = myStats.skills;
+  const hpPct = myStats.hp / myStats.maxHp;
+  const statsEl = document.getElementById('stats');
+  statsEl.innerHTML =
+    `<div class="stat">HP: <span style="color:${hpPct < 0.3 ? '#f44' : '#0f0'}">${myStats.hp}/${myStats.maxHp}</span></div>` +
+    ['attack','strength','defence','hitpoints','woodcutting','fishing','mining'].map(k => {
+      const sk = s[k];
+      if (!sk) return '';
+      return `<div class="stat">${k}: <span>${sk.level}</span> (${sk.xp} xp)</div>`;
+    }).join('') +
+    `<div class="stat" style="color:#888;margin-top:4px">Online: ${otherPlayers.length + 1} · (${myX}, ${myY})</div>`;
+  invEl.innerHTML = myStats.inv.length === 0
+    ? '<div class="item" style="color:#666">Empty</div>'
+    : myStats.inv.map(i => `<div class="item">${i.name}${i.count > 1 ? ' x' + i.count : ''}</div>`).join('');
+}
+
+function updateCombatUI() {
+  const el = document.getElementById('combat-ui');
+  if (combatTargetId === null) { el.style.display = 'none'; return; }
+  const npc = npcList.find(n => n.id === combatTargetId);
+  if (!npc) { el.style.display = 'none'; combatTargetId = null; return; }
+  el.style.display = 'block';
+  const lv = Math.max(npc.atk || 1, npc.def || 1);
+  document.getElementById('target-name').textContent = `${npc.name} (Lv ${lv})`;
+  document.getElementById('target-hp').style.width = (npc.hp / npc.maxHp * 100) + '%';
+  document.getElementById('target-hp-text').textContent = `${npc.hp} / ${npc.maxHp}`;
+}
+
+// ── Paint Tools ────────────────────────────────────────────────────────────────
+let showGrid = false;
+let paintTool = null;
+let paintTile = T.GRASS;
+let customBrushColor = '#ff00ff';
+let painting = false;
+let strokeBuffer = [];  // tiles painted in current pencil stroke, sent in batch
+
+// Undo/redo
+const undoStack = [];
+const redoStack = [];
+const MAX_UNDO = 100;
+
+function undo() {
+  if (undoStack.length === 0) { showChat('Nothing to undo.', '#888'); return; }
+  const stroke = undoStack.pop();
+  // Send reverse paint to server
+  const tiles = stroke.map(s => ({ x: s.x, y: s.y, tile: s.oldTile, color: s.oldColor }));
+  sendMsg({ t: 'paint', tiles });
+  // Apply locally immediately
+  for (const s of stroke) {
+    world[s.y * WORLD_W + s.x] = s.oldTile;
+    const k = s.y * WORLD_W + s.x;
+    if (s.oldTile === T.CUSTOM && s.oldColor) customColors.set(k, s.oldColor);
+    else customColors.delete(k);
+  }
+  redoStack.push(stroke);
+  showChat(`Undo (${stroke.length} tiles)`, '#ff981f');
+}
+
+function redo() {
+  if (redoStack.length === 0) { showChat('Nothing to redo.', '#888'); return; }
+  const stroke = redoStack.pop();
+  const tiles = stroke.map(s => ({ x: s.x, y: s.y, tile: s.newTile, color: s.newColor }));
+  sendMsg({ t: 'paint', tiles });
+  for (const s of stroke) {
+    world[s.y * WORLD_W + s.x] = s.newTile;
+    const k = s.y * WORLD_W + s.x;
+    if (s.newTile === T.CUSTOM && s.newColor) customColors.set(k, s.newColor);
+    else customColors.delete(k);
+  }
+  undoStack.push(stroke);
+  showChat(`Redo (${stroke.length} tiles)`, '#ff981f');
+}
+
+function recordAndPaint(x, y) {
+  if (x < 0 || x >= WORLD_W || y < 0 || y >= WORLD_H) return;
+  const k = y * WORLD_W + x;
+  const oldTile = world[k];
+  const oldColor = oldTile === T.CUSTOM ? (customColors.get(k) || null) : null;
+  const newColor = paintTile === T.CUSTOM ? customBrushColor : null;
+  if (oldTile === paintTile && oldColor === newColor) return;
+  strokeBuffer.push({ x, y, oldTile, oldColor, newTile: paintTile, newColor });
+  // Apply locally
+  world[k] = paintTile;
+  if (paintTile === T.CUSTOM && customBrushColor) customColors.set(k, customBrushColor);
+  else customColors.delete(k);
+}
+
+function flushStroke() {
+  if (strokeBuffer.length === 0) return;
+  // Send to server
+  sendMsg({ t: 'paint', tiles: strokeBuffer.map(s => ({ x: s.x, y: s.y, tile: s.newTile, color: s.newColor })) });
+  // Push to undo
+  undoStack.push([...strokeBuffer]);
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+  redoStack.length = 0;
+  strokeBuffer = [];
+}
+
+// Palette
+const paletteEl = document.getElementById('palette');
+const curColorEl = document.getElementById('cur-color');
+for (const [tileId, color] of Object.entries(COLORS)) {
+  const sw = document.createElement('div');
+  sw.className = 'swatch'; sw.style.background = color;
+  sw.title = `${TILE_NAMES[tileId] || tileId} (${color})`; sw.dataset.tile = tileId; sw.dataset.color = color;
+  sw.addEventListener('click', () => { paintTile = parseInt(tileId); updatePaintUI(); });
+  sw.addEventListener('contextmenu', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    navigator.clipboard.writeText(color).then(() => showChat(`Copied ${color}`, '#ff981f'));
+  });
+  paletteEl.appendChild(sw);
+}
+curColorEl.addEventListener('contextmenu', (e) => {
+  e.preventDefault(); e.stopPropagation();
+  const c = paintTile === T.CUSTOM ? customBrushColor : (COLORS[paintTile] || '#000');
+  navigator.clipboard.writeText(c).then(() => showChat(`Copied ${c}`, '#ff981f'));
+});
+// Block default context menu on entire toolbar so swatch right-clicks work
+document.getElementById('toolbar').addEventListener('contextmenu', (e) => e.preventDefault());
+
+function setTool(tool) { paintTool = (paintTool === tool) ? null : tool; updatePaintUI(); }
+function updatePaintUI() {
+  curColorEl.style.background = paintTile === T.CUSTOM ? customBrushColor : (COLORS[paintTile] || '#000');
+  document.querySelectorAll('#palette .swatch').forEach(s => s.classList.toggle('selected', parseInt(s.dataset.tile) === paintTile));
+  document.getElementById('btn-pencil').classList.toggle('active', paintTool === 'pencil');
+  document.getElementById('btn-bucket').classList.toggle('active', paintTool === 'bucket');
+  document.getElementById('btn-bucket-all').classList.toggle('active', paintTool === 'bucket_all');
+  document.getElementById('btn-bucket-new').classList.toggle('active', paintTool === 'bucket_new');
+  document.getElementById('btn-picker').classList.toggle('active', paintTool === 'picker');
+  canvas.style.cursor = paintTool === 'picker' ? 'copy' : paintTool ? 'cell' : 'crosshair';
+}
+
+document.getElementById('btn-pencil').addEventListener('click', () => setTool('pencil'));
+document.getElementById('btn-bucket').addEventListener('click', () => setTool('bucket'));
+document.getElementById('btn-bucket-all').addEventListener('click', () => setTool('bucket_all'));
+document.getElementById('btn-bucket-new').addEventListener('click', () => setTool('bucket_new'));
+document.getElementById('btn-picker').addEventListener('click', () => setTool('picker'));
+document.getElementById('btn-grid').addEventListener('click', () => {
+  showGrid = !showGrid;
+  document.getElementById('btn-grid').classList.toggle('active', showGrid);
+});
+
+// ── Input ──────────────────────────────────────────────────────────────────────
+let hoverWX = -1, hoverWY = -1; // world coords under mouse
+function getTileAt(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+  const vtx = Math.ceil(canvas.width / TILE) + 2, vty = Math.ceil(canvas.height / TILE) + 2;
+  const camFX = mySmX - Math.floor((vtx - 2) / 2);
+  const camFY = mySmY - Math.floor((vty - 2) / 2);
+  return { tx: Math.floor(camFX + mx / TILE), ty: Math.floor(camFY + my / TILE) };
+}
+canvas.addEventListener('mousemove', (e) => {
+  const { tx, ty } = getTileAt(e);
+  hoverWX = tx; hoverWY = ty;
+});
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const old = TILE;
+  TILE = e.deltaY < 0 ? Math.min(MAX_TILE, TILE + 1) : Math.max(MIN_TILE, TILE - 1);
+  if (TILE !== old) resizeCanvas();
+}, { passive: false });
+
+canvas.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  if (!connected) return;
+  const { tx, ty } = getTileAt(e);
+  for (const gi of groundItemList) {
+    if (gi.x === tx && gi.y === ty) {
+      showChat(`Examine: ${gi.name} (on ground)`, '#ff981f');
+      return;
+    }
+  }
+  for (const npc of npcList) {
+    if (npc.x === tx && npc.y === ty) {
+      showChat(`Examine: ${npc.name} (Level ${Math.ceil(npc.maxHp / 2)}) - HP: ${npc.hp}/${npc.maxHp}`, '#ff981f');
+      return;
+    }
+  }
+  for (const p of otherPlayers) {
+    if (p.x === tx && p.y === ty) { showChat(`Examine: Player ${p.id}`, '#ff981f'); return; }
+  }
+  if (tx === myX && ty === myY) { showChat('Examine: Yourself - looking strong.', '#ff981f'); return; }
+  const tile = tileAt(tx, ty);
+  if (openDoorList.some(d => (d.sx === tx && d.sy === ty) || (d.ox === tx && d.oy === ty))) {
+    showChat('Examine: An open door.', '#ff981f'); return;
+  }
+  const customName = getExamineName(tx, ty);
+  if (customName) showChat(`Examine: ${customName}`, '#ff981f');
+  else showChat(`Examine: ${EXAMINE[tile] || 'Nothing interesting.'}`, '#ff981f');
+});
+
+canvas.addEventListener('mousedown', (e) => {
+  if (e.button !== 0 || !connected) return;
+  const { tx, ty } = getTileAt(e);
+
+  // Paint tools
+  if (paintTool === 'picker') {
+    if (window.EyeDropper) {
+      new EyeDropper().open().then(r => {
+        customBrushColor = r.sRGBHex; paintTile = T.CUSTOM; updatePaintUI();
+        navigator.clipboard.writeText(customBrushColor).catch(() => {});
+        showChat(`Picked & copied: ${customBrushColor}`, '#ff981f');
+      }).catch(() => {});
+    } else {
+      paintTile = tileAt(tx, ty); updatePaintUI();
+      showChat(`Picked: ${TILE_NAMES[paintTile] || 'Unknown'}`, '#ff981f');
+    }
+    return;
+  }
+  if (paintTool === 'bucket' || paintTool === 'bucket_all') {
+    const msgType = paintTool === 'bucket_all' ? 'bucket_all' : 'bucket';
+    sendMsg({ t: msgType, x: tx, y: ty, tile: paintTile, color: paintTile === T.CUSTOM ? customBrushColor : null });
+    pendingBucketUndo = {};
+    pendingBucketUndo.promise = new Promise(resolve => { pendingBucketUndo.resolve = resolve; });
+    const capTile = paintTile, capColor = paintTile === T.CUSTOM ? customBrushColor : null;
+    pendingBucketUndo.promise.then(oldTiles => {
+      if (oldTiles && oldTiles.length > 0) {
+        const stroke = oldTiles.map(c => ({
+          x: c.x, y: c.y, oldTile: c.tile, oldColor: c.color,
+          newTile: capTile, newColor: capColor,
+        }));
+        undoStack.push(stroke);
+        if (undoStack.length > MAX_UNDO) undoStack.shift();
+        redoStack.length = 0;
+      }
+    });
+    return;
+  }
+  if (paintTool === 'bucket_new') {
+    // Store click coords, show modal
+    bucketNewTarget = { tx, ty };
+    const overlay = document.getElementById('modal-overlay');
+    const input = document.getElementById('modal-name');
+    overlay.classList.add('visible');
+    input.value = '';
+    input.focus();
+    return;
+  }
+  if (paintTool === 'pencil') {
+    painting = true;
+    recordAndPaint(tx, ty);
+    return;
+  }
+
+  // Game interactions
+  const tile = tileAt(tx, ty);
+  // Click ground item?
+  for (const gi of groundItemList) {
+    if (gi.x === tx && gi.y === ty) { targetGlow = { x: tx, y: ty, w: 1, h: 1 }; sendMsg({ t: 'pickup', id: gi.id }); return; }
+  }
+  // Click NPC?
+  for (const npc of npcList) {
+    if (npc.x === tx && npc.y === ty) { targetGlow = { x: tx, y: ty, w: 1, h: 1 }; sendMsg({ t: 'attack', id: npc.id }); combatTargetId = npc.id; return; }
+  }
+  // Door? (open or closed)
+  if (tile === T.DOOR) { sendMsg({ t: 'door', x: tx, y: ty }); return; }
+  if (openDoorList.some(d => (d.ox === tx && d.oy === ty) || (d.sx === tx && d.sy === ty))) { sendMsg({ t: 'door', x: tx, y: ty }); return; }
+  // Gather?
+  if (tile === T.TREE || tile === T.ROCK || tile === T.FISH_SPOT) {
+    // Find full object bounds (tree/rock clusters)
+    let tlx = tx, tly = ty;
+    while (tileAt(tlx - 1, tly) === tile) tlx--;
+    while (tileAt(tlx, tly - 1) === tile) tly--;
+    let tw = 0, th = 0;
+    while (tileAt(tlx + tw, tly) === tile) tw++;
+    while (tileAt(tlx, tly + th) === tile) th++;
+    targetGlow = { x: tlx, y: tly, w: tw, h: th };
+    sendMsg({ t: 'gather', x: tx, y: ty }); return;
+  }
+  // Move
+  combatTargetId = null;
+  targetGlow = null;
+  destX = tx; destY = ty;
+  sendMsg({ t: 'move', x: tx, y: ty });
+});
+
+canvas.addEventListener('mouseup', () => { if (painting) { flushStroke(); painting = false; } });
+canvas.addEventListener('mouseleave', () => { if (painting) { flushStroke(); painting = false; } });
+canvas.addEventListener('mousemove', (e) => {
+  if (!painting || paintTool !== 'pencil') return;
+  const { tx, ty } = getTileAt(e);
+  recordAndPaint(tx, ty);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); return; }
+  if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) { e.preventDefault(); redo(); return; }
+  if (e.key === 'p' || e.key === 'P') setTool('pencil');
+  if (e.key === 'b' || e.key === 'B') setTool('bucket');
+  if (e.key === 'i' || e.key === 'I') setTool('picker');
+  if (e.key === 't' || e.key === 'T') {
+    myGender = myGender === 'male' ? 'female' : 'male';
+    sendMsg({ t: 'gender', v: myGender });
+    showChat(`Gender: ${myGender}`, '#ff981f');
+  }
+  if (e.key === 'g' || e.key === 'G') {
+    showGrid = !showGrid;
+    document.getElementById('btn-grid').classList.toggle('active', showGrid);
+  }
+  if (e.key === 'm' || e.key === 'M') {
+    showOsrsMap = !showOsrsMap;
+    showChat(showOsrsMap ? 'OSRS map overlay ON (M to toggle)' : 'OSRS map overlay OFF', '#ff981f');
+  }
+  if (e.key === 'Escape') {
+    paintTool = null; updatePaintUI();
+    document.getElementById('modal-overlay').classList.remove('visible');
+  }
+});
+
+// Modal handlers for Bucket New
+function closeModal() { document.getElementById('modal-overlay').classList.remove('visible'); }
+function submitBucketNew() {
+  const name = document.getElementById('modal-name').value.trim();
+  if (!name || !bucketNewTarget) { closeModal(); return; }
+  const { tx, ty } = bucketNewTarget;
+  sendMsg({
+    t: 'bucket_new', x: tx, y: ty, tile: paintTile,
+    color: paintTile === T.CUSTOM ? customBrushColor : null, name,
+  });
+  pendingBucketUndo = {};
+  pendingBucketUndo.promise = new Promise(resolve => { pendingBucketUndo.resolve = resolve; });
+  const capTile = paintTile, capColor = paintTile === T.CUSTOM ? customBrushColor : null;
+  pendingBucketUndo.promise.then(oldTiles => {
+    if (oldTiles && oldTiles.length > 0) {
+      const stroke = oldTiles.map(c => ({
+        x: c.x, y: c.y, oldTile: c.tile, oldColor: c.color,
+        newTile: capTile, newColor: capColor,
+      }));
+      undoStack.push(stroke);
+      if (undoStack.length > MAX_UNDO) undoStack.shift();
+      redoStack.length = 0;
+    }
+  });
+  closeModal();
+  bucketNewTarget = null;
+}
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+document.getElementById('modal-ok').addEventListener('click', submitBucketNew);
+document.getElementById('modal-name').addEventListener('keydown', (e) => {
+  e.stopPropagation(); // prevent game keys while typing
+  if (e.key === 'Enter') submitBucketNew();
+  if (e.key === 'Escape') closeModal();
+});
+
+// ── Render ─────────────────────────────────────────────────────────────────────
+function render() {
+  if (!world) { requestAnimationFrame(render); return; }
+
+  // Smooth interpolation (lerp toward target positions)
+  const lerpSpeed = 0.15;
+  mySmX += (myX - mySmX) * lerpSpeed;
+  mySmY += (myY - mySmY) * lerpSpeed;
+  // Snap if very close
+  if (Math.abs(myX - mySmX) < 0.01) mySmX = myX;
+  if (Math.abs(myY - mySmY) < 0.01) mySmY = myY;
+  for (const sm of playerSmooth.values()) {
+    sm.x += (sm.tx - sm.x) * lerpSpeed;
+    sm.y += (sm.ty - sm.y) * lerpSpeed;
+    if (Math.abs(sm.tx - sm.x) < 0.01) sm.x = sm.tx;
+    if (Math.abs(sm.ty - sm.y) < 0.01) sm.y = sm.ty;
+  }
+  for (const sm of npcSmooth.values()) {
+    sm.x += (sm.tx - sm.x) * lerpSpeed;
+    sm.y += (sm.ty - sm.y) * lerpSpeed;
+    if (Math.abs(sm.tx - sm.x) < 0.01) sm.x = sm.tx;
+    if (Math.abs(sm.ty - sm.y) < 0.01) sm.y = sm.ty;
+  }
+
+  const vtx = Math.ceil(canvas.width / TILE) + 2, vty = Math.ceil(canvas.height / TILE) + 2;
+  const camFX = mySmX - Math.floor((vtx - 2) / 2); // float camera
+  const camFY = mySmY - Math.floor((vty - 2) / 2);
+  const camX = Math.floor(camFX), camY = Math.floor(camFY);
+  const offX = -(camFX - camX) * TILE, offY = -(camFY - camY) * TILE; // sub-tile pixel offset
+
+  // OSRS world map background layer
+  if (showOsrsMap) {
+    ctx.save();
+    ctx.translate(offX, offY);
+    const idealZ = Math.log2(TILE);
+    const z = Math.max(-4, Math.min(4, Math.round(idealZ)));
+    const tilesPerImg = 256 / Math.pow(2, z);
+
+    const tlOsrs = toOsrs(camX - 1, camY - 1);
+    const brOsrs = toOsrs(camX + vtx + 1, camY + vty + 1);
+    const minOX = Math.min(tlOsrs.ox, brOsrs.ox);
+    const maxOX = Math.max(tlOsrs.ox, brOsrs.ox);
+    const minOY = Math.min(tlOsrs.oy, brOsrs.oy);
+    const maxOY = Math.max(tlOsrs.oy, brOsrs.oy);
+
+    const info1 = osrsTileInfo(minOX, minOY, z);
+    const info2 = osrsTileInfo(maxOX, maxOY, z);
+    const fxMin = Math.min(info1.fileX, info2.fileX);
+    const fxMax = Math.max(info1.fileX, info2.fileX);
+    const fyMin = Math.min(info1.fileY, info2.fileY);
+    const fyMax = Math.max(info1.fileY, info2.fileY);
+
+    for (let fy = fyMin; fy <= fyMax; fy++) {
+      for (let fx = fxMin; fx <= fxMax; fx++) {
+        const img = loadOsrsTile(z, fx, fy);
+        if (!(img instanceof Image) || !img.complete) continue;
+        const imgLeftX = fx * tilesPerImg;
+        const imgTopY = (1 + fy) * tilesPerImg - 1;
+        const gx = imgLeftX - OSRS_ORIGIN_X;
+        const gy = OSRS_ORIGIN_Y - imgTopY;
+        const sx = (gx - camX) * TILE;
+        const sy = (gy - camY) * TILE;
+        const imgW = tilesPerImg * TILE;
+        ctx.drawImage(img, sx, sy, imgW, imgW);
+      }
+    }
+    ctx.restore();
+  }
+
+  // Tiles
+  ctx.save();
+  ctx.translate(offX, offY);
+  if (showOsrsMap) ctx.globalAlpha = 0.3;
+  for (let vy = 0; vy < vty; vy++) {
+    for (let vx = 0; vx < vtx; vx++) {
+      const wx = camX + vx, wy = camY + vy;
+      const tile = tileAt(wx, wy);
+      if (tile === T.WALL || tile === T.DOOR) {
+        ctx.fillStyle = COLORS[T.FLOOR];
+        ctx.fillRect(vx * TILE, vy * TILE, TILE, TILE);
+      } else if (tile === T.TREE) {
+        ctx.fillStyle = COLORS[T.GRASS];
+        ctx.fillRect(vx * TILE, vy * TILE, TILE, TILE);
+      } else {
+        ctx.fillStyle = getColor(wx, wy, tile);
+        ctx.fillRect(vx * TILE, vy * TILE, TILE, TILE);
+      }
+    }
+  }
+  if (showOsrsMap) ctx.globalAlpha = 1.0;
+
+  // Trees (multi-tile clusters — find top-left corners, draw one tree sprite per cluster)
+  function treeHash(x, y) { return ((x * 73856093) ^ (y * 19349663)) >>> 0; }
+  const drawnTrees = new Set(); // track which clusters we've drawn
+  // Also check if hover is on any tree tile
+  const hoverOnTree = tileAt(hoverWX, hoverWY) === T.TREE;
+  // Find the cluster bounds for hover highlight
+  let hoverTreeBounds = null;
+  if (hoverOnTree) {
+    // Scan to find top-left of this cluster
+    let htlx = hoverWX, htly = hoverWY;
+    while (tileAt(htlx - 1, htly) === T.TREE) htlx--;
+    while (tileAt(htlx, htly - 1) === T.TREE) htly--;
+    let htw = 0, hth = 0;
+    while (tileAt(htlx + htw, htly) === T.TREE) htw++;
+    while (tileAt(htlx, htly + hth) === T.TREE) hth++;
+    hoverTreeBounds = { x: htlx, y: htly, w: htw, h: hth };
+  }
+
+  for (let vy = 0; vy < vty; vy++) {
+    for (let vx = 0; vx < vtx; vx++) {
+      const wx = camX + vx, wy = camY + vy;
+      if (tileAt(wx, wy) !== T.TREE) continue;
+      // Is this the top-left corner? (no tree above or to the left)
+      if (tileAt(wx - 1, wy) === T.TREE || tileAt(wx, wy - 1) === T.TREE) continue;
+      const clusterKey = wy * WORLD_W + wx;
+      if (drawnTrees.has(clusterKey)) continue;
+      drawnTrees.add(clusterKey);
+
+      // Scan cluster width and height
+      let cw = 0, ch = 0;
+      while (tileAt(wx + cw, wy) === T.TREE) cw++;
+      while (tileAt(wx, wy + ch) === T.TREE) ch++;
+
+      const h = treeHash(wx, wy);
+      const variant = h % 4;
+      const colors = [
+        { trunk: '#2a1a0a', canopy: '#1a5c0a', highlight: '#2d7a1f' },
+        { trunk: '#3a2510', canopy: '#1f6b10', highlight: '#38881f' },
+        { trunk: '#2a1a0a', canopy: '#256b1a', highlight: '#3a8a2a' },
+        { trunk: '#1e1208', canopy: '#14500a', highlight: '#1f6b10' },
+      ][variant];
+
+      // Pixel bounds of the cluster
+      const px = vx * TILE, py = vy * TILE;
+      const pw = cw * TILE, ph = ch * TILE;
+
+      // Trunk: bottom 25%, centered, narrow
+      const trunkW = Math.max(2, Math.round(pw * 0.2));
+      const trunkH = Math.max(2, Math.round(ph * 0.25));
+      const trunkX = px + Math.floor((pw - trunkW) / 2);
+      const trunkY = py + ph - trunkH;
+      ctx.fillStyle = colors.trunk;
+      ctx.fillRect(trunkX, trunkY, trunkW, trunkH);
+
+      // Canopy: fills upper 80%, slightly inset for rounded look
+      const canW = pw - 2;
+      const canH = Math.round(ph * 0.78);
+      const canX = px + 1;
+      const canY = py;
+
+      ctx.fillStyle = colors.canopy;
+      // Rounded shape with inset edges
+      ctx.fillRect(canX + 2, canY, canW - 4, canH);
+      ctx.fillRect(canX + 1, canY + 1, canW - 2, canH - 2);
+      ctx.fillRect(canX, canY + 2, canW, canH - 4);
+
+      // Highlight upper-left quadrant
+      ctx.fillStyle = colors.highlight;
+      const hlW = Math.ceil(canW * 0.45), hlH = Math.ceil(canH * 0.4);
+      ctx.fillRect(canX + 2, canY + 2, hlW, hlH);
+
+      // Hover highlight: yellow border around entire cluster
+      if (hoverTreeBounds && hoverTreeBounds.x === wx && hoverTreeBounds.y === wy) {
+        ctx.strokeStyle = '#ff0';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(px + 0.5, py + 0.5, pw - 1, ph - 1);
+      }
+    }
+  }
+
+  // Wall edges (thin #fefefe lines on tile borders)
+  ctx.strokeStyle = '#fefefe';
+  ctx.lineWidth = Math.max(1, Math.floor(TILE / 5));
+  for (let vy = 0; vy < vty; vy++) {
+    for (let vx = 0; vx < vtx; vx++) {
+      const wx = camX + vx, wy = camY + vy;
+      if (tileAt(wx, wy) !== T.WALL) continue;
+      const px = vx * TILE, py = vy * TILE;
+      const n = tileAt(wx, wy - 1) !== T.WALL; // north neighbor not wall
+      const s = tileAt(wx, wy + 1) !== T.WALL;
+      const e = tileAt(wx + 1, wy) !== T.WALL;
+      const w = tileAt(wx - 1, wy) !== T.WALL;
+      // Cardinal edges
+      ctx.beginPath();
+      if (n) { ctx.moveTo(px, py + 0.5); ctx.lineTo(px + TILE, py + 0.5); }
+      if (s) { ctx.moveTo(px, py + TILE - 0.5); ctx.lineTo(px + TILE, py + TILE - 0.5); }
+      if (w) { ctx.moveTo(px + 0.5, py); ctx.lineTo(px + 0.5, py + TILE); }
+      if (e) { ctx.moveTo(px + TILE - 0.5, py); ctx.lineTo(px + TILE - 0.5, py + TILE); }
+      ctx.stroke();
+      // Diagonal walls: corner pieces where two perpendicular edges meet
+      const ne = tileAt(wx + 1, wy - 1) !== T.WALL;
+      const nw = tileAt(wx - 1, wy - 1) !== T.WALL;
+      const se = tileAt(wx + 1, wy + 1) !== T.WALL;
+      const sw = tileAt(wx - 1, wy + 1) !== T.WALL;
+      ctx.beginPath();
+      // If this wall has no cardinal edges but diagonal neighbors are open, draw diagonal
+      if (!n && !e && ne) { ctx.moveTo(px + TILE, py); ctx.lineTo(px, py + TILE); } // NE corner
+      if (!n && !w && nw) { ctx.moveTo(px, py); ctx.lineTo(px + TILE, py + TILE); } // NW corner
+      if (!s && !e && se) { ctx.moveTo(px, py); ctx.lineTo(px + TILE, py + TILE); } // SE corner
+      if (!s && !w && sw) { ctx.moveTo(px + TILE, py); ctx.lineTo(px, py + TILE); } // SW corner
+      ctx.stroke();
+    }
+  }
+
+  // Closed door edges (single #f40000 line on outside face)
+  ctx.strokeStyle = '#f40000';
+  ctx.lineWidth = Math.max(1, Math.floor(TILE / 5));
+  for (let vy = 0; vy < vty; vy++) {
+    for (let vx = 0; vx < vtx; vx++) {
+      const wx = camX + vx, wy = camY + vy;
+      if (tileAt(wx, wy) !== T.DOOR) continue;
+      const px = vx * TILE, py = vy * TILE;
+      const tn = tileAt(wx, wy - 1), ts = tileAt(wx, wy + 1);
+      const te = tileAt(wx + 1, wy), tw = tileAt(wx - 1, wy);
+      const isInterior = (t) => t === T.FLOOR || t === T.DOOR;
+      ctx.beginPath();
+      if (tn !== T.WALL && tn !== T.DOOR && !isInterior(tn)) { ctx.moveTo(px, py + 0.5); ctx.lineTo(px + TILE, py + 0.5); }
+      else if (ts !== T.WALL && ts !== T.DOOR && !isInterior(ts)) { ctx.moveTo(px, py + TILE - 0.5); ctx.lineTo(px + TILE, py + TILE - 0.5); }
+      else if (tw !== T.WALL && tw !== T.DOOR && !isInterior(tw)) { ctx.moveTo(px + 0.5, py); ctx.lineTo(px + 0.5, py + TILE); }
+      else if (te !== T.WALL && te !== T.DOOR && !isInterior(te)) { ctx.moveTo(px + TILE - 0.5, py); ctx.lineTo(px + TILE - 0.5, py + TILE); }
+      else {
+        if (tn !== T.WALL && tn !== T.DOOR) { ctx.moveTo(px, py + 0.5); ctx.lineTo(px + TILE, py + 0.5); }
+        else if (ts !== T.WALL && ts !== T.DOOR) { ctx.moveTo(px, py + TILE - 0.5); ctx.lineTo(px + TILE, py + TILE - 0.5); }
+        else if (tw !== T.WALL && tw !== T.DOOR) { ctx.moveTo(px + 0.5, py); ctx.lineTo(px + 0.5, py + TILE); }
+        else if (te !== T.WALL && te !== T.DOOR) { ctx.moveTo(px + TILE - 0.5, py); ctx.lineTo(px + TILE - 0.5, py + TILE); }
+      }
+      ctx.stroke();
+    }
+  }
+
+  // Open doors (swung in — red line on interior tile, perpendicular to original)
+  ctx.strokeStyle = '#f40000';
+  ctx.lineWidth = Math.max(1, Math.floor(TILE / 5));
+  for (const d of openDoorList) {
+    const vx = d.sx - camX, vy = d.sy - camY;
+    if (vx < -1 || vy < -1 || vx > vtx || vy > vty) continue;
+    const px = vx * TILE, py = vy * TILE;
+    // Direction door swung: from original to swung position
+    const ddx = d.sx - d.ox, ddy = d.sy - d.oy;
+    ctx.beginPath();
+    if (ddy !== 0) {
+      // Swung north or south — draw vertical line on the edge closest to original
+      const ey = ddy < 0 ? py + TILE : py; // south edge if swung north, north edge if swung south
+      ctx.moveTo(px, ey + 0.5 * Math.sign(ddy));
+      ctx.lineTo(px + TILE, ey + 0.5 * Math.sign(ddy));
+    } else if (ddx !== 0) {
+      // Swung east or west — draw horizontal line on the edge closest to original
+      const ex = ddx < 0 ? px + TILE : px;
+      ctx.moveTo(ex + 0.5 * Math.sign(ddx), py);
+      ctx.lineTo(ex + 0.5 * Math.sign(ddx), py + TILE);
+    }
+    ctx.stroke();
+  }
+
+  // Grid overlay
+  if (showGrid && TILE >= 4) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let vx = 0; vx <= vtx; vx++) { const x = vx * TILE + 0.5; ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); }
+    for (let vy = 0; vy <= vty; vy++) { const y = vy * TILE + 0.5; ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); }
+    ctx.stroke();
+  }
+
+  // No offset — objects centered in tiles
+  const nOff = 0;
+
+  // Current tile (white dashed border)
+  {
+    const cx = (myX - camX) * TILE, cy = (myY - camY) * TILE;
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 2]);
+    ctx.strokeRect(cx + 0.5, cy + 0.5, TILE - 1, TILE - 1);
+    ctx.setLineDash([]);
+  }
+
+  // Destination tile (pulsing yellow fill)
+  if (destX >= 0 && destY >= 0) {
+    const dx = (destX - camX) * TILE, dy = (destY - camY) * TILE;
+    const pulse = 0.15 + Math.sin(Date.now() * 0.005) * 0.1;
+    ctx.fillStyle = `rgba(255,255,0,${pulse})`;
+    ctx.fillRect(dx, dy, TILE, TILE);
+    ctx.strokeStyle = 'rgba(255,255,0,0.6)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(dx + 0.5, dy + 0.5, TILE - 1, TILE - 1);
+  }
+
+  // Target object glow (same yellow pulse as destination, spans full object)
+  // Clear glow if the object was removed (e.g. tree chopped)
+  if (targetGlow && targetGlow.w > 1 || targetGlow && targetGlow.h > 1) {
+    const cx = targetGlow.x, cy = targetGlow.y;
+    if (cx >= 0 && cy >= 0 && cx < mapW && cy < mapH && map[cy * mapW + cx] !== T.TREE && map[cy * mapW + cx] !== T.ROCK) {
+      targetGlow = null;
+    }
+  }
+  if (targetGlow) {
+    const gx = (targetGlow.x - camX) * TILE, gy = (targetGlow.y - camY) * TILE;
+    const gw = targetGlow.w * TILE, gh = targetGlow.h * TILE;
+    const pulse = 0.15 + Math.sin(Date.now() * 0.005) * 0.1;
+    ctx.fillStyle = `rgba(255,255,0,${pulse})`;
+    ctx.fillRect(gx, gy, gw, gh);
+    ctx.strokeStyle = 'rgba(255,255,0,0.6)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(gx + 0.5, gy + 0.5, gw - 1, gh - 1);
+  }
+
+  // Hovered tile (thin cyan border)
+  if (hoverWX >= 0 && hoverWY >= 0 && (hoverWX !== myX || hoverWY !== myY) && (hoverWX !== destX || hoverWY !== destY)) {
+    const hx = (hoverWX - camX) * TILE, hy = (hoverWY - camY) * TILE;
+    ctx.strokeStyle = 'rgba(0,255,255,0.5)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(hx + 0.5, hy + 0.5, TILE - 1, TILE - 1);
+  }
+
+  // Ground items (gold gem with glow)
+  for (const gi of groundItemList) {
+    const sx = (gi.x - camX) * TILE, sy = (gi.y - camY) * TILE - nOff;
+    if (sx < -TILE || sy < -TILE || sx > canvas.width || sy > canvas.height) continue;
+    const cx = sx + TILE / 2, cy = sy + TILE / 2, r = TILE / 2 - 0.5;
+    // Ambient glow (pulses subtly)
+    const pulse = 0.3 + Math.sin(Date.now() * 0.004 + gi.id) * 0.12;
+    const glow = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, TILE);
+    glow.addColorStop(0, `rgba(255,200,0,${pulse})`);
+    glow.addColorStop(1, 'rgba(255,200,0,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(sx - TILE * 0.5, sy - TILE * 0.5, TILE * 2, TILE * 2);
+    // Diamond shape
+    ctx.fillStyle = '#ffc800';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - r);       // top
+    ctx.lineTo(cx + r, cy);       // right
+    ctx.lineTo(cx, cy + r);       // bottom
+    ctx.lineTo(cx - r, cy);       // left
+    ctx.closePath();
+    ctx.fill();
+    // Top-left face (lighter)
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - r);
+    ctx.lineTo(cx, cy);
+    ctx.lineTo(cx - r, cy);
+    ctx.closePath();
+    ctx.fill();
+    // Bottom-right face (darker)
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + r);
+    ctx.lineTo(cx, cy);
+    ctx.lineTo(cx + r, cy);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // NPCs
+  for (const npc of npcList) {
+    const nsm = npcSmooth.get(npc.id);
+    const nx = nsm ? nsm.x : npc.x, ny = nsm ? nsm.y : npc.y;
+    const sx = (nx - camX) * TILE, sy = (ny - camY) * TILE - nOff;
+    if (sx < -TILE * 2 || sy < -TILE * 2 || sx > canvas.width + TILE || sy > canvas.height + TILE) continue;
+    // Dark border for definition
+    ctx.fillStyle = '#1a0000';
+    ctx.fillRect(sx, sy, TILE, TILE);
+    // Inner fill — dark blood red, lighter on top edge for depth
+    ctx.fillStyle = '#8b1a1a';
+    ctx.fillRect(sx + 1, sy + 1, TILE - 2, TILE - 2);
+    // Top highlight strip — reads as a head/face
+    ctx.fillStyle = '#c62828';
+    ctx.fillRect(sx + 1, sy + 1, TILE - 2, Math.max(1, Math.floor(TILE * 0.35)));
+    // Two dark eye dots when zoomed in enough
+    if (TILE >= 6) {
+      ctx.fillStyle = '#1a0000';
+      const ey = sy + 1 + Math.floor(TILE * 0.2);
+      const sz = Math.max(1, Math.floor(TILE * 0.15));
+      ctx.fillRect(sx + Math.floor(TILE * 0.25), ey, sz, sz);
+      ctx.fillRect(sx + Math.floor(TILE * 0.6), ey, sz, sz);
+    }
+    // HP bar (RS style - red bg, green fill, border)
+    if (npc.hp < npc.maxHp) {
+      const bw = TILE + 2, bx = sx - 1, by = sy - 4;
+      ctx.fillStyle = '#600'; ctx.fillRect(bx, by, bw, 3);
+      ctx.fillStyle = '#0a0'; ctx.fillRect(bx, by, bw * (npc.hp / npc.maxHp), 3);
+    }
+    // Hover highlight
+    if (npc.x === hoverWX && npc.y === hoverWY) {
+      ctx.strokeStyle = '#ff0'; ctx.lineWidth = 1;
+      ctx.strokeRect(sx + 0.5, sy + 0.5, TILE - 1, TILE - 1);
+    }
+  }
+
+  // Player color schemes
+  const PLAYER_COLORS = {
+    male:   { outline: '#0a3a5c', body: '#4a9ebb', aura: [100, 200, 255] },
+    female: { outline: '#4a4a7a', body: '#acace6', aura: [172, 172, 230] },
+  };
+
+  // Draw a player tile (fits in one tile, white border for MC)
+  function drawPlayer(sx, sy, gender, hp, maxHp, isMe) {
+    const c = PLAYER_COLORS[gender] || PLAYER_COLORS.male;
+    if (isMe) {
+      const pcx = sx + TILE / 2, pcy = sy + TILE / 2;
+      const aPulse = 0.18 + Math.sin(Date.now() * 0.003) * 0.06;
+      const aura = ctx.createRadialGradient(pcx, pcy, TILE * 0.2, pcx, pcy, TILE * 0.8);
+      aura.addColorStop(0, `rgba(${c.aura.join(',')},${aPulse})`);
+      aura.addColorStop(1, `rgba(${c.aura.join(',')},0)`);
+      ctx.fillStyle = aura;
+      ctx.fillRect(sx - 1, sy - 1, TILE + 2, TILE + 2);
+      ctx.fillStyle = '#00ff00';
+      ctx.fillRect(sx, sy, TILE, TILE);
+      ctx.fillStyle = c.body;
+      ctx.fillRect(sx + 1, sy + 1, TILE - 2, TILE - 2);
+    } else {
+      ctx.fillStyle = c.outline;
+      ctx.fillRect(sx, sy, TILE, TILE);
+      ctx.fillStyle = c.body;
+      ctx.fillRect(sx + 1, sy + 1, TILE - 2, TILE - 2);
+    }
+    if (hp < maxHp) {
+      const bw = TILE + 2, bx = sx - 1, by = sy - 4;
+      ctx.fillStyle = '#600'; ctx.fillRect(bx, by, bw, 3);
+      ctx.fillStyle = '#0a0'; ctx.fillRect(bx, by, bw * (hp / maxHp), 3);
+    }
+  }
+
+  // Other players (smoothed)
+  for (const p of otherPlayers) {
+    const sm = playerSmooth.get(p.id);
+    const dx = sm ? sm.x : p.x, dy = sm ? sm.y : p.y;
+    const sx = (dx - camX) * TILE, sy = (dy - camY) * TILE - nOff;
+    if (sx < -TILE * 2 || sy < -TILE * 2 || sx > canvas.width + TILE || sy > canvas.height + TILE) continue;
+    drawPlayer(sx, sy, p.g || 'male', p.hp, p.maxHp, false);
+  }
+
+  // Me (drawn at smooth camera center)
+  const px = (mySmX - camX) * TILE, py = (mySmY - camY) * TILE - nOff;
+  drawPlayer(px, py, myGender, myStats.hp, myStats.maxHp, true);
+
+  // Hitsplats (centered on tile)
+  const now = Date.now();
+  hitsplats = hitsplats.filter(h => now - h.born < 1200);
+  for (const h of hitsplats) {
+    const age = now - h.born;
+    const alpha = age < 800 ? 1 : Math.max(0, 1 - (age - 800) / 400);
+    // Centered on the target's tile
+    const hsx = (h.x - camX) * TILE + TILE / 2;
+    const hsy = (h.y - camY) * TILE + TILE / 2;
+    const rad = Math.max(5, TILE * 0.55);
+    const fontSize = Math.max(7, Math.min(11, Math.floor(TILE * 0.9)));
+    // Circle background
+    const r = parseInt(h.bg.slice(1,3),16), g = parseInt(h.bg.slice(3,5),16), b = parseInt(h.bg.slice(5,7),16);
+    ctx.beginPath();
+    ctx.arc(hsx, hsy, rad, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(0,0,0,${alpha * 0.6})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // White number
+    ctx.font = `bold ${fontSize}px Courier New`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    ctx.fillText(h.text, hsx, hsy);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  // Hover tooltip for NPCs
+  const hovNpc = npcList.find(n => n.x === hoverWX && n.y === hoverWY);
+  if (hovNpc) {
+    ctx.font = '11px Courier New';
+    const lv = Math.max(hovNpc.atk || 1, hovNpc.def || 1);
+    const txt = `${hovNpc.name} (Lv ${lv})`;
+    const hvx = (hovNpc.x - camX) * TILE + TILE + 4;
+    const hvy = (hovNpc.y - camY) * TILE - 2;
+    const tw = ctx.measureText(txt).width + 8;
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(hvx, hvy - 12, tw, 16);
+    ctx.fillStyle = '#ff0';
+    ctx.fillText(txt, hvx + 4, hvy);
+  }
+
+  ctx.restore(); // end translated context
+
+  // OSRS coordinate display (bottom-center)
+  {
+    const myOsrs = toOsrs(myX, myY);
+    let coordText = `Tile: (${myX}, ${myY})  OSRS: (${myOsrs.ox}, ${myOsrs.oy})`;
+    if (hoverWX >= 0 && hoverWY >= 0) {
+      const hOsrs = toOsrs(hoverWX, hoverWY);
+      coordText += `  Hover: (${hOsrs.ox}, ${hOsrs.oy})`;
+    }
+    ctx.font = '11px Courier New';
+    const tw = ctx.measureText(coordText).width + 12;
+    const cx = (canvas.width - tw) / 2;
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(cx, canvas.height - 22, tw, 18);
+    ctx.fillStyle = '#ff981f';
+    ctx.fillText(coordText, cx + 6, canvas.height - 8);
+  }
+
+  // Update combat target UI
+  updateCombatUI();
+
+  requestAnimationFrame(render);
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+updatePaintUI();
+connect();
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
