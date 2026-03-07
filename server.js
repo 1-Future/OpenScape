@@ -5,14 +5,18 @@ const path = require('path');
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const PORT = 2222;
-const WORLD_W = 200, WORLD_H = 200;
-const TICK_MS = 600;             // OSRS game tick: 0.6 seconds
-const STATE_INTERVAL = 1;        // broadcast entities every tick
-const SAVE_INTERVAL_MS = 30000;  // save world every 30s
+const TICK_MS = 600;
+const STATE_INTERVAL = 1;
+const SAVE_INTERVAL_MS = 30000;
 const DATA_DIR = path.join(__dirname, 'data');
-const WORLD_FILE = path.join(DATA_DIR, 'world.bin');
-const COLORS_FILE = path.join(DATA_DIR, 'colors.json');
+const CHUNKS_DIR = path.join(DATA_DIR, 'chunks');
+const TILE_DATA_DIR = path.join(DATA_DIR, 'tile-data');
 const NAMES_FILE = path.join(DATA_DIR, 'names.json');
+
+const CHUNK_SIZE = 64;
+const VIEW_DIST = 3;
+const ENTITY_VIEW = (VIEW_DIST + 1) * CHUNK_SIZE;
+const SPAWN_X = 3222, SPAWN_Y = 3218;
 
 const T = {
   GRASS: 0, WATER: 1, TREE: 2, PATH: 3, ROCK: 4, SAND: 5, WALL: 6,
@@ -20,53 +24,210 @@ const T = {
   DARK_GRASS: 13, CUSTOM: 14
 };
 
+// ── OSRS Terrain Data ─────────────────────────────────────────────────────────
+const underlayRgb = {}; // id -> '#rrggbb'
+const overlayRgb = {}; // id -> { hex, texture, hideUnderlay }
+const terrainCache = new Map(); // 'cx_cy' -> Uint8Array(64*64*3) RGB per tile
+
+function loadTerrainDefs() {
+  try {
+    const ul = JSON.parse(fs.readFileSync(path.join(TILE_DATA_DIR, 'underlays-rgb.json'), 'utf8'));
+    for (const u of ul) underlayRgb[u.id] = u.hex;
+    const ol = JSON.parse(fs.readFileSync(path.join(TILE_DATA_DIR, 'overlays-rgb.json'), 'utf8'));
+    for (const o of ol) overlayRgb[o.id] = { hex: o.hex, texture: o.texture, hide: o.hideUnderlay };
+    console.log(`[terrain] Loaded ${ul.length} underlays, ${ol.length} overlays`);
+  } catch (e) {
+    console.log('[terrain] No terrain definitions found, using default colors');
+  }
+}
+
+function loadTerrainChunk(cx, cy) {
+  const key = `${cx}_${cy}`;
+  if (terrainCache.has(key)) return terrainCache.get(key);
+  const filePath = path.join(TILE_DATA_DIR, `${cx}_${cy}.json`);
+  if (!fs.existsSync(filePath)) { terrainCache.set(key, null); return null; }
+  try {
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    // Build RGB array: 64*64*3 bytes
+    const rgb = new Uint8Array(64 * 64 * 3);
+    for (let x = 0; x < 64; x++) {
+      for (let y = 0; y < 64; y++) {
+        const ul = data.underlay[x][y];
+        const ol = data.overlay[x][y];
+        const olDef = overlayRgb[ol];
+        let hex;
+        if (ol > 0 && olDef && olDef.hide) hex = olDef.hex;
+        else if (ul > 0 && underlayRgb[ul]) hex = underlayRgb[ul];
+        else hex = null;
+        if (hex) {
+          const idx = (y * 64 + x) * 3;
+          rgb[idx] = parseInt(hex.slice(1, 3), 16);
+          rgb[idx + 1] = parseInt(hex.slice(3, 5), 16);
+          rgb[idx + 2] = parseInt(hex.slice(5, 7), 16);
+        }
+        // else stays 0,0,0 (black = no data, client uses default)
+      }
+    }
+    terrainCache.set(key, rgb);
+    return rgb;
+  } catch (e) { terrainCache.set(key, null); return null; }
+}
+
+function loadTerrainHeights(cx, cy) {
+  const filePath = path.join(TILE_DATA_DIR, `${cx}_${cy}.json`);
+  if (!fs.existsSync(filePath)) return null;
+  try {
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const heights = new Uint16Array(64 * 64);
+    for (let x = 0; x < 64; x++)
+      for (let y = 0; y < 64; y++)
+        heights[y * 64 + x] = data.height[x][y] || 0;
+    return heights;
+  } catch (e) { return null; }
+}
+
+
+loadTerrainDefs();
+
+
+// ── Chunk System ───────────────────────────────────────────────────────────────
+const chunks = new Map();
+
+function localXY(wx, wy) {
+  return [((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE, ((wy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE];
+}
+
+function loadChunkFromDisk(cx, cy) {
+  const tp = path.join(CHUNKS_DIR, `${cx}_${cy}.bin`);
+  if (!fs.existsSync(tp)) return null;
+  const buf = fs.readFileSync(tp);
+  const tiles = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
+  tiles.set(new Uint8Array(buf.buffer, buf.byteOffset, Math.min(buf.byteLength, tiles.length)));
+  const colors = new Map();
+  const cp = path.join(CHUNKS_DIR, `${cx}_${cy}.json`);
+  if (fs.existsSync(cp)) {
+    const obj = JSON.parse(fs.readFileSync(cp, 'utf8'));
+    for (const [k, v] of Object.entries(obj)) colors.set(parseInt(k), v);
+  }
+  return { tiles, colors, dirty: false, lastAccess: Date.now() };
+}
+
+function saveChunkToDisk(cx, cy, chunk) {
+  fs.mkdirSync(CHUNKS_DIR, { recursive: true });
+  fs.writeFileSync(path.join(CHUNKS_DIR, `${cx}_${cy}.bin`), Buffer.from(chunk.tiles));
+  const cp = path.join(CHUNKS_DIR, `${cx}_${cy}.json`);
+  if (chunk.colors.size > 0) {
+    const obj = {}; for (const [k, v] of chunk.colors) obj[k] = v;
+    fs.writeFileSync(cp, JSON.stringify(obj));
+  } else if (fs.existsSync(cp)) { fs.unlinkSync(cp); }
+  chunk.dirty = false;
+}
+
+function getChunk(cx, cy) {
+  const key = `${cx}_${cy}`;
+  let chunk = chunks.get(key);
+  if (chunk) return chunk;
+  chunk = loadChunkFromDisk(cx, cy);
+  if (!chunk) chunk = { tiles: new Uint8Array(CHUNK_SIZE * CHUNK_SIZE), colors: new Map(), dirty: false, lastAccess: Date.now() };
+  chunks.set(key, chunk);
+  return chunk;
+}
+
+function tileAt(x, y) {
+  const cx = Math.floor(x / CHUNK_SIZE), cy = Math.floor(y / CHUNK_SIZE);
+  const key = `${cx}_${cy}`;
+  let chunk = chunks.get(key);
+  if (!chunk) {
+    chunk = loadChunkFromDisk(cx, cy);
+    if (!chunk) return T.GRASS;
+    chunks.set(key, chunk);
+  }
+  const [lx, ly] = localXY(x, y);
+  return chunk.tiles[ly * CHUNK_SIZE + lx];
+}
+
+function setTile(x, y, t) {
+  const cx = Math.floor(x / CHUNK_SIZE), cy = Math.floor(y / CHUNK_SIZE);
+  const chunk = getChunk(cx, cy);
+  const [lx, ly] = localXY(x, y);
+  chunk.tiles[ly * CHUNK_SIZE + lx] = t;
+  chunk.dirty = true;
+  chunk.lastAccess = Date.now();
+}
+
+function getColor(x, y) {
+  const cx = Math.floor(x / CHUNK_SIZE), cy = Math.floor(y / CHUNK_SIZE);
+  const chunk = chunks.get(`${cx}_${cy}`);
+  if (!chunk) return null;
+  const [lx, ly] = localXY(x, y);
+  return chunk.colors.get(ly * CHUNK_SIZE + lx) || null;
+}
+
+function setColor(x, y, color) {
+  const cx = Math.floor(x / CHUNK_SIZE), cy = Math.floor(y / CHUNK_SIZE);
+  const chunk = getChunk(cx, cy);
+  const [lx, ly] = localXY(x, y);
+  const k = ly * CHUNK_SIZE + lx;
+  if (color) chunk.colors.set(k, color);
+  else chunk.colors.delete(k);
+  chunk.dirty = true;
+}
+
+function isWalkable(x, y) {
+  const t = tileAt(x, y);
+  if (t === T.WATER || t === T.TREE || t === T.ROCK || t === T.WALL || t === T.BUSH || t === T.DOOR) return false;
+  return true;
+}
+
+function evictChunks() {
+  const now = Date.now();
+  const keep = new Set();
+  for (const [, p] of players) {
+    const cx = Math.floor(p.x / CHUNK_SIZE), cy = Math.floor(p.y / CHUNK_SIZE);
+    for (let dx = -(VIEW_DIST + 1); dx <= VIEW_DIST + 1; dx++)
+      for (let dy = -(VIEW_DIST + 1); dy <= VIEW_DIST + 1; dy++)
+        keep.add(`${cx + dx}_${cy + dy}`);
+  }
+  for (const [key, chunk] of chunks) {
+    if (keep.has(key)) continue;
+    if (now - chunk.lastAccess > 60000) {
+      if (chunk.dirty) {
+        const [cx, cy] = key.split('_').map(Number);
+        saveChunkToDisk(cx, cy, chunk);
+      }
+      chunks.delete(key);
+    }
+  }
+}
+
+function saveAllChunks() {
+  let saved = 0;
+  for (const [key, chunk] of chunks) {
+    if (!chunk.dirty) continue;
+    const [cx, cy] = key.split('_').map(Number);
+    saveChunkToDisk(cx, cy, chunk);
+    saved++;
+  }
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  const namesObj = {}; for (const [k, v] of customNames) namesObj[k] = v;
+  fs.writeFileSync(NAMES_FILE, JSON.stringify(namesObj));
+  if (saved > 0 || customNames.size > 0) console.log(`[save] ${saved} chunks, ${customNames.size} names`);
+}
+
 // ── World State ────────────────────────────────────────────────────────────────
-let world = new Uint8Array(WORLD_W * WORLD_H);
-let customColors = new Map(); // key (y*W+x) -> hex string
-let customNames = new Map();  // key (tile type or "custom:hexcolor") -> display name
-let players = new Map();      // ws -> player object
+let players = new Map();
 let npcs = [];
 let respawns = [];
-let groundItems = [];         // {id, name, x, y, despawnTick}
-let openDoors = new Map();    // origKey -> {ox, oy, sx, sy} (original pos + swung-into pos)
+let groundItems = [];
+let openDoors = new Map();
+let customNames = new Map();
 let nextGroundItemId = 1;
 let tick = 0;
 let nextPlayerId = 1;
 
-function tileAt(x, y) {
-  return (x >= 0 && x < WORLD_W && y >= 0 && y < WORLD_H) ? world[y * WORLD_W + x] : T.WATER;
-}
-function setTile(x, y, t) {
-  if (x >= 0 && x < WORLD_W && y >= 0 && y < WORLD_H) world[y * WORLD_W + x] = t;
-}
-function isWalkable(x, y) {
-  const t = tileAt(x, y);
-  return t !== T.WATER && t !== T.TREE && t !== T.ROCK && t !== T.WALL && t !== T.BUSH && t !== T.DOOR;
-}
-
 // ── Seeded RNG ─────────────────────────────────────────────────────────────────
 let seed = 42;
 function rng() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
-
-// ── World Generation ───────────────────────────────────────────────────────────
-function noise2d(x, y) {
-  const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-  return n - Math.floor(n);
-}
-function smoothNoise(x, y, s) {
-  const ix = Math.floor(x / s), iy = Math.floor(y / s);
-  const fx = x / s - ix, fy = y / s - iy;
-  const a = noise2d(ix, iy), b = noise2d(ix + 1, iy);
-  const c = noise2d(ix, iy + 1), d = noise2d(ix + 1, iy + 1);
-  return (a + (b - a) * fx) * (1 - fy) + (c + (d - c) * fx) * fy;
-}
-
-function generateWorld() {
-  // Blank map — all grass. Use OSRS map overlay (M) as reference to build.
-  for (let y = 0; y < WORLD_H; y++)
-    for (let x = 0; x < WORLD_W; x++)
-      setTile(x, y, T.GRASS);
-}
 
 // ── NPCs ───────────────────────────────────────────────────────────────────────
 const NPC_TYPES = [
@@ -79,10 +240,7 @@ const NPC_TYPES = [
   { name: 'Guard', color: '#8b1a1a', maxHp: 22, attack: 10, defence: 8, aggressive: false, xp: 80, drops: ['Coins (30)', 'Bones'] },
   { name: 'Dark Wizard', color: '#8b1a1a', maxHp: 18, attack: 8, defence: 5, aggressive: true, xp: 60, drops: ['Coins (20)', 'Rune essence'] },
 ];
-
-function spawnNpcs() {
-  // No NPCs on blank map — will be placed manually
-}
+function spawnNpcs() {}
 
 // ── XP ─────────────────────────────────────────────────────────────────────────
 function xpForLevel(l) {
@@ -107,7 +265,8 @@ function addXp(p, skill, amount) {
 function findPath(sx, sy, tx, ty) {
   if (!isWalkable(tx, ty)) return [];
   if (sx === tx && sy === ty) return [];
-  const key = (x, y) => y * WORLD_W + x;
+  if (Math.abs(tx - sx) + Math.abs(ty - sy) > 200) return [];
+  const key = (x, y) => `${x},${y}`;
   const open = [{ x: sx, y: sy, g: 0, f: 0 }];
   const closed = new Set();
   const came = new Map();
@@ -126,7 +285,7 @@ function findPath(sx, sy, tx, ty) {
       return p;
     }
     closed.add(key(cur.x, cur.y));
-    for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0], [-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    for (const [dx, dy] of [[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[1,-1],[-1,1],[1,1]]) {
       const nx = cur.x + dx, ny = cur.y + dy;
       if (!isWalkable(nx, ny) || closed.has(key(nx, ny))) continue;
       if (dx !== 0 && dy !== 0 && (!isWalkable(cur.x + dx, cur.y) || !isWalkable(cur.x, cur.y + dy))) continue;
@@ -148,8 +307,19 @@ function send(ws, msg) {
 }
 function broadcast(msg) {
   const s = JSON.stringify(msg);
-  for (const [ws] of players) {
-    if (ws.readyState === WebSocket.OPEN) ws.send(s);
+  for (const [ws] of players) if (ws.readyState === WebSocket.OPEN) ws.send(s);
+}
+function broadcastTiles(changes) {
+  const byChunk = new Map();
+  for (const c of changes) {
+    const key = `${Math.floor(c.x / CHUNK_SIZE)}_${Math.floor(c.y / CHUNK_SIZE)}`;
+    if (!byChunk.has(key)) byChunk.set(key, []);
+    byChunk.get(key).push(c);
+  }
+  for (const [ws, p] of players) {
+    const rel = [];
+    for (const [key, cc] of byChunk) if (p.sentChunks.has(key)) rel.push(...cc);
+    if (rel.length > 0) send(ws, { t: 'tiles', changes: rel });
   }
 }
 function sendChat(p, msg, color) { send(p.ws, { t: 'chat', msg, color }); }
@@ -163,12 +333,10 @@ function addItem(p, name) {
   if (ex) ex.count++; else p.inventory.push({ name, count: 1 });
   return true;
 }
-
 function dropItem(name, x, y) {
-  groundItems.push({ id: nextGroundItemId++, name, x, y, despawnTick: tick + 167 }); // ~100s
+  groundItems.push({ id: nextGroundItemId++, name, x, y, despawnTick: tick + 167 });
 }
 
-// Find bounding box of a connected tile cluster (trees, rocks)
 function findCluster(tx, ty) {
   const t = tileAt(tx, ty);
   let x0 = tx, y0 = ty;
@@ -180,135 +348,128 @@ function findCluster(tx, ty) {
   return { x: x0, y: y0, w, h };
 }
 
-// Find nearest walkable tile adjacent to a cluster's base (bottom edge)
 function walkToClusterBase(cx, cy, cw, ch, px, py) {
-  // Try all tiles adjacent to the bottom edge first, then sides
   const candidates = [];
-  // Bottom edge + 1 tile below
-  for (let dx = 0; dx < cw; dx++) {
-    if (isWalkable(cx + dx, cy + ch)) candidates.push([cx + dx, cy + ch]);
-  }
-  // Left and right sides
+  for (let dx = 0; dx < cw; dx++) if (isWalkable(cx + dx, cy + ch)) candidates.push([cx + dx, cy + ch]);
   for (let dy = 0; dy < ch; dy++) {
     if (isWalkable(cx - 1, cy + dy)) candidates.push([cx - 1, cy + dy]);
     if (isWalkable(cx + cw, cy + dy)) candidates.push([cx + cw, cy + dy]);
   }
-  // Top edge
-  for (let dx = 0; dx < cw; dx++) {
-    if (isWalkable(cx + dx, cy - 1)) candidates.push([cx + dx, cy - 1]);
-  }
+  for (let dx = 0; dx < cw; dx++) if (isWalkable(cx + dx, cy - 1)) candidates.push([cx + dx, cy - 1]);
   if (candidates.length === 0) return null;
   candidates.sort((a, b) => (Math.abs(a[0] - px) + Math.abs(a[1] - py)) - (Math.abs(b[0] - px) + Math.abs(b[1] - py)));
   return candidates[0];
 }
 
 function walkAdjacentTo(tx, ty, px, py) {
-  const adj = [[tx - 1, ty], [tx + 1, ty], [tx, ty - 1], [tx, ty + 1]].filter(([x, y]) => isWalkable(x, y));
+  const adj = [[tx-1,ty],[tx+1,ty],[tx,ty-1],[tx,ty+1]].filter(([x,y]) => isWalkable(x,y));
   if (adj.length === 0) return null;
   adj.sort((a, b) => (Math.abs(a[0] - px) + Math.abs(a[1] - py)) - (Math.abs(b[0] - px) + Math.abs(b[1] - py)));
   return adj[0];
 }
 
-// ── Paint: Bucket Fill ─────────────────────────────────────────────────────────
+// ── Bucket Fill ──────────────────────────────────────────────────────────────
 function bucketFill(sx, sy, newTile, newColor) {
   const oldTile = tileAt(sx, sy);
-  const oldColor = oldTile === T.CUSTOM ? (customColors.get(sy * WORLD_W + sx) || '#ff00ff') : null;
+  const oldColor = oldTile === T.CUSTOM ? (getColor(sx, sy) || '#ff00ff') : null;
   if (oldTile === newTile && (newTile !== T.CUSTOM || oldColor === newColor)) return [];
-  const changes = [];
-  const stack = [{ x: sx, y: sy }];
-  const visited = new Set();
-  const key = (x, y) => y * WORLD_W + x;
+  const changes = [], stack = [{ x: sx, y: sy }], visited = new Set();
   function matches(x, y) {
+    if (Math.abs(x - sx) > 100 || Math.abs(y - sy) > 100) return false;
     if (tileAt(x, y) !== oldTile) return false;
-    if (oldTile === T.CUSTOM) return (customColors.get(y * WORLD_W + x) || '#ff00ff') === oldColor;
+    if (oldTile === T.CUSTOM) return (getColor(x, y) || '#ff00ff') === oldColor;
     return true;
   }
   while (stack.length > 0 && changes.length < 5000) {
     const { x, y } = stack.pop();
-    const k = key(x, y);
-    if (visited.has(k) || x < 0 || x >= WORLD_W || y < 0 || y >= WORLD_H || !matches(x, y)) continue;
+    const k = `${x},${y}`;
+    if (visited.has(k) || !matches(x, y)) continue;
     visited.add(k);
     const prev = tileAt(x, y);
-    const prevColor = prev === T.CUSTOM ? (customColors.get(k) || null) : null;
+    const prevColor = prev === T.CUSTOM ? (getColor(x, y) || null) : null;
     setTile(x, y, newTile);
-    if (newTile === T.CUSTOM && newColor) customColors.set(k, newColor);
-    else if (newTile !== T.CUSTOM) customColors.delete(k);
+    if (newTile === T.CUSTOM && newColor) setColor(x, y, newColor);
+    else setColor(x, y, null);
     changes.push({ x, y, tile: newTile, color: newColor || null, prevTile: prev, prevColor });
-    stack.push({ x: x + 1, y }, { x: x - 1, y }, { x, y: y + 1 }, { x, y: y - 1 });
+    stack.push({ x: x+1, y }, { x: x-1, y }, { x, y: y+1 }, { x, y: y-1 });
   }
   return changes;
 }
 
-// ── Bucket All: recolor every matching tile in the world ────────────────────────
 function tileKey(x, y) {
   const t = tileAt(x, y);
-  if (t === T.CUSTOM) return 'c:' + (customColors.get(y * WORLD_W + x) || '#ff00ff');
+  if (t === T.CUSTOM) return 'c:' + (getColor(x, y) || '#ff00ff');
   return 't:' + t;
 }
 
 function bucketAllRecolor(sx, sy, newTile, newColor) {
   const targetKey = tileKey(sx, sy);
   const changes = [];
-  for (let y = 0; y < WORLD_H; y++) {
-    for (let x = 0; x < WORLD_W; x++) {
-      if (tileKey(x, y) !== targetKey) continue;
-      const k = y * WORLD_W + x;
-      const prev = world[k];
-      const prevColor = prev === T.CUSTOM ? (customColors.get(k) || null) : null;
-      setTile(x, y, newTile);
-      if (newTile === T.CUSTOM && newColor) customColors.set(k, newColor);
-      else if (newTile !== T.CUSTOM) customColors.delete(k);
-      changes.push({ x, y, tile: newTile, color: newColor || null, prevTile: prev, prevColor });
+  for (const [key, chunk] of chunks) {
+    const [cx, cy] = key.split('_').map(Number);
+    const baseX = cx * CHUNK_SIZE, baseY = cy * CHUNK_SIZE;
+    for (let ly = 0; ly < CHUNK_SIZE; ly++) {
+      for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+        const k = ly * CHUNK_SIZE + lx;
+        const t = chunk.tiles[k];
+        const tk = t === T.CUSTOM ? 'c:' + (chunk.colors.get(k) || '#ff00ff') : 't:' + t;
+        if (tk !== targetKey) continue;
+        const wx = baseX + lx, wy = baseY + ly;
+        const prev = t, prevColor = t === T.CUSTOM ? (chunk.colors.get(k) || null) : null;
+        chunk.tiles[k] = newTile;
+        if (newTile === T.CUSTOM && newColor) chunk.colors.set(k, newColor);
+        else chunk.colors.delete(k);
+        chunk.dirty = true;
+        changes.push({ x: wx, y: wy, tile: newTile, color: newColor || null, prevTile: prev, prevColor });
+      }
     }
   }
   return changes;
 }
 
-// ── Persistence ────────────────────────────────────────────────────────────────
-function saveWorld() {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(WORLD_FILE, Buffer.from(world));
+// ── Player Chunks ──────────────────────────────────────────────────────────────
+function sendChunkToPlayer(ws, cx, cy) {
+  const chunk = getChunk(cx, cy);
   const colorsObj = {};
-  for (const [k, v] of customColors) colorsObj[k] = v;
-  fs.writeFileSync(COLORS_FILE, JSON.stringify(colorsObj));
-  const namesObj = {};
-  for (const [k, v] of customNames) namesObj[k] = v;
-  fs.writeFileSync(NAMES_FILE, JSON.stringify(namesObj));
-  console.log(`[save] World saved (${customColors.size} custom colors, ${customNames.size} custom names)`);
+  for (const [k, v] of chunk.colors) colorsObj[k] = v;
+  const msg = { t: 'chunk', cx, cy, tiles: Buffer.from(chunk.tiles).toString('base64'), colors: colorsObj };
+  // Attach OSRS terrain data if available
+  const terrain = loadTerrainChunk(cx, cy);
+  if (terrain) msg.terrain = Buffer.from(terrain).toString('base64');
+  const heights = loadTerrainHeights(cx, cy);
+  if (heights) msg.heights = Buffer.from(heights.buffer).toString('base64');
+  send(ws, msg);
 }
 
-function loadWorld() {
-  if (fs.existsSync(WORLD_FILE)) {
-    const buf = fs.readFileSync(WORLD_FILE);
-    world.set(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
-    console.log('[load] World loaded from disk');
-    if (fs.existsSync(COLORS_FILE)) {
-      const obj = JSON.parse(fs.readFileSync(COLORS_FILE, 'utf8'));
-      for (const [k, v] of Object.entries(obj)) customColors.set(parseInt(k), v);
-      console.log(`[load] ${customColors.size} custom colors loaded`);
+function updatePlayerChunks(p) {
+  const pcx = Math.floor(p.x / CHUNK_SIZE), pcy = Math.floor(p.y / CHUNK_SIZE);
+  for (let dx = -VIEW_DIST; dx <= VIEW_DIST; dx++) {
+    for (let dy = -VIEW_DIST; dy <= VIEW_DIST; dy++) {
+      const key = `${pcx + dx}_${pcy + dy}`;
+      if (!p.sentChunks.has(key)) {
+        sendChunkToPlayer(p.ws, pcx + dx, pcy + dy);
+        p.sentChunks.add(key);
+      }
     }
-    if (fs.existsSync(NAMES_FILE)) {
-      const obj = JSON.parse(fs.readFileSync(NAMES_FILE, 'utf8'));
-      for (const [k, v] of Object.entries(obj)) customNames.set(k, v);
-      console.log(`[load] ${customNames.size} custom names loaded`);
-    }
-    return true;
   }
-  return false;
+  for (const key of p.sentChunks) {
+    const [cx, cy] = key.split('_').map(Number);
+    if (Math.abs(cx - pcx) > VIEW_DIST + 2 || Math.abs(cy - pcy) > VIEW_DIST + 2) {
+      p.sentChunks.delete(key);
+    }
+  }
 }
 
 // ── Player Factory ─────────────────────────────────────────────────────────────
 function createPlayer(ws) {
-  // Find walkable spawn near center
-  let sx = 100, sy = 100;
+  let sx = SPAWN_X, sy = SPAWN_Y;
   for (let r = 0; r < 50; r++)
     for (let dx = -r; dx <= r; dx++)
       for (let dy = -r; dy <= r; dy++)
-        if (isWalkable(100 + dx, 100 + dy)) { sx = 100 + dx; sy = 100 + dy; r = 999; dx = 999; break; }
-
+        if (isWalkable(SPAWN_X + dx, SPAWN_Y + dy)) { sx = SPAWN_X + dx; sy = SPAWN_Y + dy; r = 999; dx = 999; break; }
   return {
     id: nextPlayerId++, ws, x: sx, y: sy, hp: 10, maxHp: 10,
-    gender: 'male',
+    gender: 'male', sentChunks: new Set(),
     path: [], gathering: null, actionTick: 0,
     combatTarget: null, clickedNpc: null, pendingPickup: null, gatherCluster: null,
     skills: {
@@ -326,13 +487,14 @@ function gameTick() {
   tick++;
 
   for (const [, p] of players) {
-    // Move along path
-    if (p.path.length > 0) { // 1 tile per tick (walking speed)
+    if (p.path.length > 0) {
+      const prevCX = Math.floor(p.x / CHUNK_SIZE), prevCY = Math.floor(p.y / CHUNK_SIZE);
       const next = p.path.shift();
       p.x = next.x; p.y = next.y;
+      const newCX = Math.floor(p.x / CHUNK_SIZE), newCY = Math.floor(p.y / CHUNK_SIZE);
+      if (newCX !== prevCX || newCY !== prevCY) updatePlayerChunks(p);
     }
 
-    // Pending pickup
     if (p.pendingPickup !== null && p.path.length === 0) {
       const idx = groundItems.findIndex(g => g.id === p.pendingPickup);
       if (idx !== -1) {
@@ -346,10 +508,8 @@ function gameTick() {
       p.pendingPickup = null;
     }
 
-    // Gathering
     if (p.gathering && p.path.length === 0) {
       const g = p.gathering;
-      // Check if adjacent to any tile in the cluster (or the single tile)
       const cl = p.gatherCluster;
       let adjacent = false;
       if (cl) {
@@ -361,27 +521,24 @@ function gameTick() {
       }
       if (adjacent && tileAt(g.tx, g.ty) === g.tile) {
         p.actionTick++;
-        if (p.actionTick >= 4) { // 4 ticks = chance roll
+        if (p.actionTick >= 4) {
           p.actionTick = 0;
           if (g.type === 'woodcutting') {
-            // Chance scales with level: ~30% at lv1, ~70% at lv99
             const wcChance = Math.min(0.9, 0.25 + p.skills.woodcutting.level * 0.005);
             if (rng() >= wcChance) { sendChat(p, 'You swing at the tree...', '#ccc'); }
             else if (addItem(p, 'Logs')) {
               addXp(p, 'woodcutting', 25);
               sendChat(p, 'You chop down the tree.', '#ff0');
-              // Remove entire tree cluster
-              const cl = p.gatherCluster || { x: g.tx, y: g.ty, w: 1, h: 1 };
+              const cl2 = p.gatherCluster || { x: g.tx, y: g.ty, w: 1, h: 1 };
               const changes = [];
-              for (let dy = 0; dy < cl.h; dy++)
-                for (let dx = 0; dx < cl.w; dx++) {
-                  setTile(cl.x + dx, cl.y + dy, T.GRASS);
-                  changes.push({ x: cl.x + dx, y: cl.y + dy, tile: T.GRASS });
-                  respawns.push({ x: cl.x + dx, y: cl.y + dy, tile: T.TREE, tick: tick + 25 });
+              for (let dy = 0; dy < cl2.h; dy++)
+                for (let dx = 0; dx < cl2.w; dx++) {
+                  setTile(cl2.x + dx, cl2.y + dy, T.GRASS);
+                  changes.push({ x: cl2.x + dx, y: cl2.y + dy, tile: T.GRASS });
+                  respawns.push({ x: cl2.x + dx, y: cl2.y + dy, tile: T.TREE, tick: tick + 25 });
                 }
-              broadcast({ t: 'tiles', changes });
-              p.gathering = null;
-              p.gatherCluster = null;
+              broadcastTiles(changes);
+              p.gathering = null; p.gatherCluster = null;
             }
           } else if (g.type === 'mining') {
             const mineChance = Math.min(0.9, 0.25 + p.skills.mining.level * 0.005);
@@ -390,8 +547,8 @@ function gameTick() {
               addXp(p, 'mining', 30);
               sendChat(p, 'You mine some ore.', '#ff0');
               setTile(g.tx, g.ty, T.GRASS);
-              broadcast({ t: 'tiles', changes: [{ x: g.tx, y: g.ty, tile: T.GRASS }] });
-              respawns.push({ x: g.tx, y: g.ty, tile: T.ROCK, tick: tick + 33 }); // ~20s
+              broadcastTiles([{ x: g.tx, y: g.ty, tile: T.GRASS }]);
+              respawns.push({ x: g.tx, y: g.ty, tile: T.ROCK, tick: tick + 33 });
               p.gathering = null;
             }
           } else if (g.type === 'fishing') {
@@ -404,12 +561,9 @@ function gameTick() {
           }
           sendStats(p);
         }
-      } else {
-        p.gathering = null;
-      }
+      } else { p.gathering = null; }
     }
 
-    // Combat init from click
     if (p.clickedNpc !== null && p.path.length === 0) {
       const npc = npcs[p.clickedNpc];
       if (npc && !npc.dead && Math.abs(p.x - npc.x) + Math.abs(p.y - npc.y) <= 1) {
@@ -418,13 +572,11 @@ function gameTick() {
       }
     }
 
-    // Combat (RS-style formulas)
     if (p.combatTarget !== null) {
       const npc = npcs[p.combatTarget];
       if (!npc || npc.dead || Math.abs(p.x - npc.x) + Math.abs(p.y - npc.y) > 2) {
         p.combatTarget = null;
-      } else if (tick % 4 === 0) { // 4 ticks = 2.4s (scimitar speed)
-        // Player attacks: hit chance = 0.4 + attack*0.03 - npcDef*0.02
+      } else if (tick % 4 === 0) {
         const hitChance = Math.max(0.1, Math.min(0.95, 0.4 + p.skills.attack.level * 0.03 - (npc.defence || 1) * 0.02));
         const maxHit = Math.max(1, p.skills.strength.level + 1);
         if (rng() < hitChance) {
@@ -433,27 +585,23 @@ function gameTick() {
           sendChat(p, `You hit ${npc.name} for ${dmg}`, '#f44');
           addXp(p, 'attack', Math.ceil(dmg * 2));
           addXp(p, 'strength', Math.ceil(dmg * 2));
-        } else {
-          sendChat(p, `You miss ${npc.name}`, '#f44');
-        }
+        } else { sendChat(p, `You miss ${npc.name}`, '#f44'); }
         if (npc.hp <= 0) {
-          npc.dead = true; npc.respawnTick = tick + 17; // ~10s
+          npc.dead = true; npc.respawnTick = tick + 17;
           addXp(p, 'hitpoints', Math.ceil(npc.xp * 0.33));
           sendChat(p, `You killed ${npc.name}!`, '#0f0');
           for (const drop of npc.drops) { if (rng() > 0.3) dropItem(drop, npc.x, npc.y); }
           p.combatTarget = null;
         } else {
-          // NPC retaliates
           const npcHitChance = Math.max(0.05, Math.min(0.9, 0.3 + (npc.attack || 1) * 0.03 - p.skills.defence.level * 0.02));
           if (rng() < npcHitChance) {
             const npcDmg = Math.floor(rng() * Math.max(1, npc.attack || 1)) + 1;
             p.hp -= npcDmg;
             sendChat(p, `${npc.name} hits you for ${npcDmg}`, '#f44');
             addXp(p, 'defence', Math.ceil(npcDmg * 2));
-            if (p.hp <= 0) { killPlayer(p); }
+            if (p.hp <= 0) killPlayer(p);
           }
         }
-        // Update maxHp from hitpoints level
         p.maxHp = p.skills.hitpoints.level;
         sendStats(p);
       }
@@ -466,27 +614,25 @@ function gameTick() {
       if (tick >= npc.respawnTick) { npc.dead = false; npc.hp = npc.maxHp; npc.x = npc.spawnX; npc.y = npc.spawnY; }
       continue;
     }
-    // Wander
-    if (tick % 5 === npc.wanderTick % 5) { // wander every ~3s
-      const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    if (tick % 5 === npc.wanderTick % 5) {
+      const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
       const [dx, dy] = dirs[Math.floor(rng() * 4)];
       const nx = npc.x + dx, ny = npc.y + dy;
       if (isWalkable(nx, ny) && Math.abs(nx - npc.spawnX) + Math.abs(ny - npc.spawnY) < 8) {
         npc.x = nx; npc.y = ny;
       }
     }
-    // Aggressive chase + attack
     if (npc.aggressive) {
       let closest = null, closestDist = 999;
       for (const [, p] of players) {
         const d = Math.abs(p.x - npc.x) + Math.abs(p.y - npc.y);
         if (d < closestDist) { closest = p; closestDist = d; }
       }
-      if (closest && closestDist < 5 && closestDist > 1) { // chase every tick
+      if (closest && closestDist < 5 && closestDist > 1) {
         const dx = Math.sign(closest.x - npc.x), dy = Math.sign(closest.y - npc.y);
         if (isWalkable(npc.x + dx, npc.y + dy)) { npc.x += dx; npc.y += dy; }
       }
-      if (closest && closestDist <= 1 && tick % 5 === 0) { // attack every 5 ticks (3s)
+      if (closest && closestDist <= 1 && tick % 5 === 0) {
         const npcHitChance = Math.max(0.05, Math.min(0.9, 0.3 + (npc.attack || 1) * 0.03 - closest.skills.defence.level * 0.02));
         if (rng() < npcHitChance) {
           const dmg = Math.floor(rng() * Math.max(1, npc.attack || 1)) + 1;
@@ -506,7 +652,7 @@ function gameTick() {
     if (tick >= respawns[i].tick) {
       const r = respawns[i];
       setTile(r.x, r.y, r.tile);
-      broadcast({ t: 'tiles', changes: [{ x: r.x, y: r.y, tile: r.tile }] });
+      broadcastTiles([{ x: r.x, y: r.y, tile: r.tile }]);
       respawns.splice(i, 1);
     }
   }
@@ -517,32 +663,44 @@ function gameTick() {
   }
 
   // HP regen
-  if (tick % 100 === 0) { // every 100 ticks = 60s (OSRS stat restore)
+  if (tick % 100 === 0) {
     for (const [, p] of players) {
       if (p.hp < p.maxHp) { p.hp++; sendStats(p); }
     }
   }
 
-  // Broadcast entity state
+  // Per-player state broadcast (proximity filtered)
   if (tick % STATE_INTERVAL === 0) {
-    const pArr = [];
-    for (const [, p] of players) pArr.push({ id: p.id, x: p.x, y: p.y, hp: p.hp, maxHp: p.maxHp, g: p.gender, path: p.path.slice(0, 20) });
-    const nArr = npcs.filter(n => !n.dead).map(n => ({ id: n.id, x: n.x, y: n.y, hp: n.hp, maxHp: n.maxHp, name: n.name, color: n.color, atk: n.attack || 1, def: n.defence || 1 }));
-    const gArr = groundItems.map(g => ({ id: g.id, name: g.name, x: g.x, y: g.y }));
-    broadcast({ t: 'state', players: pArr, npcs: nArr, items: gArr, doors: [...openDoors.values()], tick });
+    for (const [ws, p] of players) {
+      const pArr = [];
+      for (const [, op] of players) {
+        if (Math.abs(op.x - p.x) <= ENTITY_VIEW && Math.abs(op.y - p.y) <= ENTITY_VIEW) {
+          pArr.push({ id: op.id, x: op.x, y: op.y, hp: op.hp, maxHp: op.maxHp, g: op.gender, path: op.path.slice(0, 20) });
+        }
+      }
+      const nArr = npcs.filter(n => !n.dead && Math.abs(n.x - p.x) <= ENTITY_VIEW && Math.abs(n.y - p.y) <= ENTITY_VIEW)
+        .map(n => ({ id: n.id, x: n.x, y: n.y, hp: n.hp, maxHp: n.maxHp, name: n.name, color: n.color, atk: n.attack || 1, def: n.defence || 1 }));
+      const gArr = groundItems.filter(g => Math.abs(g.x - p.x) <= ENTITY_VIEW && Math.abs(g.y - p.y) <= ENTITY_VIEW)
+        .map(g => ({ id: g.id, name: g.name, x: g.x, y: g.y }));
+      const dArr = [...openDoors.values()].filter(d => Math.abs(d.ox - p.x) <= ENTITY_VIEW && Math.abs(d.oy - p.y) <= ENTITY_VIEW);
+      send(ws, { t: 'state', players: pArr, npcs: nArr, items: gArr, doors: dArr, tick });
+    }
   }
+
+  // Evict idle chunks every 30s
+  if (tick % 50 === 0) evictChunks();
 }
 
 function killPlayer(p) {
   p.hp = p.maxHp; p.path = []; p.gathering = null; p.combatTarget = null; p.clickedNpc = null;
-  // Find spawn
   for (let r = 0; r < 50; r++)
     for (let dx = -r; dx <= r; dx++)
       for (let dy = -r; dy <= r; dy++)
-        if (isWalkable(100 + dx, 100 + dy)) { p.x = 100 + dx; p.y = 100 + dy; r = 999; dx = 999; break; }
+        if (isWalkable(SPAWN_X + dx, SPAWN_Y + dy)) { p.x = SPAWN_X + dx; p.y = SPAWN_Y + dy; r = 999; dx = 999; break; }
   sendChat(p, 'Oh dear, you are dead!', '#f00');
   if (p.inventory.length > 3) p.inventory.splice(3);
   sendStats(p);
+  updatePlayerChunks(p);
 }
 
 // ── Message Handling ───────────────────────────────────────────────────────────
@@ -555,27 +713,23 @@ function handleMessage(ws, data) {
   switch (msg.t) {
     case 'move': {
       const tx = Math.floor(msg.x), ty = Math.floor(msg.y);
-      if (tx < 0 || tx >= WORLD_W || ty < 0 || ty >= WORLD_H) return;
+      if (Math.abs(tx - p.x) + Math.abs(ty - p.y) > 200) { sendChat(p, 'Too far!', '#f44'); return; }
       p.gathering = null; p.clickedNpc = null; p.combatTarget = null;
-      if (isWalkable(tx, ty)) {
-        p.path = findPath(p.x, p.y, tx, ty);
-      } else {
-        sendChat(p, "I can't reach that.", '#f44');
-      }
+      if (isWalkable(tx, ty)) { p.path = findPath(p.x, p.y, tx, ty); }
+      else { sendChat(p, "I can't reach that.", '#f44'); }
       break;
     }
     case 'gather': {
       const tx = Math.floor(msg.x), ty = Math.floor(msg.y);
+      if (Math.abs(tx - p.x) + Math.abs(ty - p.y) > 200) return;
       const tile = tileAt(tx, ty);
       const typeMap = { [T.TREE]: 'woodcutting', [T.ROCK]: 'mining', [T.FISH_SPOT]: 'fishing' };
       if (!typeMap[tile]) return;
       p.gathering = null; p.clickedNpc = null; p.combatTarget = null;
-      // For multi-tile objects (trees, rocks), walk to cluster base
       let adj;
       if (tile === T.TREE || tile === T.ROCK) {
         const cl = findCluster(tx, ty);
         adj = walkToClusterBase(cl.x, cl.y, cl.w, cl.h, p.x, p.y);
-        // Store cluster info for full removal
         p.gatherCluster = cl;
       } else {
         adj = walkAdjacentTo(tx, ty, p.x, p.y);
@@ -588,43 +742,32 @@ function handleMessage(ws, data) {
       }
       break;
     }
-    case 'gender': {
-      p.gender = msg.v === 'female' ? 'female' : 'male';
-      break;
-    }
+    case 'gender': { p.gender = msg.v === 'female' ? 'female' : 'male'; break; }
     case 'door': {
       const dx = Math.floor(msg.x), dy = Math.floor(msg.y);
-      if (dx < 0 || dx >= WORLD_W || dy < 0 || dy >= WORLD_H) return;
-      // Must be adjacent (within 1 tile)
       if (Math.abs(p.x - dx) > 1 || Math.abs(p.y - dy) > 1) {
-        sendChat(p, 'You need to be next to the door.', '#f44');
-        return;
+        sendChat(p, 'You need to be next to the door.', '#f44'); return;
       }
-      const dk = dy * WORLD_W + dx;
+      const dk = `${dx},${dy}`;
       const tile = tileAt(dx, dy);
       if (tile === T.DOOR) {
-        // Find interior side (FLOOR neighbor) to swing into
         let sx = dx, sy = dy;
         for (const [ndx, ndy] of [[0,-1],[0,1],[-1,0],[1,0]]) {
           if (tileAt(dx + ndx, dy + ndy) === T.FLOOR) { sx = dx + ndx; sy = dy + ndy; break; }
         }
         openDoors.set(dk, { ox: dx, oy: dy, sx, sy });
         setTile(dx, dy, T.FLOOR);
-        broadcast({ t: 'tiles', changes: [{ x: dx, y: dy, tile: T.FLOOR }] });
-        broadcast({ t: 'doors', doors: [...openDoors.values()] });
+        broadcastTiles([{ x: dx, y: dy, tile: T.FLOOR }]);
         sendChat(p, 'You open the door.', '#ccc');
       } else {
-        // Check if clicking on swung door position or original position to close
         for (const [key, d] of openDoors) {
           if ((dx === d.ox && dy === d.oy) || (dx === d.sx && dy === d.sy)) {
             if (Math.abs(p.x - d.ox) > 1 || Math.abs(p.y - d.oy) > 1) {
-              sendChat(p, 'You need to be next to the door.', '#f44');
-              return;
+              sendChat(p, 'You need to be next to the door.', '#f44'); return;
             }
             openDoors.delete(key);
             setTile(d.ox, d.oy, T.DOOR);
-            broadcast({ t: 'tiles', changes: [{ x: d.ox, y: d.oy, tile: T.DOOR }] });
-            broadcast({ t: 'doors', doors: [...openDoors.values()] });
+            broadcastTiles([{ x: d.ox, y: d.oy, tile: T.DOOR }]);
             sendChat(p, 'You close the door.', '#ccc');
             break;
           }
@@ -638,12 +781,10 @@ function handleMessage(ws, data) {
       if (idx === -1) return;
       const gi = groundItems[idx];
       p.gathering = null; p.clickedNpc = null; p.combatTarget = null;
-      // Walk to item tile then pick up
       if (p.x === gi.x && p.y === gi.y) {
         if (addItem(p, gi.name)) {
           groundItems.splice(idx, 1);
-          sendStats(p);
-          sendChat(p, `You pick up: ${gi.name}`, '#ff0');
+          sendStats(p); sendChat(p, `You pick up: ${gi.name}`, '#ff0');
         }
       } else {
         p.path = findPath(p.x, p.y, gi.x, gi.y);
@@ -657,78 +798,64 @@ function handleMessage(ws, data) {
       const npc = npcs[npcId];
       p.gathering = null; p.combatTarget = null;
       const adj = walkAdjacentTo(npc.x, npc.y, p.x, p.y);
-      if (adj) {
-        p.path = findPath(p.x, p.y, adj[0], adj[1]);
-        p.clickedNpc = npcId;
-      }
+      if (adj) { p.path = findPath(p.x, p.y, adj[0], adj[1]); p.clickedNpc = npcId; }
       break;
     }
     case 'paint': {
-      // {t:'paint', tiles:[{x,y,tile,color?}]}
       const changes = [];
       if (!Array.isArray(msg.tiles) || msg.tiles.length > 500) return;
       for (const t of msg.tiles) {
         const x = Math.floor(t.x), y = Math.floor(t.y);
-        if (x < 0 || x >= WORLD_W || y < 0 || y >= WORLD_H) continue;
+        if (Math.abs(x - p.x) > ENTITY_VIEW || Math.abs(y - p.y) > ENTITY_VIEW) continue;
         const tile = Math.floor(t.tile);
         if (tile < 0 || tile > T.CUSTOM) continue;
-        const k = y * WORLD_W + x;
         setTile(x, y, tile);
-        if (tile === T.CUSTOM && t.color) customColors.set(k, String(t.color).slice(0, 7));
-        else customColors.delete(k);
+        if (tile === T.CUSTOM && t.color) setColor(x, y, String(t.color).slice(0, 7));
+        else setColor(x, y, null);
         changes.push({ x, y, tile, color: t.color || null });
       }
-      if (changes.length > 0) broadcast({ t: 'tiles', changes });
+      if (changes.length > 0) broadcastTiles(changes);
       break;
     }
     case 'bucket': {
       const x = Math.floor(msg.x), y = Math.floor(msg.y);
       const tile = Math.floor(msg.tile);
-      if (x < 0 || x >= WORLD_W || y < 0 || y >= WORLD_H) return;
+      if (Math.abs(x - p.x) > ENTITY_VIEW || Math.abs(y - p.y) > ENTITY_VIEW) return;
       if (tile < 0 || tile > T.CUSTOM) return;
       const changes = bucketFill(x, y, tile, msg.color || null);
       if (changes.length > 0) {
-        const bc = changes.map(c => ({ x: c.x, y: c.y, tile: c.tile, color: c.color }));
-        broadcast({ t: 'tiles', changes: bc });
+        broadcastTiles(changes.map(c => ({ x: c.x, y: c.y, tile: c.tile, color: c.color })));
         send(ws, { t: 'bucket_undo', changes: changes.map(c => ({ x: c.x, y: c.y, tile: c.prevTile, color: c.prevColor })) });
       }
       break;
     }
     case 'bucket_all': {
-      // Recolor every tile of the same type/color across the entire world
       const x = Math.floor(msg.x), y = Math.floor(msg.y);
       const tile = Math.floor(msg.tile);
-      if (x < 0 || x >= WORLD_W || y < 0 || y >= WORLD_H) return;
+      if (Math.abs(x - p.x) > ENTITY_VIEW || Math.abs(y - p.y) > ENTITY_VIEW) return;
       if (tile < 0 || tile > T.CUSTOM) return;
       const changes = bucketAllRecolor(x, y, tile, msg.color || null);
       if (changes.length > 0) {
-        const bc = changes.map(c => ({ x: c.x, y: c.y, tile: c.tile, color: c.color }));
-        broadcast({ t: 'tiles', changes: bc });
+        broadcastTiles(changes.map(c => ({ x: c.x, y: c.y, tile: c.tile, color: c.color })));
         send(ws, { t: 'bucket_undo', changes: changes.map(c => ({ x: c.x, y: c.y, tile: c.prevTile, color: c.prevColor })) });
         sendChat(p, `Recolored ${changes.length} tiles globally.`, '#ff981f');
       }
       break;
     }
     case 'bucket_new': {
-      // Recolor every tile of same type globally AND rename it
       const x = Math.floor(msg.x), y = Math.floor(msg.y);
       const tile = Math.floor(msg.tile);
       const name = String(msg.name || '').slice(0, 30);
-      if (x < 0 || x >= WORLD_W || y < 0 || y >= WORLD_H) return;
-      if (tile < 0 || tile > T.CUSTOM) return;
-      if (!name) return;
-      // Get the key for the NEW tile type for naming
+      if (Math.abs(x - p.x) > ENTITY_VIEW || Math.abs(y - p.y) > ENTITY_VIEW) return;
+      if (tile < 0 || tile > T.CUSTOM || !name) return;
       const newNameKey = tile === T.CUSTOM && msg.color ? 'c:' + msg.color : 't:' + tile;
       customNames.set(newNameKey, name);
       const changes = bucketAllRecolor(x, y, tile, msg.color || null);
       if (changes.length > 0) {
-        const bc = changes.map(c => ({ x: c.x, y: c.y, tile: c.tile, color: c.color }));
-        broadcast({ t: 'tiles', changes: bc });
+        broadcastTiles(changes.map(c => ({ x: c.x, y: c.y, tile: c.tile, color: c.color })));
         send(ws, { t: 'bucket_undo', changes: changes.map(c => ({ x: c.x, y: c.y, tile: c.prevTile, color: c.prevColor })) });
       }
-      // Broadcast updated names
-      const namesObj = {};
-      for (const [k, v] of customNames) namesObj[k] = v;
+      const namesObj = {}; for (const [k, v] of customNames) namesObj[k] = v;
       broadcast({ t: 'names', names: namesObj });
       sendChat(p, `Renamed ${changes.length} tiles to "${name}".`, '#ff981f');
       break;
@@ -736,7 +863,7 @@ function handleMessage(ws, data) {
   }
 }
 
-// ── HTTP Server (serves client.html and map.html) ──────────────────────────────
+// ── HTTP Server ────────────────────────────────────────────────────────────────
 const clientPath = path.join(__dirname, 'client.html');
 const mapPath = path.join(__dirname, 'map.html');
 const server = http.createServer((req, res) => {
@@ -751,19 +878,11 @@ const wss = new WebSocket.Server({ server });
 wss.on('connection', (ws) => {
   const p = createPlayer(ws);
   players.set(ws, p);
-  console.log(`[join] Player ${p.id} connected (${players.size} online)`);
+  console.log(`[join] Player ${p.id} at (${p.x}, ${p.y}) (${players.size} online)`);
 
-  // Send full world state
-  const colorsObj = {};
-  for (const [k, v] of customColors) colorsObj[k] = v;
-  const namesObj = {};
-  for (const [k, v] of customNames) namesObj[k] = v;
-  send(ws, {
-    t: 'welcome', id: p.id, x: p.x, y: p.y,
-    world: Buffer.from(world).toString('base64'),
-    customColors: colorsObj,
-    customNames: namesObj,
-  });
+  const namesObj = {}; for (const [k, v] of customNames) namesObj[k] = v;
+  send(ws, { t: 'welcome', id: p.id, x: p.x, y: p.y, customNames: namesObj, chunkSize: CHUNK_SIZE });
+  updatePlayerChunks(p);
   sendStats(p);
   sendChat(p, `Welcome to MiniScape! ${players.size} player(s) online.`, '#ff981f');
   broadcast({ t: 'chat', msg: `Player ${p.id} has joined.`, color: '#0ff' });
@@ -777,24 +896,21 @@ wss.on('connection', (ws) => {
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────────
-if (!loadWorld()) {
-  console.log('[init] Generating new world...');
-  generateWorld();
-  saveWorld();
+fs.mkdirSync(CHUNKS_DIR, { recursive: true });
+if (fs.existsSync(NAMES_FILE)) {
+  const obj = JSON.parse(fs.readFileSync(NAMES_FILE, 'utf8'));
+  for (const [k, v] of Object.entries(obj)) customNames.set(k, v);
+  console.log(`[load] ${customNames.size} custom names`);
 }
 spawnNpcs();
 
-// Game loop
 setInterval(gameTick, TICK_MS);
-
-// Auto-save
-setInterval(saveWorld, SAVE_INTERVAL_MS);
-
-// Save on exit
-process.on('SIGINT', () => { saveWorld(); process.exit(); });
-process.on('SIGTERM', () => { saveWorld(); process.exit(); });
+setInterval(saveAllChunks, SAVE_INTERVAL_MS);
+process.on('SIGINT', () => { saveAllChunks(); process.exit(); });
+process.on('SIGTERM', () => { saveAllChunks(); process.exit(); });
 
 server.listen(PORT, () => {
   console.log(`[server] MiniScape running on http://localhost:${PORT}`);
-  console.log(`[server] OSRS tick rate (${TICK_MS}ms / 0.6s), world ${WORLD_W}x${WORLD_H}`);
+  console.log(`[server] Chunk-based world (${CHUNK_SIZE}x${CHUNK_SIZE} chunks, view=${VIEW_DIST})`);
+  console.log(`[server] Spawn: OSRS (${SPAWN_X}, ${SPAWN_Y}) Lumbridge`);
 });

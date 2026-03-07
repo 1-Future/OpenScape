@@ -6,6 +6,8 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "lodash": "^4.17.23",
+    "osrscachereader": "^1.1.3",
     "ws": "^8.16.0"
   }
 }
