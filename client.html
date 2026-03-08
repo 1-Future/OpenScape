@@ -39,8 +39,9 @@
 
   /* ── Sidebar ──────────────────────────────────────────────────────── */
   #panel-sidebar {
-    top: 0; right: 0; width: var(--sidebar-w); height: 100vh;
+    top: 205px; right: 0; width: var(--sidebar-w); bottom: 0;
     display: none; flex-direction: column; pointer-events: auto;
+    z-index: 60;
   }
 
   /* Minimap frame */
@@ -50,13 +51,8 @@
     position: relative; border-bottom: 2px solid var(--panel-border);
   }
   #minimap-canvas {
-    width: 152px; height: 152px; border-radius: 50%;
-    border: 3px solid #2a2018; image-rendering: pixelated;
-  }
-  #minimap-frame::after {
-    content: ''; position: absolute; inset: 0; pointer-events: none;
-    border-radius: 0; background: radial-gradient(circle at center,
-      transparent 46%, #1a1510 54%);
+    width: 100%; height: 100%;
+    border: 2px solid #2a2018; image-rendering: pixelated;
   }
   #minimap-compass {
     position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
@@ -65,7 +61,7 @@
   }
 
   /* Tab icon row */
-  #tab-icons {
+  #tab-icons, .clone-tab-icons {
     display: flex; background: var(--panel-bg2);
     border-bottom: 2px solid var(--panel-border);
   }
@@ -107,7 +103,7 @@
 
   /* ── Chat Panel ───────────────────────────────────────────────────── */
   #panel-chat {
-    bottom: 0; left: 0; width: calc(100vw - var(--sidebar-w));
+    bottom: 28px; left: 0; width: calc(100vw - var(--sidebar-w));
     height: var(--chat-h); display: none; flex-direction: column; pointer-events: auto;
   }
   #panel-chat .drag-handle { cursor: n-resize; }
@@ -173,6 +169,421 @@
   #toolbar .sep { width: 1px; height: 20px; background: #555; margin: 0 4px; }
   #toolbar .current-color { width: 20px; height: 20px; border: 2px solid #fff; border-radius: 2px; }
 
+  /* ── Action Progress Overlay ─────────────────────────────────────── */
+  #action-progress {
+    position: fixed; z-index: 64; display: none;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(10, 8, 5, 0.88); border: 1px solid #3a3020;
+    padding: 0; pointer-events: none; min-width: 200px;
+  }
+  #action-progress-inner {
+    display: flex; align-items: center; gap: 8px; padding: 6px 10px 4px;
+  }
+  #action-icon {
+    width: 32px; height: 32px; font-size: 24px; line-height: 32px; text-align: center;
+    flex-shrink: 0;
+  }
+  #action-info {
+    flex: 1; min-width: 0;
+  }
+  #action-name {
+    color: #e8e0d0; font-family: 'Courier New', monospace; font-size: 12px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #action-time {
+    color: #e8a020; font-family: 'Courier New', monospace; font-size: 11px;
+    margin-top: 1px;
+  }
+  #action-bar-wrap {
+    height: 4px; background: #1a1510; border-top: 1px solid #3a3020;
+    overflow: hidden;
+  }
+  #action-bar-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #1a6e1a, #2aaa2a);
+    transition: width 0.1s linear;
+  }
+
+  /* ── NPC Dialogue Panel ──────────────────────────────────────────── */
+  #panel-dialogue {
+    position: fixed; z-index: 65; display: none;
+    bottom: 60px; left: 50%; transform: translateX(-50%);
+    width: 460px; max-width: calc(100vw - 40px);
+    background: rgba(10, 15, 12, 0.95); border: 2px solid #d4a853;
+    font-family: 'Courier New', monospace; color: #e8f0ec; font-size: 14px;
+    pointer-events: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  #panel-dialogue .unlock-handle {
+    display: flex !important; background: rgba(212, 168, 83, 0.7);
+  }
+  #panel-dialogue .unlock-resize {
+    display: block !important;
+  }
+  #panel-dialogue::after {
+    content: ''; position: absolute; inset: 3px; border: 1px solid rgba(212, 168, 83, 0.3);
+    pointer-events: none;
+  }
+  #dlg-name { color: #d4a853; font-weight: bold; font-size: 15px; padding: 10px 14px 6px; }
+  #dlg-sep { height: 1px; background: rgba(212, 168, 83, 0.4); margin: 0 14px; }
+  #dlg-lines { padding: 8px 14px 6px; line-height: 1.6; }
+  #dlg-dismiss { color: rgba(212, 168, 83, 0.5); font-size: 11px; text-align: right; padding: 2px 14px 8px; }
+  /* Clone +/- buttons in panel handle bars */
+  .panel-clone-btn {
+    width: 20px; height: 20px; background: rgba(0,0,0,0.2); border: none;
+    border-left: 1px solid rgba(0,0,0,0.3);
+    color: #000; font: bold 13px monospace; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+    flex-shrink: 0;
+  }
+  .panel-clone-btn:hover { background: rgba(0,0,0,0.35); }
+  .panel-handle-buttons {
+    display: flex; align-items: center; gap: 0; margin-left: auto;
+  }
+
+  .dlg-bar-buttons {
+    display: inline-flex; align-items: center; gap: 0; margin-left: auto;
+  }
+  .dlg-bar-buttons button {
+    width: 20px; height: 20px; background: rgba(0,0,0,0.2); border: none;
+    border-left: 1px solid rgba(0,0,0,0.3);
+    color: #000; font: bold 12px monospace; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .dlg-bar-buttons button:hover { background: rgba(0,0,0,0.35); }
+  .dlg-bar-buttons input[type="color"] {
+    width: 16px; height: 16px; padding: 0; border: 1px solid rgba(0,0,0,0.4);
+    border-radius: 2px; cursor: pointer; background: none;
+    margin: 0 1px;
+  }
+  .dlg-bar-buttons input[type="color"]::-webkit-color-swatch-wrapper { padding: 1px; }
+  .dlg-bar-buttons input[type="color"]::-webkit-color-swatch { border: none; border-radius: 1px; }
+  .dlg-bar-buttons .unlock-resize-grip {
+    border-left: 1px solid rgba(0,0,0,0.3);
+  }
+
+
+  /* ── Minimap Panel (separate) ──────────────────────────────────── */
+  #panel-minimap {
+    position: fixed; top: 0; right: 0; z-index: 62;
+    width: 205px; height: 205px;
+    background: #1a1510; border: 2px solid var(--panel-border);
+    display: none; pointer-events: auto; overflow: hidden;
+  }
+  #panel-minimap #minimap-frame { border-bottom: none; height: 100%; }
+
+  /* ── Popped-out Tab Panels ─────────────────────────────────────── */
+  .popout-panel {
+    position: fixed; z-index: 63;
+    background: var(--panel-bg); border: 2px solid var(--panel-border);
+    font-family: 'Courier New', monospace; color: #ff981f; font-size: 12px;
+    display: flex; flex-direction: column; pointer-events: auto;
+    min-width: 160px; min-height: 100px; width: 210px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .popout-header {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--panel-bg2); border-bottom: 2px solid var(--panel-border);
+    padding: 0 4px; height: 22px; cursor: move; user-select: none; flex-shrink: 0;
+  }
+  .popout-header .popout-title { font-size: 11px; font-weight: bold; color: var(--gold); letter-spacing: 1px; }
+  .popout-header .popout-btns { display: flex; gap: 2px; }
+  .popout-header .popout-btns button {
+    background: var(--panel-bg); color: var(--gold); border: 1px solid var(--panel-border);
+    width: 18px; height: 18px; cursor: pointer; font-size: 13px; line-height: 1;
+    font-family: 'Courier New', monospace; display: flex; align-items: center; justify-content: center;
+  }
+  .popout-header .popout-btns button:hover { background: #4a3d2d; }
+  .popout-content {
+    flex: 1; overflow-y: auto; padding: 8px;
+    border-left: 6px solid var(--stone-col);
+    border-right: 6px solid var(--stone-col);
+    scrollbar-width: thin; scrollbar-color: var(--stone-col) var(--panel-bg);
+  }
+  .popout-resize {
+    position: absolute; right: 0; bottom: 0; width: 12px; height: 12px; cursor: se-resize;
+    background: linear-gradient(135deg, transparent 50%, var(--panel-border-light) 50%);
+  }
+
+  /* Panel customize controls (unlock mode only) */
+  .panel-customize {
+    display: none !important; align-items: center; gap: 0;
+  }
+  body.ui-unlocked .panel-customize { display: inline-flex !important; }
+  .panel-customize input[type="color"] {
+    width: 16px; height: 16px; padding: 0; border: 1px solid rgba(0,0,0,0.4);
+    border-radius: 2px; cursor: pointer; background: none; margin: 0;
+  }
+  .panel-customize input[type="color"]::-webkit-color-swatch-wrapper { padding: 1px; }
+  .panel-customize input[type="color"]::-webkit-color-swatch { border: none; border-radius: 1px; }
+  .panel-customize button {
+    width: 20px; height: 20px; background: rgba(0,0,0,0.2); border: none;
+    border-left: 1px solid rgba(0,0,0,0.3);
+    color: #000; font: bold 10px monospace; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .panel-customize button:hover { background: rgba(0,0,0,0.35); }
+  /* Label mode: show handle bar as label (no buttons) outside unlock mode */
+  .panel-label-on .unlock-handle {
+    display: flex !important; pointer-events: none;
+  }
+  .panel-label-on .unlock-handle .panel-customize,
+  .panel-label-on .unlock-handle .panel-clone-btn,
+  .panel-label-on .unlock-handle .unlock-resize-grip,
+  .panel-label-on .unlock-handle .panel-handle-buttons,
+  .panel-label-on .unlock-handle .dlg-bar-buttons .panel-clone-btn,
+  .panel-label-on .unlock-handle .dlg-bar-buttons .unlock-resize-grip {
+    display: none !important;
+  }
+  /* In unlock mode, show everything again */
+  body.ui-unlocked .panel-label-on .unlock-handle { pointer-events: auto; }
+  body.ui-unlocked .panel-label-on .unlock-handle .panel-customize { display: inline-flex !important; }
+  body.ui-unlocked .panel-label-on .unlock-handle .panel-clone-btn { display: flex !important; }
+  body.ui-unlocked .panel-label-on .unlock-handle .unlock-resize-grip { display: inline !important; }
+  body.ui-unlocked .panel-label-on .unlock-handle .panel-handle-buttons { display: flex !important; }
+  /* Label bar color picker (next to T button) */
+  .panel-label-color {
+    width: 16px; height: 16px; padding: 0; border: 1px solid rgba(0,0,0,0.4);
+    border-radius: 2px; cursor: pointer; background: none; margin: 0;
+  }
+  .panel-label-color::-webkit-color-swatch-wrapper { padding: 1px; }
+  .panel-label-color::-webkit-color-swatch { border: none; border-radius: 1px; }
+
+  /* ── UI Unlock Mode ──────────────────────────────────────────────── */
+  body.ui-unlocked .unlockable {
+    outline: 2px dashed var(--gold) !important;
+    outline-offset: -2px;
+    cursor: move !important;
+  }
+  body.ui-unlocked .unlockable .unlock-handle {
+    display: flex !important;
+  }
+  body.ui-unlocked .unlockable .unlock-resize {
+    display: block !important;
+  }
+  .unlock-handle {
+    display: none !important;
+    height: 20px; background: rgba(212, 152, 31, 0.9);
+    align-items: center; justify-content: space-between;
+    font: bold 10px 'Courier New', monospace; color: #000;
+    cursor: move; user-select: none; letter-spacing: 1px;
+    flex-shrink: 0; padding: 0 2px 0 6px;
+  }
+  .unlock-handle .unlock-resize-grip {
+    cursor: se-resize; padding: 0 4px; font-size: 12px; line-height: 20px;
+    color: #600; font-weight: bold;
+  }
+  .unlock-handle .unlock-resize-grip:hover { color: #000; }
+  .unlock-resize {
+    display: none !important;
+    position: absolute; right: 0; bottom: 0; width: 14px; height: 14px;
+    cursor: se-resize; z-index: 10;
+    background: linear-gradient(135deg, transparent 40%, var(--gold) 40%, var(--gold) 50%, transparent 50%, transparent 60%, var(--gold) 60%, var(--gold) 70%, transparent 70%);
+  }
+  #ui-unlock-banner {
+    display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
+    background: rgba(212, 152, 31, 0.95); color: #000; text-align: center;
+    font: bold 12px 'Courier New', monospace; padding: 4px 0;
+    letter-spacing: 1px;
+  }
+  #ui-unlock-banner span { color: #600; }
+  body.ui-unlocked #ui-unlock-banner { display: block; }
+  body.ui-unlocked #panel-sidebar { position: fixed !important; }
+  body.ui-unlocked #panel-chat { position: fixed !important; }
+  body.ui-unlocked #panel-minimap { position: fixed !important; }
+  body.ui-unlocked #panel-dialogue { position: fixed !important; }
+
+
+  /* ── Anchor Grid ────────────────────────────────────────────────── */
+  #anchor-grid {
+    position: fixed; inset: 0; z-index: 280; display: none; pointer-events: none;
+  }
+  body.ui-unlocked #anchor-grid { display: block; }
+  .anchor-line-h {
+    position: absolute; left: 0; right: 0; height: 1px;
+    background: rgba(0, 220, 255, 0.25); pointer-events: none;
+  }
+  .anchor-line-v {
+    position: absolute; top: 0; bottom: 0; width: 1px;
+    background: rgba(0, 220, 255, 0.25); pointer-events: none;
+  }
+  .anchor-dot {
+    position: absolute; width: 9px; height: 9px; border-radius: 50%;
+    background: rgba(0, 220, 255, 0.6); transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  #anchor-controls {
+    display: inline-flex; align-items: center; gap: 2px; margin-left: 8px;
+    font-size: 11px;
+  }
+  #anchor-controls button {
+    width: 18px; height: 18px; background: #333; color: #ccc;
+    border: 1px solid #555; cursor: pointer; font: bold 12px monospace;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+    border-radius: 2px;
+  }
+  #anchor-controls button:hover { background: #555; }
+  #anchor-controls .anchor-label { color: #000; font-weight: bold; min-width: 14px; text-align: center; }
+
+  /* ── Taskbar ─────────────────────────────────────────────────────── */
+  #taskbar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+    height: 28px; background: rgba(26, 21, 16, 0.95);
+    border-top: 2px solid var(--panel-border);
+    display: none; align-items: center; padding: 0 4px; gap: 3px;
+    font-family: 'Courier New', monospace; pointer-events: auto;
+    backdrop-filter: blur(6px);
+  }
+  #taskbar.visible { display: flex; }
+  .taskbar-btn {
+    height: 22px; padding: 0 10px;
+    background: var(--panel-bg2); border: 1px solid var(--panel-border);
+    color: #ccc; font: 11px 'Courier New', monospace; cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+    white-space: nowrap; transition: all 0.15s;
+  }
+  .taskbar-btn:hover { background: #4a3d2d; color: #fff; }
+  .taskbar-btn.active { background: var(--panel-bg); border-bottom: 2px solid var(--gold); color: var(--gold); }
+  .taskbar-btn.minimized { opacity: 0.5; border-bottom: 1px solid var(--panel-border); }
+  .taskbar-sep { width: 1px; height: 18px; background: var(--panel-border); margin: 0 2px; }
+
+  /* ── Login Screen ────────────────────────────────────────────────── */
+  #login-screen {
+    position: fixed; inset: 0; z-index: 500;
+    background: #0a0a08;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: 'Courier New', monospace;
+  }
+  #login-screen::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 30%, rgba(60,40,10,0.3) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  #login-bg-grain {
+    position: absolute; inset: 0; pointer-events: none; opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  #login-box {
+    position: relative; z-index: 1;
+    background: rgba(30, 24, 18, 0.95); border: 2px solid #5a4a35;
+    padding: 32px 40px; min-width: 340px;
+    text-align: center; box-shadow: 0 0 60px rgba(0,0,0,0.6);
+  }
+  #login-box::after {
+    content: ''; position: absolute; inset: 4px; border: 1px solid rgba(90,74,53,0.3);
+    pointer-events: none;
+  }
+  #login-title {
+    font-size: 28px; color: #d4a853; font-weight: bold;
+    letter-spacing: 4px; margin-bottom: 4px;
+    text-shadow: 0 2px 8px rgba(212,168,83,0.3);
+  }
+  #login-subtitle { font-size: 12px; color: #6b5e4a; margin-bottom: 24px; letter-spacing: 2px; }
+  #login-input {
+    width: 100%; padding: 10px 14px; margin-bottom: 16px;
+    background: #151210; border: 1px solid #5a4a35; color: #e0d8c8;
+    font: 15px 'Courier New', monospace; text-align: center;
+    outline: none; transition: border-color 0.2s;
+  }
+  #login-input:focus { border-color: #d4a853; }
+  #login-input::placeholder { color: #4a4030; }
+  #login-play-btn {
+    width: 100%; padding: 12px; margin-bottom: 12px;
+    background: linear-gradient(180deg, #4a6a2a 0%, #3a5420 100%);
+    border: 2px solid #5a7a30; color: #e0f0c0; font: bold 16px 'Courier New', monospace;
+    cursor: pointer; letter-spacing: 3px; transition: all 0.2s;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  #login-play-btn:hover { background: linear-gradient(180deg, #5a7a34 0%, #4a6428 100%); border-color: #7a9a40; }
+  #login-play-btn:active { transform: scale(0.98); }
+  #login-btns {
+    display: flex; justify-content: space-between; gap: 8px;
+  }
+  .login-small-btn {
+    flex: 1; padding: 6px 8px;
+    background: #1e1810; border: 1px solid #5a4a35; color: #a09080;
+    font: 11px 'Courier New', monospace; cursor: pointer;
+    transition: all 0.15s; letter-spacing: 1px;
+  }
+  .login-small-btn:hover { background: #2a2018; color: #d4a853; border-color: #d4a853; }
+  .login-small-btn.active { color: #d4a853; border-color: #d4a853; }
+  #login-world-label {
+    color: #6b5e4a; font-size: 11px; margin-top: 16px;
+  }
+  #login-world-label span { color: #d4a853; }
+
+  /* ── World Selector ─────────────────────────────────────────────── */
+  #world-selector {
+    display: none; position: fixed; inset: 0; z-index: 510;
+    background: rgba(5,5,3,0.95);
+    font-family: 'Courier New', monospace;
+    flex-direction: column; align-items: center; padding: 30px 20px;
+  }
+  #world-selector.visible { display: flex; }
+  #world-header {
+    width: 100%; max-width: 740px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 12px;
+  }
+  #world-header h2 {
+    color: #d4a853; font-size: 20px; font-weight: bold; letter-spacing: 2px;
+    margin: 0;
+  }
+  #world-header h2 small { display: block; font-size: 11px; color: #6b5e4a; font-weight: normal; letter-spacing: 1px; margin-top: 2px; }
+  #world-header .server-time { color: #6b5e4a; font-size: 12px; }
+  #world-header .server-time span { color: #a09080; }
+  #world-table-wrap {
+    width: 100%; max-width: 740px; flex: 1;
+    overflow-y: auto; border: 1px solid #3a3020;
+    scrollbar-width: thin; scrollbar-color: #5a4a35 #1a1510;
+  }
+  #world-table {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+  }
+  #world-table thead th {
+    position: sticky; top: 0; z-index: 2;
+    background: #1e1810; color: #a09080;
+    text-align: left; padding: 6px 10px; font-weight: normal;
+    border-bottom: 2px solid #5a4a35; cursor: pointer;
+    user-select: none; letter-spacing: 1px; font-size: 11px;
+  }
+  #world-table thead th:hover { color: #d4a853; }
+  #world-table tbody tr {
+    border-bottom: 1px solid #1e1810; cursor: pointer; transition: background 0.1s;
+  }
+  #world-table tbody tr:hover { background: #2a2018; }
+  #world-table tbody tr.selected { background: #3a3018; }
+  #world-table tbody tr.selected td:first-child { color: #d4a853; font-weight: bold; }
+  #world-table td {
+    padding: 5px 10px; color: #c0b8a0; white-space: nowrap;
+  }
+  .world-fav { color: #5a4a35; cursor: pointer; font-size: 14px; }
+  .world-fav.active { color: #d4a853; }
+  .world-players { color: #8a8060; }
+  .world-activity { color: #a09080; }
+  .world-location { color: #90a080; }
+  .world-type-free { color: #80c060; }
+  .world-type-members { color: #d4a853; }
+  .world-ping { font-size: 11px; }
+  .world-ping.good { color: #60c060; }
+  .world-ping.ok { color: #c0c060; }
+  .world-ping.bad { color: #c06060; }
+  #world-back-btn {
+    margin-top: 12px; padding: 8px 32px;
+    background: #1e1810; border: 1px solid #5a4a35; color: #a09080;
+    font: 12px 'Courier New', monospace; cursor: pointer; letter-spacing: 2px;
+  }
+  #world-back-btn:hover { color: #d4a853; border-color: #d4a853; }
+
+  /* ── Hover Action Icon ───────────────────────────────────────────── */
+  #hover-icon {
+    position: fixed; z-index: 70; pointer-events: none;
+    font-size: 18px; line-height: 1;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.5);
+    transition: opacity 0.1s;
+    opacity: 0;
+  }
+  #hover-icon.visible { opacity: 1; }
+
   /* ── Misc ──────────────────────────────────────────────────────────── */
   #conn {
     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -201,21 +612,109 @@
 </style>
 </head>
 <body>
-<div id="conn">Connecting to server...</div>
+<!-- Login Screen -->
+<div id="login-screen">
+  <div id="login-bg-grain"></div>
+  <div id="login-box">
+    <div id="login-title">MINISCAPE</div>
+    <div id="login-subtitle">WELCOME TO GIELINOR</div>
+    <input id="login-input" type="text" placeholder="Enter username" maxlength="20" autocomplete="off" spellcheck="false">
+    <button id="login-play-btn" onclick="doLogin()">PLAY NOW</button>
+    <div id="login-btns">
+      <button class="login-small-btn" onclick="showWorldSelector()">World <span id="login-world-num">1</span></button>
+      <button class="login-small-btn" id="login-mute-btn" onclick="toggleLoginMute()">Sound: ON</button>
+    </div>
+    <div id="login-world-label">World <span>1</span> — Lumbridge — <span style="color:#60c060">0 players</span></div>
+  </div>
+</div>
+
+<!-- World Selector -->
+<div id="world-selector">
+  <div id="world-header">
+    <h2>SELECT A WORLD<small>Please select a game world from the list</small></h2>
+    <div class="server-time">Server time <span id="world-server-time">00:00</span></div>
+  </div>
+  <div id="world-table-wrap">
+    <table id="world-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>World</th>
+          <th>Players</th>
+          <th>Activity</th>
+          <th>Location</th>
+          <th>Type</th>
+          <th>Ping</th>
+        </tr>
+      </thead>
+      <tbody id="world-table-body"></tbody>
+    </table>
+  </div>
+  <button id="world-back-btn" onclick="hideWorldSelector()">BACK</button>
+</div>
+
+<div id="conn" style="display:none">Connecting to server...</div>
+<div id="anchor-grid"></div>
+<div id="ui-unlock-banner">UI UNLOCKED — <span>U</span> lock — <button id="ui-reset-btn" onclick="resetUIAndReload()" style="margin-left:4px;background:#600;color:#fff;border:1px solid #a00;padding:2px 8px;cursor:pointer;font:bold 11px monospace;border-radius:3px;">RESET</button><span id="anchor-controls"> X <button onclick="changeAnchor('x',-1)">-</button><span class="anchor-label" id="anchor-x-val">4</span><button onclick="changeAnchor('x',1)">+</button> Y <button onclick="changeAnchor('y',-1)">-</button><span class="anchor-label" id="anchor-y-val">3</span><button onclick="changeAnchor('y',1)">+</button></span></div>
+
+<!-- Taskbar -->
+<div id="taskbar"></div>
+
+<!-- Action Progress Overlay -->
+<div id="action-progress">
+  <div id="action-progress-inner">
+    <div id="action-icon"></div>
+    <div id="action-info">
+      <div id="action-name"></div>
+      <div id="action-time"></div>
+    </div>
+  </div>
+  <div id="action-bar-wrap"><div id="action-bar-fill"></div></div>
+</div>
 
 <!-- Combat overlay (floating, not in a panel) -->
-<div id="combat-overlay">
+<div id="combat-overlay" class="unlockable" data-clone-type="combat-overlay">
+  <div class="unlock-handle"><span>COMBAT</span><span class="panel-handle-buttons"><button class="panel-clone-btn panel-clone-add" title="Duplicate panel">+</button><span class="unlock-resize-grip">&#x2921;</span></span></div>
+  <div class="unlock-resize"></div>
   <b id="target-name">Target</b>
   <div class="hp-bar"><div class="hp-fill" id="target-hp" style="width:100%"></div></div>
   <div id="target-hp-text" style="color:#0a0;font-size:11px"></div>
 </div>
 
-<!-- Right Sidebar: Minimap + Tabs -->
-<div id="panel-sidebar" class="os-panel">
+<!-- NPC Dialogue Panel -->
+<div id="panel-dialogue" class="unlockable" data-clone-type="dialogue">
+  <div class="unlock-handle">
+    <span>DIALOGUE</span>
+    <span class="dlg-bar-buttons">
+      <button onclick="changeDlgFont(-1)" title="Smaller text">a</button>
+      <button onclick="changeDlgFont(1)" title="Larger text">A</button>
+      <input type="color" id="dlg-color-text" value="#e8f0ec" title="Text color">
+      <input type="color" id="dlg-color-bg" value="#0a0f0c" title="Background color">
+      <button class="panel-clone-btn panel-clone-add" title="Duplicate panel">+</button>
+      <span class="unlock-resize-grip">&#x2921;</span>
+    </span>
+  </div>
+  <div class="unlock-resize"></div>
+  <div id="dlg-name"></div>
+  <div id="dlg-sep"></div>
+  <div id="dlg-lines"></div>
+  <div id="dlg-dismiss">click to dismiss</div>
+</div>
+
+<!-- Minimap (separate panel) -->
+<div id="panel-minimap" class="unlockable" data-clone-type="minimap">
+  <div class="unlock-handle"><span>MINIMAP</span><span class="panel-handle-buttons"><button class="panel-clone-btn panel-clone-add" title="Duplicate panel">+</button><span class="unlock-resize-grip">&#x2921;</span></span></div>
+  <div class="unlock-resize"></div>
   <div id="minimap-frame">
     <canvas id="minimap-canvas" width="152" height="152"></canvas>
     <div id="minimap-compass">N</div>
   </div>
+</div>
+
+<!-- Right Sidebar: Tabs -->
+<div id="panel-sidebar" class="os-panel unlockable" data-clone-type="sidebar">
+  <div class="unlock-handle"><span>SIDEBAR</span><span class="panel-handle-buttons"><button class="panel-clone-btn panel-clone-add" title="Duplicate panel">+</button><span class="unlock-resize-grip">&#x2921;</span></span></div>
+  <div class="unlock-resize"></div>
   <div id="tab-icons">
     <div class="tab-icon active" data-tab="combat" title="Combat">&#9876;</div>
     <div class="tab-icon" data-tab="stats" title="Skills">&#9733;</div>
@@ -262,7 +761,9 @@
 </div>
 
 <!-- Chat Panel -->
-<div id="panel-chat" class="os-panel">
+<div id="panel-chat" class="os-panel unlockable" data-clone-type="chat">
+  <div class="unlock-handle"><span>CHAT</span><span class="panel-handle-buttons"><button class="panel-clone-btn panel-clone-add" title="Duplicate panel">+</button><span class="unlock-resize-grip">&#x2921;</span></span></div>
+  <div class="unlock-resize"></div>
   <div class="drag-handle"></div>
   <div id="log"></div>
   <div id="chat-input-row">
@@ -281,7 +782,9 @@
 </div>
 
 <!-- Toolbar (paint tools) -->
-<div id="toolbar">
+<div id="toolbar" class="unlockable">
+  <div class="unlock-handle"><span>TOOLBAR</span><span class="unlock-resize-grip">&#x2921;</span></div>
+  <div class="unlock-resize"></div>
   <button id="btn-pencil" title="Pencil (P)">Pencil</button>
   <button id="btn-bucket" title="Bucket Fill (B)">Bucket</button>
   <button id="btn-bucket-all" title="Recolor all matching tiles globally">Bucket All</button>
@@ -312,6 +815,7 @@
   </div>
 </div>
 
+<div id="hover-icon"></div>
 <canvas id="game"></canvas>
 <canvas id="game3d"></canvas>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -409,27 +913,369 @@ function initPanelSystem() {
   });
   window.addEventListener('mouseup', () => { chatDrag.active = false; });
 
+  // ── UI Unlock System ──────────────────────────────────────────────────
+  initUIUnlock();
+  initTabDragPopout();
+  initTaskbar();
+
   // Render minimap
   updateMinimap();
 }
 
+// ── UI Unlock: press U to unlock all panels for drag/resize/reposition ──────
+let uiUnlocked = false;
+const uiDrag = { active: false, el: null, startX: 0, startY: 0, elX: 0, elY: 0 };
+const uiResize = { active: false, el: null, startX: 0, startY: 0, startW: 0, startH: 0 };
+
+function getDefaultLayouts() {
+  return {
+    'panel-sidebar': { top: 0, right: 0, width: 205, height: window.innerHeight, anchored: 'right' },
+    'panel-chat': { bottom: 0, left: 0, width: window.innerWidth - 205, height: 165, anchored: 'bottom-left' },
+    'combat-overlay': { top: 8, left: 8, width: null, height: null },
+    'toolbar': { bottom: 170, left: '50%', width: null, height: null, centered: true },
+  };
+}
+
+function saveUILayout() {
+  const layouts = {};
+  document.querySelectorAll('.unlockable').forEach(el => {
+    if (!el.id) return;
+    layouts[el.id] = {
+      top: el.style.top, left: el.style.left, right: el.style.right, bottom: el.style.bottom,
+      width: el.style.width, height: el.style.height,
+      transform: el.style.transform,
+    };
+  });
+  try { localStorage.setItem('miniscape-ui-layout', JSON.stringify(layouts)); } catch(e) {}
+}
+
+function loadUILayout() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('miniscape-ui-layout'));
+    if (!saved) return false;
+    for (const [id, props] of Object.entries(saved)) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      if (props.top) el.style.top = props.top;
+      if (props.left) el.style.left = props.left;
+      if (props.right !== undefined) el.style.right = props.right;
+      if (props.bottom !== undefined) el.style.bottom = props.bottom;
+      if (props.width) el.style.width = props.width;
+      if (props.height) el.style.height = props.height;
+      if (props.transform) el.style.transform = props.transform;
+    }
+    return true;
+  } catch(e) { return false; }
+}
+
+function resetUILayout() {
+  localStorage.removeItem('miniscape-ui-layout');
+}
+
+function resetUIAndReload() {
+  resetUILayout();
+  // Clear panel customizations
+  localStorage.removeItem('miniscape-panel-custom');
+  if (typeof panelCustomize !== 'undefined') {
+    for (const k of Object.keys(panelCustomize)) delete panelCustomize[k];
+  }
+  // Remove all clones
+  if (typeof clonedPanels !== 'undefined') {
+    while (clonedPanels.length) removeClone(clonedPanels[0].id);
+  }
+  // Reset all unlockable panels to default CSS
+  document.querySelectorAll('.unlockable').forEach(el => {
+    el.style.cssText = '';
+    el.classList.remove('panel-label-on');
+    const h = el.querySelector('.unlock-handle');
+    if (h) h.style.background = '';
+  });
+  // Restore default display states
+  document.getElementById('panel-sidebar').style.display = 'flex';
+  document.getElementById('panel-chat').style.display = 'flex';
+  document.getElementById('panel-minimap').style.display = 'block';
+  document.getElementById('toolbar').style.display = 'flex';
+  // Exit unlock mode
+  uiUnlocked = false;
+  document.body.classList.remove('ui-unlocked');
+  hideDialoguePanel();
+  resizeCanvas();
+  showChat('UI layout reset to defaults.', '#ff981f');
+}
+
+function toggleUIUnlock() {
+  uiUnlocked = !uiUnlocked;
+  document.body.classList.toggle('ui-unlocked', uiUnlocked);
+  if (uiUnlocked) {
+    showChat('UI UNLOCKED — drag to move, corners to resize, U to lock', '#ff981f');
+    // Convert anchored panels to absolute positioning for dragging
+    document.querySelectorAll('.unlockable').forEach(el => {
+      const rect = el.getBoundingClientRect();
+      el.style.position = 'fixed';
+      el.style.top = rect.top + 'px';
+      el.style.left = rect.left + 'px';
+      el.style.right = 'auto';
+      el.style.bottom = 'auto';
+      el.style.transform = 'none';
+      if (rect.width > 0) el.style.width = rect.width + 'px';
+      if (rect.height > 0) el.style.height = rect.height + 'px';
+    });
+    // Show pseudo dialogue so it can be repositioned/resized
+    npcDialogueName = 'Gielinor Guide';
+    npcDialogueLines = [
+      'Welcome to MiniScape! I\'m here to help you get started on your adventure.',
+      'Use the +/- buttons below to adjust the font size until it\'s comfortable to read.',
+      'You can also drag and resize this box. Press U when you\'re happy with it.',
+    ];
+    showDialoguePanel();
+    clearTimeout(npcDialogueTimer); // don't auto-dismiss in unlock mode
+  } else {
+    // Hide the preview dialogue
+    hideDialoguePanel();
+    saveUILayout();
+    showChat('UI LOCKED — layout saved', '#ff981f');
+    resizeCanvas();
+  }
+}
+
+function clampPanel(el) {
+  const rect = el.getBoundingClientRect();
+  const vw = window.innerWidth, vh = window.innerHeight;
+  // Ensure at least 40px of the handle bar stays on screen
+  const minVisible = 40;
+  let x = rect.left, y = rect.top;
+  x = Math.max(-rect.width + minVisible, Math.min(vw - minVisible, x));
+  y = Math.max(0, Math.min(vh - 24, y)); // always keep handle bar reachable
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+}
+
+function initUIUnlock() {
+  // Load saved layout
+  loadUILayout();
+
+  // Drag handles — clicking the bar drags, clicking the resize grip resizes
+  document.querySelectorAll('.unlock-handle').forEach(handle => {
+    handle.addEventListener('mousedown', (e) => {
+      const el = handle.closest('.unlockable');
+      const alwaysDraggable = el && el.id === 'panel-dialogue';
+      if (!uiUnlocked && !alwaysDraggable) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const rect = el.getBoundingClientRect();
+
+      // Check if clicking the resize grip
+      if (e.target.classList.contains('unlock-resize-grip')) {
+        uiResize.active = true;
+        uiResize.el = el;
+        uiResize.startX = e.clientX;
+        uiResize.startY = e.clientY;
+        uiResize.startW = el.offsetWidth;
+        uiResize.startH = el.offsetHeight;
+        return;
+      }
+
+      // Otherwise drag
+      uiDrag.active = true;
+      uiDrag.el = el;
+      uiDrag.startX = e.clientX;
+      uiDrag.startY = e.clientY;
+      uiDrag.elX = rect.left;
+      uiDrag.elY = rect.top;
+    });
+  });
+
+  // Keep old corner resize handles working too
+  document.querySelectorAll('.unlock-resize').forEach(handle => {
+    handle.addEventListener('mousedown', (e) => {
+      const el = handle.closest('.unlockable');
+      const alwaysDraggable = el && el.id === 'panel-dialogue';
+      if (!uiUnlocked && !alwaysDraggable) return;
+      e.preventDefault();
+      e.stopPropagation();
+      uiResize.active = true;
+      uiResize.el = el;
+      uiResize.startX = e.clientX;
+      uiResize.startY = e.clientY;
+      uiResize.startW = el.offsetWidth;
+      uiResize.startH = el.offsetHeight;
+    });
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (uiDrag.active && uiDrag.el) {
+      const dx = e.clientX - uiDrag.startX;
+      const dy = e.clientY - uiDrag.startY;
+      let newX = uiDrag.elX + dx;
+      let newY = uiDrag.elY + dy;
+      const w = uiDrag.el.offsetWidth, h = uiDrag.el.offsetHeight;
+
+      // Snap to anchor grid
+      if (uiUnlocked && typeof snapToAnchors === 'function') {
+        const s = snapToAnchors(newX, newY, w, h);
+        newX = s.x; newY = s.y;
+      }
+
+      uiDrag.el.style.left = newX + 'px';
+      uiDrag.el.style.top = newY + 'px';
+      uiDrag.el.style.right = 'auto';
+      uiDrag.el.style.bottom = 'auto';
+      uiDrag.el.style.transform = 'none';
+      clampPanel(uiDrag.el);
+    }
+    if (uiResize.active && uiResize.el) {
+      let newW = uiResize.startW + (e.clientX - uiResize.startX);
+      let newH = uiResize.startH + (e.clientY - uiResize.startY);
+
+      // Snap resize to anchor grid
+      if (uiUnlocked && typeof getAnchorLinesX === 'function') {
+        const el = uiResize.el;
+        const left = el.getBoundingClientRect().left;
+        const top = el.getBoundingClientRect().top;
+        const xLines = getAnchorLinesX();
+        const yLines = getAnchorLinesY();
+        for (const ax of xLines) {
+          if (Math.abs((left + newW) - ax) < 14) { newW = ax - left; break; }
+        }
+        for (const ay of yLines) {
+          if (Math.abs((top + newH) - ay) < 14) { newH = ay - top; break; }
+        }
+      }
+
+      uiResize.el.style.width = Math.max(100, newW) + 'px';
+      uiResize.el.style.height = Math.max(60, newH) + 'px';
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (uiDrag.active && uiDrag.el) clampPanel(uiDrag.el);
+    uiDrag.active = false;
+    uiResize.active = false;
+  });
+}
+
+// ── Anchor Grid ──────────────────────────────────────────────────────────────
+let anchorX = parseInt(localStorage.getItem('miniscape-anchor-x') || '4', 10);
+let anchorY = parseInt(localStorage.getItem('miniscape-anchor-y') || '3', 10);
+
+function getAnchorPoints() {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const points = [];
+  for (let ix = 0; ix <= anchorX; ix++) {
+    for (let iy = 0; iy <= anchorY; iy++) {
+      points.push({ x: Math.round(ix * vw / anchorX), y: Math.round(iy * vh / anchorY) });
+    }
+  }
+  return points;
+}
+
+function getAnchorLinesX() {
+  const vw = window.innerWidth, lines = [];
+  for (let i = 0; i <= anchorX; i++) lines.push(Math.round(i * vw / anchorX));
+  return lines;
+}
+
+function getAnchorLinesY() {
+  const vh = window.innerHeight, lines = [];
+  for (let i = 0; i <= anchorY; i++) lines.push(Math.round(i * vh / anchorY));
+  return lines;
+}
+
+function snapToAnchors(x, y, w, h) {
+  const xLines = getAnchorLinesX();
+  const yLines = getAnchorLinesY();
+  const threshold = 14;
+  let sx = x, sy = y, sw = null, sh = null;
+
+  // Snap left edge
+  for (const ax of xLines) {
+    if (Math.abs(x - ax) < threshold) { sx = ax; break; }
+  }
+  // Snap right edge → also suggests width
+  for (const ax of xLines) {
+    if (Math.abs((x + w) - ax) < threshold) {
+      sw = ax - sx; // snap width to fit between left snap and this anchor
+      break;
+    }
+  }
+  // Snap top edge
+  for (const ay of yLines) {
+    if (Math.abs(y - ay) < threshold) { sy = ay; break; }
+  }
+  // Snap bottom edge → also suggests height
+  for (const ay of yLines) {
+    if (Math.abs((y + h) - ay) < threshold) {
+      sh = ay - sy;
+      break;
+    }
+  }
+
+  return { x: sx, y: sy, w: sw, h: sh };
+}
+
+function renderAnchorGrid() {
+  const container = document.getElementById('anchor-grid');
+  container.innerHTML = '';
+  const vw = window.innerWidth, vh = window.innerHeight;
+
+  // Vertical lines
+  for (let i = 0; i <= anchorX; i++) {
+    const x = Math.round(i * vw / anchorX);
+    const line = document.createElement('div');
+    line.className = 'anchor-line-v';
+    line.style.left = x + 'px';
+    container.appendChild(line);
+  }
+  // Horizontal lines
+  for (let i = 0; i <= anchorY; i++) {
+    const y = Math.round(i * vh / anchorY);
+    const line = document.createElement('div');
+    line.className = 'anchor-line-h';
+    line.style.top = y + 'px';
+    container.appendChild(line);
+  }
+  // Dots at intersections
+  for (let ix = 0; ix <= anchorX; ix++) {
+    for (let iy = 0; iy <= anchorY; iy++) {
+      const dot = document.createElement('div');
+      dot.className = 'anchor-dot';
+      dot.style.left = Math.round(ix * vw / anchorX) + 'px';
+      dot.style.top = Math.round(iy * vh / anchorY) + 'px';
+      container.appendChild(dot);
+    }
+  }
+
+  document.getElementById('anchor-x-val').textContent = anchorX;
+  document.getElementById('anchor-y-val').textContent = anchorY;
+}
+
+function changeAnchor(axis, delta) {
+  if (axis === 'x') {
+    anchorX = Math.max(1, Math.min(20, anchorX + delta));
+    localStorage.setItem('miniscape-anchor-x', anchorX);
+  } else {
+    anchorY = Math.max(1, Math.min(20, anchorY + delta));
+    localStorage.setItem('miniscape-anchor-y', anchorY);
+  }
+  renderAnchorGrid();
+}
+
+renderAnchorGrid();
+window.addEventListener('resize', renderAnchorGrid);
+
 // Minimap: renders a small overhead view of surrounding terrain
-function updateMinimap() {
-  const mc = document.getElementById('minimap-canvas');
+function updateMinimapCanvas(mc) {
   if (!mc) return;
   const mctx = mc.getContext('2d');
-  const size = 152, half = Math.floor(size / 2);
+  const size = mc.width, half = Math.floor(size / 2);
   mctx.fillStyle = '#1a1510';
   mctx.fillRect(0, 0, size, size);
-  // Draw terrain centered on player
-  const scale = 2; // pixels per tile
+  const scale = 2;
   const range = Math.floor(half / scale);
   for (let dy = -range; dy <= range; dy++) {
     for (let dx = -range; dx <= range; dx++) {
       const wx = myX + dx, wy = myY + dy;
       const sx = half + dx * scale, sy = half - dy * scale;
-      // Check if within circle
-      if (dx * dx + dy * dy > range * range) continue;
       const chunk = chunkCache.get(chunkKey(Math.floor(wx / CHUNK_SIZE), Math.floor(wy / CHUNK_SIZE)));
       if (chunk && chunk.terrain) {
         const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
@@ -444,23 +1290,66 @@ function updateMinimap() {
       mctx.fillRect(sx, sy, scale, scale);
     }
   }
-  // Player dot
   mctx.fillStyle = '#fff';
   mctx.fillRect(half - 1, half - 1, 3, 3);
-  // Other players
   for (const p of otherPlayers) {
     const dx = p.x - myX, dy = p.y - myY;
-    if (dx * dx + dy * dy > range * range) continue;
+    if (Math.abs(dx) > range || Math.abs(dy) > range) continue;
     mctx.fillStyle = '#00ff00';
     mctx.fillRect(half + dx * scale, half - dy * scale, scale, scale);
   }
-  // NPCs
   for (const n of npcList) {
     const dx = n.x - myX, dy = n.y - myY;
-    if (dx * dx + dy * dy > range * range) continue;
+    if (Math.abs(dx) > range || Math.abs(dy) > range) continue;
     mctx.fillStyle = '#ffff00';
     mctx.fillRect(half + dx * scale, half - dy * scale, scale, scale);
   }
+}
+function updateMinimap() {
+  updateMinimapCanvas(document.getElementById('minimap-canvas'));
+}
+
+// ── Action Progress (RS3-style) ─────────────────────────────────────
+const ACTION_ICONS = {
+  woodcutting: '\uD83E\uDE93', // 🪓
+  mining: '\u26CF\uFE0F',      // ⛏️
+  fishing: '\uD83C\uDFA3',     // 🎣
+};
+let currentAction = null;
+let actionStartTime = 0;
+let actionAnimFrame = null;
+
+function updateActionProgress(action) {
+  const el = document.getElementById('action-progress');
+  if (!action) {
+    if (currentAction) {
+      currentAction = null;
+      el.style.display = 'none';
+      if (actionAnimFrame) { cancelAnimationFrame(actionAnimFrame); actionAnimFrame = null; }
+    }
+    return;
+  }
+  // New action or action reset (tick went back to 0 = new cycle)
+  if (!currentAction || currentAction.type !== action.type || (action.tick === 0 && currentAction.tick > 0)) {
+    actionStartTime = Date.now() - (action.tick / action.total) * (action.total * 600);
+  }
+  currentAction = action;
+  document.getElementById('action-icon').textContent = ACTION_ICONS[action.type] || '\u2699';
+  document.getElementById('action-name').textContent = action.name;
+  el.style.display = 'block';
+  // Start smooth animation if not running
+  if (!actionAnimFrame) animateActionBar();
+}
+
+function animateActionBar() {
+  if (!currentAction) { actionAnimFrame = null; return; }
+  const totalMs = currentAction.total * 600;
+  const elapsed = Date.now() - actionStartTime;
+  const pct = Math.min(100, (elapsed / totalMs) * 100);
+  const remaining = Math.max(0, (totalMs - elapsed) / 1000);
+  document.getElementById('action-bar-fill').style.width = pct + '%';
+  document.getElementById('action-time').textContent = remaining.toFixed(1) + 's';
+  actionAnimFrame = requestAnimationFrame(animateActionBar);
 }
 
 const T = {
@@ -636,6 +1525,118 @@ function getExamineName(x, y) {
   return null;
 }
 
+// ── Login & World Selector ─────────────────────────────────────────────────────
+let selectedWorld = 1;
+let loginMuted = false;
+let playerUsername = '';
+
+const WORLDS = [
+  { id: 1, activity: 'Tutorial Island', location: 'United States (East)', type: 'Free', members: false },
+  { id: 2, activity: '-', location: 'United States (West)', type: 'Free', members: false },
+  { id: 3, activity: 'Trade — Free', location: 'United States (East)', type: 'Free', members: false },
+  { id: 4, activity: '-', location: 'United Kingdom', type: 'Free', members: false },
+  { id: 5, activity: '-', location: 'Germany', type: 'Free', members: false },
+  { id: 6, activity: 'PvP', location: 'United States (East)', type: 'Free', members: false },
+  { id: 7, activity: '-', location: 'Australia', type: 'Free', members: false },
+  { id: 8, activity: 'Role-Playing', location: 'United States (West)', type: 'Free', members: false },
+  { id: 9, activity: '-', location: 'Netherlands', type: 'Free', members: false },
+  { id: 10, activity: 'Clan Wars', location: 'United Kingdom', type: 'Free', members: false },
+  { id: 11, activity: '-', location: 'Canada', type: 'Free', members: false },
+  { id: 12, activity: 'Minigames', location: 'Germany', type: 'Free', members: false },
+];
+
+const worldFavs = new Set(JSON.parse(localStorage.getItem('miniscape-world-favs') || '[]'));
+
+function buildWorldTable() {
+  const body = document.getElementById('world-table-body');
+  const now = new Date();
+  document.getElementById('world-server-time').textContent =
+    now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+
+  body.innerHTML = '';
+  for (const w of WORLDS) {
+    const isFav = worldFavs.has(w.id);
+    // Simulate players and ping
+    const players = w.id === 1 ? Math.floor(Math.random() * 20 + 5) : Math.floor(Math.random() * 80);
+    const ping = Math.floor(Math.random() * 120 + 15);
+    const pingClass = ping < 50 ? 'good' : ping < 100 ? 'ok' : 'bad';
+
+    const tr = document.createElement('tr');
+    if (w.id === selectedWorld) tr.classList.add('selected');
+    tr.innerHTML = `
+      <td><span class="world-fav ${isFav ? 'active' : ''}" data-world="${w.id}">\u2605</span></td>
+      <td>${w.id}</td>
+      <td class="world-players">${players}</td>
+      <td class="world-activity">${w.activity}</td>
+      <td class="world-location">${w.location}</td>
+      <td class="${w.members ? 'world-type-members' : 'world-type-free'}">${w.type}</td>
+      <td class="world-ping ${pingClass}">${ping}</td>`;
+
+    tr.addEventListener('click', (e) => {
+      if (e.target.classList.contains('world-fav')) return;
+      selectWorld(w.id);
+    });
+
+    body.appendChild(tr);
+  }
+
+  // Fav toggle
+  body.querySelectorAll('.world-fav').forEach(star => {
+    star.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wid = parseInt(star.dataset.world);
+      if (worldFavs.has(wid)) { worldFavs.delete(wid); star.classList.remove('active'); }
+      else { worldFavs.add(wid); star.classList.add('active'); }
+      localStorage.setItem('miniscape-world-favs', JSON.stringify([...worldFavs]));
+    });
+  });
+}
+
+function selectWorld(wid) {
+  selectedWorld = wid;
+  const w = WORLDS.find(x => x.id === wid);
+  document.getElementById('login-world-num').textContent = wid;
+  const lbl = document.getElementById('login-world-label');
+  if (w) lbl.innerHTML = `World <span>${wid}</span> — ${w.location} — <span style="color:#60c060">${w.activity}</span>`;
+  // Highlight in table
+  document.querySelectorAll('#world-table-body tr').forEach(tr => tr.classList.remove('selected'));
+  const rows = document.querySelectorAll('#world-table-body tr');
+  rows.forEach(tr => { if (tr.children[1]?.textContent == wid) tr.classList.add('selected'); });
+  hideWorldSelector();
+}
+
+function showWorldSelector() {
+  buildWorldTable();
+  document.getElementById('world-selector').classList.add('visible');
+}
+
+function hideWorldSelector() {
+  document.getElementById('world-selector').classList.remove('visible');
+}
+
+function toggleLoginMute() {
+  loginMuted = !loginMuted;
+  const btn = document.getElementById('login-mute-btn');
+  btn.textContent = loginMuted ? 'Sound: OFF' : 'Sound: ON';
+  btn.classList.toggle('active', !loginMuted);
+}
+
+function doLogin() {
+  const input = document.getElementById('login-input');
+  playerUsername = input.value.trim() || ('Player' + Math.floor(Math.random() * 9999));
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('conn').style.display = 'block';
+  connect();
+}
+
+// Enter key on login input
+document.getElementById('login-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') doLogin();
+});
+
+// Focus the username input on load
+setTimeout(() => document.getElementById('login-input').focus(), 100);
+
 // ── WebSocket ──────────────────────────────────────────────────────────────────
 let ws;
 function connect() {
@@ -666,6 +1667,7 @@ function handleServerMsg(msg) {
       connEl.style.display = 'none';
       document.getElementById('panel-sidebar').style.display = 'flex';
       document.getElementById('panel-chat').style.display = 'flex';
+      document.getElementById('panel-minimap').style.display = 'block';
       document.getElementById('toolbar').style.display = 'flex';
       initPanelSystem();
       showChat('Welcome to MiniScape!', '#0000cc');
@@ -726,6 +1728,7 @@ function handleServerMsg(msg) {
       groundItemList = msg.items || [];
       openDoorList = msg.doors || [];
       updateStatsUI();
+      updateActionProgress(msg.action);
       break;
     case 'doors':
       openDoorList = msg.doors || [];
@@ -764,8 +1767,8 @@ function handleServerMsg(msg) {
           npcDialogueName = dlgMatch[1];
         }
         npcDialogueLines.push(dlgMatch[2]);
+        showDialoguePanel();
         clearTimeout(npcDialogueTimer);
-        npcDialogueTimer = setTimeout(() => { npcDialogueLines = []; npcDialogueName = ''; }, 8000);
       }
       break;
   }
@@ -872,6 +1875,7 @@ function updateStatsUI() {
   }
   invHtml += '</div>';
   invEl.innerHTML = invHtml;
+  updateAllPopouts();
 }
 
 function updateCombatUI() {
@@ -886,8 +1890,658 @@ function updateCombatUI() {
   document.getElementById('target-hp-text').textContent = `${npc.hp} / ${npc.maxHp}`;
 }
 
+// ── Taskbar System ────────────────────────────────────────────────────────────
+const taskbarEl = document.getElementById('taskbar');
+const taskbarPanels = new Map(); // id -> { el, btn, minimized, label }
+
+function initTaskbar() {
+  const panels = [
+    { id: 'panel-minimap', label: 'Minimap', icon: '\u25CB' },
+    { id: 'panel-sidebar', label: 'Panel', icon: '\u2630' },
+    { id: 'panel-chat', label: 'Chat', icon: '\u2709' },
+    { id: 'combat-overlay', label: 'Combat', icon: '\u2694' },
+    { id: 'toolbar', label: 'Tools', icon: '\u270E' },
+    { id: 'panel-dialogue', label: 'Dialogue', icon: '\u2606' },
+  ];
+
+  for (const p of panels) {
+    const el = document.getElementById(p.id);
+    if (!el) continue;
+
+    const btn = document.createElement('button');
+    btn.className = 'taskbar-btn active';
+    btn.innerHTML = `${p.icon} ${p.label}`;
+    btn.title = `${p.label} — click to minimize/restore`;
+
+    const state = { el, btn, minimized: false, label: p.label, prevDisplay: '' };
+    taskbarPanels.set(p.id, state);
+
+    btn.addEventListener('click', () => {
+      toggleMinimize(p.id);
+    });
+
+    taskbarEl.appendChild(btn);
+  }
+
+  taskbarEl.classList.add('visible');
+}
+
+function toggleMinimize(panelId) {
+  const state = taskbarPanels.get(panelId);
+  if (!state) return;
+
+  state.minimized = !state.minimized;
+
+  if (state.minimized) {
+    state.prevDisplay = state.el.style.display;
+    state.el.style.display = 'none';
+    state.btn.classList.remove('active');
+    state.btn.classList.add('minimized');
+  } else {
+    // Restore — figure out the right display value
+    const tag = state.el.id;
+    if (tag === 'panel-sidebar' || tag === 'panel-chat' || tag === 'toolbar') {
+      state.el.style.display = 'flex';
+    } else if (tag === 'panel-minimap') {
+      state.el.style.display = 'block';
+    } else if (tag === 'combat-overlay') {
+      // Only show if we have a target
+      if (combatTargetId !== null) state.el.style.display = 'block';
+    } else if (tag === 'panel-dialogue') {
+      if (npcDialogueLines.length > 0) state.el.style.display = 'block';
+    } else {
+      state.el.style.display = state.prevDisplay || 'block';
+    }
+    state.btn.classList.add('active');
+    state.btn.classList.remove('minimized');
+  }
+}
+
+function addPopoutToTaskbar(popoutPanel, tabName) {
+  const id = popoutPanel.id;
+  const btn = document.createElement('button');
+  btn.className = 'taskbar-btn active';
+  btn.innerHTML = `${TAB_ICONS_MAP[tabName] || '\u25A0'} ${TAB_NAMES[tabName] || tabName}`;
+  btn.title = `${TAB_NAMES[tabName]} — click to minimize/restore`;
+
+  const state = { el: popoutPanel, btn, minimized: false, label: TAB_NAMES[tabName] || tabName, prevDisplay: '' };
+  taskbarPanels.set(id, state);
+
+  btn.addEventListener('click', () => toggleMinimize(id));
+
+  // Insert before the separator or at end
+  taskbarEl.appendChild(btn);
+}
+
+function removeFromTaskbar(panelId) {
+  const state = taskbarPanels.get(panelId);
+  if (state) {
+    state.btn.remove();
+    taskbarPanels.delete(panelId);
+  }
+}
+
+// ── NPC Dialogue Panel ────────────────────────────────────────────────────────
+let dlgFontSize = parseInt(localStorage.getItem('miniscape-dlg-font') || '14', 10);
+let dlgTextColor = localStorage.getItem('miniscape-dlg-text-color') || '#e8f0ec';
+let dlgBgColor = localStorage.getItem('miniscape-dlg-bg-color') || '#0a0f0c';
+
+function applyDlgStyle() {
+  const panel = document.getElementById('panel-dialogue');
+  panel.style.fontSize = dlgFontSize + 'px';
+  panel.style.color = dlgTextColor;
+  panel.style.background = dlgBgColor + 'f2'; // add slight transparency
+  document.getElementById('dlg-name').style.fontSize = (dlgFontSize + 1) + 'px';
+}
+
+document.getElementById('dlg-color-text').addEventListener('input', (e) => {
+  dlgTextColor = e.target.value;
+  localStorage.setItem('miniscape-dlg-text-color', dlgTextColor);
+  applyDlgStyle();
+});
+document.getElementById('dlg-color-bg').addEventListener('input', (e) => {
+  dlgBgColor = e.target.value;
+  localStorage.setItem('miniscape-dlg-bg-color', dlgBgColor);
+  applyDlgStyle();
+});
+// Init color pickers from saved values
+document.getElementById('dlg-color-text').value = dlgTextColor;
+document.getElementById('dlg-color-bg').value = dlgBgColor;
+
+function changeDlgFont(delta) {
+  dlgFontSize = Math.max(10, Math.min(28, dlgFontSize + delta));
+  localStorage.setItem('miniscape-dlg-font', dlgFontSize);
+  applyDlgStyle();
+}
+
+function showDialoguePanel() {
+  const panel = document.getElementById('panel-dialogue');
+  document.getElementById('dlg-name').textContent = npcDialogueName;
+  document.getElementById('dlg-lines').innerHTML = npcDialogueLines.map(l => `<div>${l}</div>`).join('');
+  applyDlgStyle();
+  panel.style.display = 'block';
+}
+function hideDialoguePanel() {
+  npcDialogueLines = []; npcDialogueName = '';
+  clearTimeout(npcDialogueTimer);
+  document.getElementById('panel-dialogue').style.display = 'none';
+}
+// Click dialogue dismiss button
+document.getElementById('dlg-dismiss').addEventListener('click', (e) => { e.stopPropagation(); hideDialoguePanel(); });
+document.getElementById('panel-dialogue').addEventListener('click', (e) => {
+  if (e.target.closest('.unlock-handle') || e.target.closest('.unlock-resize') || e.target.closest('#dlg-font-controls')) return;
+  hideDialoguePanel();
+});
+
+// ── Panel Cloning System ─────────────────────────────────────────────────────
+let cloneCounter = 0;
+const clonedPanels = []; // { id, type, el }
+
+function clonePanel(sourceEl) {
+  const type = sourceEl.dataset.cloneType;
+  if (!type) return;
+  const id = `clone-${type}-${cloneCounter++}`;
+  const clone = document.createElement('div');
+  clone.id = id;
+  clone.className = 'unlockable';
+  clone.dataset.cloneType = type;
+  clone.dataset.isClone = 'true';
+  clone.style.cssText = 'position:fixed;z-index:63;display:block;';
+
+  // Position offset from source
+  const rect = sourceEl.getBoundingClientRect();
+  clone.style.left = (rect.left + 30) + 'px';
+  clone.style.top = (rect.top + 30) + 'px';
+  clone.style.width = rect.width + 'px';
+  clone.style.height = rect.height + 'px';
+
+  // Build handle bar
+  const label = sourceEl.querySelector('.unlock-handle span:first-child')?.textContent || type.toUpperCase();
+  const handle = document.createElement('div');
+  handle.className = 'unlock-handle';
+  handle.style.display = 'flex';
+  handle.innerHTML = `<span>${label}</span><span class="panel-handle-buttons">` +
+    `<button class="panel-clone-btn panel-clone-add" title="Duplicate panel">+</button>` +
+    `<button class="panel-clone-btn panel-clone-remove" title="Remove this clone">&times;</button>` +
+    `<span class="unlock-resize-grip">&#x2921;</span></span>`;
+  clone.appendChild(handle);
+
+  // Resize handle
+  const resize = document.createElement('div');
+  resize.className = 'unlock-resize';
+  resize.style.display = 'block';
+  clone.appendChild(resize);
+
+  // Clone inner content based on type
+  if (type === 'minimap') {
+    const frame = document.createElement('div');
+    frame.id = 'minimap-frame';
+    frame.innerHTML = '<canvas class="clone-minimap-canvas" width="152" height="152"></canvas><div id="minimap-compass">N</div>';
+    clone.appendChild(frame);
+    clone.style.width = '205px';
+    clone.style.height = '';
+  } else if (type === 'chat') {
+    const log = document.createElement('div');
+    log.className = 'clone-chat-log';
+    log.style.cssText = 'overflow-y:auto;flex:1;padding:4px 6px;font:12px "Courier New",monospace;color:#d4c6a0;background:#0a0a0a;';
+    // Copy existing messages
+    const origLog = document.getElementById('log');
+    if (origLog) log.innerHTML = origLog.innerHTML;
+    clone.appendChild(log);
+    clone.style.width = '400px';
+    clone.style.height = '165px';
+    clone.style.display = 'flex';
+    clone.style.flexDirection = 'column';
+  } else if (type === 'sidebar') {
+    // Clone tab icons and content
+    const tabIcons = document.getElementById('tab-icons').cloneNode(true);
+    tabIcons.removeAttribute('id');
+    tabIcons.classList.add('clone-tab-icons');
+    clone.appendChild(tabIcons);
+    const tabContent = document.createElement('div');
+    tabContent.style.cssText = 'flex:1;overflow-y:auto;padding:8px;font:12px "Courier New",monospace;color:#d4c6a0;';
+    tabContent.className = 'clone-tab-content';
+    // Copy active tab content
+    const activePane = document.querySelector('#tab-content .tab-pane.active');
+    if (activePane) tabContent.innerHTML = activePane.innerHTML;
+    clone.appendChild(tabContent);
+    clone.style.width = '205px';
+    clone.style.height = '400px';
+    clone.style.display = 'flex';
+    clone.style.flexDirection = 'column';
+    clone.style.background = 'var(--panel-bg)';
+    clone.style.border = '2px solid var(--panel-border)';
+    // Tab switching for clone
+    tabIcons.querySelectorAll('.tab-icon').forEach(icon => {
+      icon.addEventListener('click', () => {
+        tabIcons.querySelectorAll('.tab-icon').forEach(i => i.classList.remove('active'));
+        icon.classList.add('active');
+        const pane = document.getElementById('tab-' + icon.dataset.tab);
+        if (pane) tabContent.innerHTML = pane.innerHTML;
+      });
+    });
+  } else if (type === 'combat-overlay') {
+    clone.innerHTML += '<b class="clone-target-name" style="color:var(--gold);font-size:13px;padding:4px 8px;display:block;">Target</b>' +
+      '<div class="hp-bar"><div class="hp-fill clone-target-hp" style="width:100%"></div></div>' +
+      '<div class="clone-target-hp-text" style="color:#0a0;font-size:11px;padding:2px 8px;"></div>';
+    clone.style.width = '160px';
+    clone.style.height = '';
+    clone.style.background = 'rgba(42,32,24,0.92)';
+    clone.style.border = '2px solid var(--panel-border)';
+  } else if (type === 'dialogue') {
+    clone.innerHTML += '<div class="clone-dlg-name" style="color:#d4a853;font-weight:bold;font-size:15px;padding:10px 14px 6px;"></div>' +
+      '<div style="height:1px;background:rgba(212,168,83,0.4);margin:0 14px;"></div>' +
+      '<div class="clone-dlg-lines" style="padding:8px 14px 6px;line-height:1.6;"></div>' +
+      '<div style="color:rgba(212,168,83,0.5);font-size:11px;text-align:right;padding:2px 14px 8px;">click to dismiss</div>';
+    clone.style.width = '460px';
+    clone.style.height = '';
+    clone.style.background = 'rgba(10,15,12,0.95)';
+    clone.style.border = '2px solid #d4a853';
+    clone.style.fontFamily = "'Courier New', monospace";
+    clone.style.color = '#e8f0ec';
+    // Sync current dialogue
+    const origName = document.getElementById('dlg-name');
+    const origLines = document.getElementById('dlg-lines');
+    if (origName) clone.querySelector('.clone-dlg-name').textContent = origName.textContent;
+    if (origLines) clone.querySelector('.clone-dlg-lines').innerHTML = origLines.innerHTML;
+  }
+
+  document.body.appendChild(clone);
+  clonedPanels.push({ id, type, el: clone });
+
+  // Wire up drag on handle
+  handle.addEventListener('mousedown', (e) => {
+    if (e.target.classList.contains('panel-clone-btn') || e.target.tagName === 'INPUT') return;
+    e.preventDefault();
+    e.stopPropagation();
+    const r = clone.getBoundingClientRect();
+    uiDrag.active = true; uiDrag.el = clone;
+    uiDrag.startX = e.clientX; uiDrag.startY = e.clientY;
+    uiDrag.elX = r.left; uiDrag.elY = r.top;
+  });
+
+  // Wire resize grip in handle
+  handle.querySelector('.unlock-resize-grip').addEventListener('mousedown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    uiResize.active = true; uiResize.el = clone;
+    uiResize.startX = e.clientX; uiResize.startY = e.clientY;
+    uiResize.startW = clone.offsetWidth; uiResize.startH = clone.offsetHeight;
+  });
+
+  // Wire corner resize
+  resize.addEventListener('mousedown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    uiResize.active = true; uiResize.el = clone;
+    uiResize.startX = e.clientX; uiResize.startY = e.clientY;
+    uiResize.startW = clone.offsetWidth; uiResize.startH = clone.offsetHeight;
+  });
+
+  // Wire + button (clone from clone)
+  handle.querySelector('.panel-clone-add').addEventListener('click', (e) => {
+    e.stopPropagation();
+    clonePanel(clone);
+  });
+
+  // Wire × button (remove)
+  handle.querySelector('.panel-clone-remove').addEventListener('click', (e) => {
+    e.stopPropagation();
+    removeClone(id);
+  });
+
+  // Add to taskbar
+  if (typeof addPopoutToTaskbar === 'function') {
+    const tbBtn = document.createElement('div');
+    tbBtn.className = 'taskbar-btn';
+    tbBtn.textContent = label;
+    tbBtn.title = label;
+    tbBtn.addEventListener('click', () => {
+      clone.style.display = clone.style.display === 'none' ? (type === 'chat' || type === 'sidebar' ? 'flex' : 'block') : 'none';
+    });
+    document.getElementById('taskbar').appendChild(tbBtn);
+    clone._taskbarBtn = tbBtn;
+  }
+
+  // Inject customize controls
+  if (typeof injectPanelCustomize === 'function') injectPanelCustomize(clone);
+
+  showChat(`Cloned ${label} panel.`, '#ff981f');
+  return clone;
+}
+
+function removeClone(id) {
+  const idx = clonedPanels.findIndex(c => c.id === id);
+  if (idx === -1) return;
+  const clone = clonedPanels[idx];
+  if (clone.el._taskbarBtn) clone.el._taskbarBtn.remove();
+  clone.el.remove();
+  clonedPanels.splice(idx, 1);
+}
+
+// Sync cloned panels each frame
+function updateClonedPanels() {
+  for (const c of clonedPanels) {
+    if (c.type === 'minimap') {
+      const canvas = c.el.querySelector('.clone-minimap-canvas');
+      if (canvas) updateMinimapCanvas(canvas);
+    } else if (c.type === 'chat') {
+      const log = c.el.querySelector('.clone-chat-log');
+      const origLog = document.getElementById('log');
+      if (log && origLog && log.children.length !== origLog.children.length) {
+        log.innerHTML = origLog.innerHTML;
+        log.scrollTop = log.scrollHeight;
+      }
+    } else if (c.type === 'sidebar') {
+      const tabContent = c.el.querySelector('.clone-tab-content');
+      const activeIcon = c.el.querySelector('.clone-tab-icons .tab-icon.active');
+      if (tabContent && activeIcon) {
+        const pane = document.getElementById('tab-' + activeIcon.dataset.tab);
+        if (pane) tabContent.innerHTML = pane.innerHTML;
+      }
+    } else if (c.type === 'combat-overlay') {
+      const origName = document.getElementById('target-name');
+      const origHp = document.getElementById('target-hp');
+      const origText = document.getElementById('target-hp-text');
+      const cn = c.el.querySelector('.clone-target-name');
+      const ch = c.el.querySelector('.clone-target-hp');
+      const ct = c.el.querySelector('.clone-target-hp-text');
+      if (cn && origName) cn.textContent = origName.textContent;
+      if (ch && origHp) ch.style.width = origHp.style.width;
+      if (ct && origText) ct.textContent = origText.textContent;
+    } else if (c.type === 'dialogue') {
+      const origName = document.getElementById('dlg-name');
+      const origLines = document.getElementById('dlg-lines');
+      const cn = c.el.querySelector('.clone-dlg-name');
+      const cl = c.el.querySelector('.clone-dlg-lines');
+      if (cn && origName) cn.textContent = origName.textContent;
+      if (cl && origLines) cl.innerHTML = origLines.innerHTML;
+    }
+  }
+}
+
+// Wire + buttons on original panels
+document.querySelectorAll('.panel-clone-add').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const panel = btn.closest('.unlockable');
+    if (panel && !panel.dataset.isClone) clonePanel(panel);
+  });
+});
+
+// ── Panel Customize (color, label, rename) ──────────────────────────────────
+const panelCustomize = JSON.parse(localStorage.getItem('miniscape-panel-custom') || '{}');
+
+function savePanelCustomize() {
+  try { localStorage.setItem('miniscape-panel-custom', JSON.stringify(panelCustomize)); } catch(e) {}
+}
+
+function applyPanelCustomize(el) {
+  const id = el.id;
+  if (!id || !panelCustomize[id]) return;
+  const c = panelCustomize[id];
+  if (c.textColor) el.style.color = c.textColor;
+  if (c.bgColor) el.style.setProperty('background', c.bgColor, 'important');
+  if (c.labelOn) el.classList.add('panel-label-on');
+  if (c.labelColor) {
+    const h = el.querySelector('.unlock-handle');
+    if (h) h.style.background = c.labelColor;
+  }
+  if (c.name) {
+    const nameSpan = el.querySelector('.unlock-handle > span:first-child');
+    if (nameSpan) nameSpan.textContent = c.name;
+  }
+}
+
+function injectPanelCustomize(el) {
+  const handle = el.querySelector('.unlock-handle');
+  if (!handle || handle.querySelector('.panel-customize')) return;
+  const id = el.id;
+
+  // Create customize button group
+  const grp = document.createElement('span');
+  grp.className = 'panel-customize';
+
+  // Text color
+  const txtColor = document.createElement('input');
+  txtColor.type = 'color';
+  txtColor.value = panelCustomize[id]?.textColor || '#d4c6a0';
+  txtColor.title = 'Text color';
+  txtColor.addEventListener('input', (e) => {
+    e.stopPropagation();
+    if (!panelCustomize[id]) panelCustomize[id] = {};
+    panelCustomize[id].textColor = e.target.value;
+    el.style.color = e.target.value;
+    savePanelCustomize();
+  });
+  txtColor.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  // BG color
+  const bgColor = document.createElement('input');
+  bgColor.type = 'color';
+  bgColor.value = panelCustomize[id]?.bgColor || '#1a1510';
+  bgColor.title = 'Background color';
+  bgColor.addEventListener('input', (e) => {
+    e.stopPropagation();
+    if (!panelCustomize[id]) panelCustomize[id] = {};
+    panelCustomize[id].bgColor = e.target.value;
+    el.style.setProperty('background', e.target.value, 'important');
+    savePanelCustomize();
+  });
+  bgColor.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  // Label toggle — shows the handle bar as a label outside unlock mode
+  const lblBtn = document.createElement('button');
+  lblBtn.textContent = 'T';
+  lblBtn.title = 'Toggle title label';
+  lblBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!panelCustomize[id]) panelCustomize[id] = {};
+    const on = el.classList.toggle('panel-label-on');
+    panelCustomize[id].labelOn = on;
+    if (!on) delete panelCustomize[id].labelOn;
+    savePanelCustomize();
+  });
+  lblBtn.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  // Label bar color
+  const lblColor = document.createElement('input');
+  lblColor.type = 'color';
+  lblColor.className = 'panel-label-color';
+  lblColor.value = panelCustomize[id]?.labelColor || '#d4981f';
+  lblColor.title = 'Label bar color';
+  lblColor.addEventListener('input', (e) => {
+    e.stopPropagation();
+    if (!panelCustomize[id]) panelCustomize[id] = {};
+    panelCustomize[id].labelColor = e.target.value;
+    handle.style.background = e.target.value;
+    savePanelCustomize();
+  });
+  lblColor.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  // Rename
+  const renameBtn = document.createElement('button');
+  renameBtn.innerHTML = '&#x270E;'; // ✎
+  renameBtn.title = 'Rename panel';
+  renameBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const nameSpan = el.querySelector('.unlock-handle > span:first-child');
+    const current = nameSpan?.textContent || '';
+    const newName = prompt('Rename panel:', current);
+    if (newName !== null && newName.trim()) {
+      nameSpan.textContent = newName.trim().toUpperCase();
+      if (!panelCustomize[id]) panelCustomize[id] = {};
+      panelCustomize[id].name = newName.trim().toUpperCase();
+      savePanelCustomize();
+    }
+  });
+  renameBtn.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  grp.appendChild(txtColor);
+  grp.appendChild(bgColor);
+  grp.appendChild(lblBtn);
+  grp.appendChild(lblColor);
+  grp.appendChild(renameBtn);
+
+  // Insert before the resize grip / buttons group at end of handle
+  const buttons = handle.querySelector('.panel-handle-buttons') || handle.querySelector('.dlg-bar-buttons');
+  if (buttons) {
+    buttons.insertBefore(grp, buttons.firstChild);
+  } else {
+    handle.appendChild(grp);
+  }
+
+  // Apply saved customizations
+  applyPanelCustomize(el);
+}
+
+// Inject into all existing panels
+document.querySelectorAll('.unlockable').forEach(injectPanelCustomize);
+
+// ── Tab Pop-out System ────────────────────────────────────────────────────────
+const TAB_NAMES = { combat: 'Combat', stats: 'Skills', quest: 'Quests', inv: 'Inventory', equip: 'Equipment', prayer: 'Prayer', magic: 'Magic' };
+const TAB_ICONS_MAP = { combat: '\u2694', stats: '\u2733', quest: '\u270E', inv: '\u25A6', equip: '\u265F', prayer: '\u2726', magic: '\u2736' };
+let popoutCounter = 0;
+const popoutPanels = []; // track all popped-out panels
+
+function createPopoutPanel(tabName, x, y) {
+  const id = `popout-${tabName}-${popoutCounter++}`;
+  const panel = document.createElement('div');
+  panel.className = 'popout-panel unlockable';
+  panel.id = id;
+  panel.style.left = x + 'px';
+  panel.style.top = y + 'px';
+
+  const header = document.createElement('div');
+  header.className = 'popout-header';
+  header.innerHTML = `
+    <span class="popout-title">${TAB_ICONS_MAP[tabName] || ''} ${TAB_NAMES[tabName] || tabName}</span>
+    <div class="popout-btns">
+      <button class="popout-add" title="Duplicate panel">+</button>
+      <button class="popout-remove" title="Close panel">&minus;</button>
+    </div>`;
+
+  const content = document.createElement('div');
+  content.className = 'popout-content';
+  content.dataset.tab = tabName;
+
+  const resize = document.createElement('div');
+  resize.className = 'popout-resize';
+
+  panel.appendChild(header);
+  panel.appendChild(content);
+  panel.appendChild(resize);
+  document.body.appendChild(panel);
+
+  // Update content immediately
+  updatePopoutContent(content, tabName);
+
+  // Drag header
+  let dragState = null;
+  header.addEventListener('mousedown', (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+    e.preventDefault();
+    const rect = panel.getBoundingClientRect();
+    dragState = { startX: e.clientX, startY: e.clientY, elX: rect.left, elY: rect.top };
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!dragState) return;
+    panel.style.left = (dragState.elX + e.clientX - dragState.startX) + 'px';
+    panel.style.top = (dragState.elY + e.clientY - dragState.startY) + 'px';
+  });
+  window.addEventListener('mouseup', () => { dragState = null; });
+
+  // Resize handle
+  let resizeState = null;
+  resize.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizeState = { startX: e.clientX, startY: e.clientY, startW: panel.offsetWidth, startH: panel.offsetHeight };
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!resizeState) return;
+    panel.style.width = Math.max(140, resizeState.startW + e.clientX - resizeState.startX) + 'px';
+    panel.style.height = Math.max(80, resizeState.startH + e.clientY - resizeState.startY) + 'px';
+  });
+  window.addEventListener('mouseup', () => { resizeState = null; });
+
+  // + button: duplicate
+  header.querySelector('.popout-add').addEventListener('click', () => {
+    const rect = panel.getBoundingClientRect();
+    createPopoutPanel(tabName, rect.left + 30, rect.top + 30);
+  });
+
+  // - button: remove
+  header.querySelector('.popout-remove').addEventListener('click', () => {
+    const idx = popoutPanels.indexOf(panel);
+    if (idx !== -1) popoutPanels.splice(idx, 1);
+    removeFromTaskbar(panel.id);
+    panel.remove();
+  });
+
+  popoutPanels.push(panel);
+  addPopoutToTaskbar(panel, tabName);
+  return panel;
+}
+
+function updatePopoutContent(contentEl, tabName) {
+  // Mirror content from the original tab pane
+  const source = document.getElementById('tab-' + tabName);
+  if (source) {
+    contentEl.innerHTML = source.innerHTML;
+  }
+}
+
+function updateAllPopouts() {
+  for (const panel of popoutPanels) {
+    const content = panel.querySelector('.popout-content');
+    if (content) updatePopoutContent(content, content.dataset.tab);
+  }
+}
+
+// Hook tab icon dragging to pop out panels
+function initTabDragPopout() {
+  document.querySelectorAll('.tab-icon[data-tab]').forEach(icon => {
+    let dragInfo = null;
+    let ghostEl = null;
+
+    icon.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      dragInfo = { startX: e.clientX, startY: e.clientY, tab: icon.dataset.tab, dragging: false };
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!dragInfo) return;
+      const dx = e.clientX - dragInfo.startX;
+      const dy = e.clientY - dragInfo.startY;
+      if (!dragInfo.dragging && Math.abs(dx) + Math.abs(dy) > 15) {
+        dragInfo.dragging = true;
+        // Create ghost element
+        ghostEl = document.createElement('div');
+        ghostEl.style.cssText = `position:fixed;z-index:500;padding:6px 12px;background:var(--panel-bg);border:2px solid var(--gold);color:var(--gold);font:bold 12px monospace;pointer-events:none;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.5);`;
+        ghostEl.textContent = TAB_NAMES[dragInfo.tab] || dragInfo.tab;
+        document.body.appendChild(ghostEl);
+      }
+      if (dragInfo.dragging && ghostEl) {
+        ghostEl.style.left = (e.clientX + 10) + 'px';
+        ghostEl.style.top = (e.clientY + 10) + 'px';
+      }
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (!dragInfo) return;
+      if (dragInfo.dragging) {
+        // Pop out the tab
+        createPopoutPanel(dragInfo.tab, e.clientX - 100, e.clientY - 20);
+        showChat(`Popped out ${TAB_NAMES[dragInfo.tab]}! Use + to duplicate, \u2212 to close.`, '#ff981f');
+      }
+      if (ghostEl) { ghostEl.remove(); ghostEl = null; }
+      dragInfo = null;
+    });
+  });
+}
+
 // ── Paint Tools ────────────────────────────────────────────────────────────────
 let showGrid = false;
+let showChunkGrid = false;
 let showElevation = false;
 let showCollision = false;
 let showTerrainColors = true;
@@ -1092,9 +2746,69 @@ function getTileAt(e) {
   return { tx, ty };
 }
 
+const hoverIconEl = document.getElementById('hover-icon');
+let hoverMouseX = 0, hoverMouseY = 0;
+
 canvas.addEventListener('mousemove', (e) => {
   const { tx, ty } = getTileAt(e);
   hoverWX = tx; hoverWY = ty;
+  hoverMouseX = e.clientX; hoverMouseY = e.clientY;
+
+  if (!connected) { hoverIconEl.classList.remove('visible'); return; }
+
+  // Determine what's under the cursor
+  let icon = '';
+
+  // Check NPCs
+  for (const npc of npcList) {
+    if (npc.x === tx && npc.y === ty) {
+      icon = npc.talk ? '\uD83D\uDCAC' : '\u2694\uFE0F'; // 💬 talk, ⚔️ fight
+      break;
+    }
+  }
+
+  // Check other players
+  if (!icon) {
+    for (const p of otherPlayers) {
+      if (p.x === tx && p.y === ty) { icon = '\uD83D\uDC64'; break; } // 👤
+    }
+  }
+
+  // Check ground items
+  if (!icon) {
+    for (const gi of groundItemList) {
+      if (gi.x === tx && gi.y === ty) { icon = '\uD83D\uDC4B'; break; } // 👋 pickup
+    }
+  }
+
+  // Check doors
+  if (!icon) {
+    for (const d of openDoorList) {
+      if (d.x === tx && d.y === ty) { icon = '\uD83D\uDEAA'; break; } // 🚪
+    }
+  }
+
+  // Check tiles
+  if (!icon) {
+    const tile = tileAt(tx, ty);
+    if (tile === T.TREE) icon = '\uD83E\uDE93'; // 🪓 chop
+    else if (tile === T.ROCK) icon = '\u26CF\uFE0F'; // ⛏️ mine
+    else if (tile === T.FISH_SPOT) icon = '\uD83C\uDFA3'; // 🎣 fish
+    else if (tile === T.DOOR) icon = '\uD83D\uDEAA'; // 🚪 door
+  }
+
+  if (icon) {
+    hoverIconEl.textContent = icon;
+    hoverIconEl.style.left = (e.clientX + 16) + 'px';
+    hoverIconEl.style.top = (e.clientY + 2) + 'px';
+    hoverIconEl.classList.add('visible');
+  } else {
+    hoverIconEl.classList.remove('visible');
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  hoverIconEl.classList.remove('visible');
 });
 
 canvas.addEventListener('wheel', (e) => {
@@ -1135,8 +2849,7 @@ canvas.addEventListener('mousedown', (e) => {
   if (e.button !== 0 || !connected) return;
   // Dismiss NPC dialogue on click
   if (npcDialogueLines.length > 0) {
-    npcDialogueLines = []; npcDialogueName = '';
-    clearTimeout(npcDialogueTimer);
+    hideDialoguePanel();
     return;
   }
   const { tx, ty } = getTileAt(e);
@@ -1250,8 +2963,9 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     return;
   }
-  // When chat is focused, don't process game keys
+  // When chat or login input is focused, don't process game keys
   if (chatActive) return;
+  if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
 
   keysDown.add(e.key.toLowerCase());
   if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); return; }
@@ -1270,16 +2984,24 @@ document.addEventListener('keydown', (e) => {
     sendMsg({ t: 'gender', v: myGender });
     showChat(`Gender: ${myGender}`, '#333');
   }
-  if (e.key === 'g' || e.key === 'G') {
+  if (e.key === 'g') {
     showGrid = !showGrid;
     document.getElementById('btn-grid').classList.toggle('active', showGrid);
     if (mode3d) {
-      // Toggle grid + chunk lines visibility in 3D
       for (const [, mesh] of terrain3dMeshes) {
-        mesh.children.forEach(c => { c.visible = showGrid; });
+        if (mesh.children[0]) mesh.children[0].visible = showGrid;
       }
-      showChat(showGrid ? 'Grid ON (G to toggle)' : 'Grid OFF (G to toggle)', '#333');
     }
+    showChat(showGrid ? 'Tile grid ON (G)' : 'Tile grid OFF (G)', '#333');
+  }
+  if (e.key === 'G') {
+    showChunkGrid = !showChunkGrid;
+    if (mode3d) {
+      for (const [, mesh] of terrain3dMeshes) {
+        if (mesh.children[1]) mesh.children[1].visible = showChunkGrid;
+      }
+    }
+    showChat(showChunkGrid ? 'Chunk grid ON (Shift+G)' : 'Chunk grid OFF (Shift+G)', '#333');
   }
   if (e.key === 'e' || e.key === 'E') {
     showElevation = !showElevation;
@@ -1312,6 +3034,7 @@ document.addEventListener('keydown', (e) => {
     showOsrsMap = !showOsrsMap;
     showChat(showOsrsMap ? 'OSRS map overlay ON (M to toggle)' : 'OSRS map overlay OFF', '#333');
   }
+  if (e.key === 'u' || e.key === 'U') { toggleUIUnlock(); }
   if (e.key === 'p' || e.key === 'P') { if (mode3d || !paintTool) { e.preventDefault(); takeScreenshot(); return; } }
   if (e.key === 'v' || e.key === 'V') { e.preventDefault(); startRecording(); return; }
   if (e.key === 'Escape') {
@@ -1343,6 +3066,7 @@ document.addEventListener('keydown', (e) => {
       'C — Toggle collision overlay',
       'M — Toggle OSRS map overlay',
       'T — Toggle gender',
+      'U — Unlock/lock UI panels',
       'P — Screenshot',
       'V — Record 10s clip',
       'Ctrl+Z / Ctrl+Y — Undo / Redo',
@@ -1624,7 +3348,7 @@ function render() {
   }
 
   // Chunk grid lines (8x8) in 2D
-  if (TILE >= 2) {
+  if (showChunkGrid && TILE >= 2) {
     // Blue chunk lines every 8 tiles
     ctx.strokeStyle = 'rgba(68,136,255,0.45)';
     ctx.lineWidth = 1;
@@ -1935,51 +3659,6 @@ function render() {
     ctx.fillText(coordText, cx + 6, canvas.height - 8);
   }
 
-  // NPC Dialogue overlay
-  if (npcDialogueLines.length > 0) {
-    const dlgPad = 16;
-    const dlgLineH = 22;
-    const dlgNameH = 28;
-    const dlgW = Math.min(500, canvas.width - 40);
-    const dlgH = dlgNameH + dlgPad + npcDialogueLines.length * dlgLineH + dlgPad;
-    const dlgX = (canvas.width - dlgW) / 2;
-    const dlgY = canvas.height - dlgH - 60;
-
-    // Background
-    ctx.fillStyle = 'rgba(10, 15, 12, 0.92)';
-    ctx.fillRect(dlgX, dlgY, dlgW, dlgH);
-    ctx.strokeStyle = '#d4a853';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(dlgX, dlgY, dlgW, dlgH);
-    ctx.strokeStyle = 'rgba(212, 168, 83, 0.3)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(dlgX + 3, dlgY + 3, dlgW - 6, dlgH - 6);
-
-    // NPC name
-    ctx.font = 'bold 15px monospace';
-    ctx.fillStyle = '#d4a853';
-    ctx.fillText(npcDialogueName, dlgX + dlgPad, dlgY + 22);
-
-    // Separator line
-    ctx.strokeStyle = 'rgba(212, 168, 83, 0.4)';
-    ctx.beginPath();
-    ctx.moveTo(dlgX + dlgPad, dlgY + dlgNameH);
-    ctx.lineTo(dlgX + dlgW - dlgPad, dlgY + dlgNameH);
-    ctx.stroke();
-
-    // Dialogue text
-    ctx.font = '14px monospace';
-    ctx.fillStyle = '#e8f0ec';
-    for (let i = 0; i < npcDialogueLines.length; i++) {
-      ctx.fillText(npcDialogueLines[i], dlgX + dlgPad, dlgY + dlgNameH + dlgPad + i * dlgLineH + 14);
-    }
-
-    // Click to dismiss hint
-    ctx.font = '11px monospace';
-    ctx.fillStyle = 'rgba(212, 168, 83, 0.5)';
-    ctx.fillText('click to dismiss', dlgX + dlgW - 110, dlgY + dlgH - 6);
-  }
-
   // Tutorial Island hint bar
   if (tutorialHint) {
     ctx.font = 'bold 14px monospace';
@@ -1997,6 +3676,7 @@ function render() {
 
   updateCombatUI();
   updateMinimap();
+  updateClonedPanels();
   requestAnimationFrame(render);
 }
 
@@ -2429,7 +4109,7 @@ function toggle3D() {
 
 // ── Init ───────────────────────────────────────────────────────────────────────
 updatePaintUI();
-connect();
+// connect() is called by doLogin() from the login screen
 requestAnimationFrame(render);
 </script>
 </body>

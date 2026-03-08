@@ -1446,7 +1446,20 @@ function gameTick() {
       const gArr = groundItems.filter(g => Math.abs(g.x - p.x) <= ENTITY_VIEW && Math.abs(g.y - p.y) <= ENTITY_VIEW)
         .map(g => ({ id: g.id, name: g.name, x: g.x, y: g.y }));
       const dArr = [...openDoors.values()].filter(d => Math.abs(d.ox - p.x) <= ENTITY_VIEW && Math.abs(d.oy - p.y) <= ENTITY_VIEW);
-      send(ws, { t: 'state', players: pArr, npcs: nArr, items: gArr, doors: dArr, tick });
+      // Action progress for gathering skills
+      let action = null;
+      if (p.gathering && p.path.length === 0) {
+        const actionNames = { woodcutting: 'Woodcutting', mining: 'Mining', fishing: 'Fishing' };
+        const actionItems = { woodcutting: 'Logs', mining: 'Ore', fishing: 'Raw fish' };
+        action = {
+          type: p.gathering.type,
+          name: actionNames[p.gathering.type] || p.gathering.type,
+          item: actionItems[p.gathering.type] || '',
+          tick: p.actionTick,
+          total: 4,
+        };
+      }
+      send(ws, { t: 'state', players: pArr, npcs: nArr, items: gArr, doors: dArr, tick, action });
     }
   }
 
