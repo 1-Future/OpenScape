@@ -297,6 +297,45 @@ let nextGroundItemId = 1;
 let tick = 0;
 let nextPlayerId = 1;
 
+// ── Friends System ────────────────────────────────────────────────────────────
+// friendsData: Map<playerId, Set<friendPlayerId>> — persists in memory per session
+const friendsData = new Map(); // id -> Set of friend ids
+const playerNames = new Map(); // id -> display name
+
+function getPlayerById(id) {
+  for (const [, p] of players) if (p.id === id) return p;
+  return null;
+}
+function getPlayerByName(name) {
+  const lower = name.toLowerCase();
+  for (const [, p] of players) if ((playerNames.get(p.id) || `Player ${p.id}`).toLowerCase() === lower) return p;
+  return null;
+}
+function getFriendsList(playerId) {
+  const friends = friendsData.get(playerId) || new Set();
+  return [...friends].map(fid => ({
+    id: fid,
+    name: playerNames.get(fid) || `Player ${fid}`,
+    online: !!getPlayerById(fid),
+    world: getPlayerById(fid) ? 1 : 0,
+  }));
+}
+function sendFriendsList(p) {
+  send(p.ws, { t: 'friends', list: getFriendsList(p.id), name: playerNames.get(p.id) || `Player ${p.id}` });
+}
+function notifyFriendsOfStatus(playerId, online) {
+  const name = playerNames.get(playerId) || `Player ${playerId}`;
+  // Notify all online players who have this player as a friend
+  for (const [, p] of players) {
+    const pFriends = friendsData.get(p.id);
+    if (pFriends && pFriends.has(playerId)) {
+      sendFriendsList(p);
+      if (online) sendChat(p, `${name} has logged in.`, '#22c55e');
+      else sendChat(p, `${name} has logged out.`, '#888888');
+    }
+  }
+}
+
 // ── Seeded RNG ─────────────────────────────────────────────────────────────────
 let seed = 42;
 function rng() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
@@ -901,8 +940,11 @@ function createPlayer(ws) {
   skills.hitpoints = { xp: 1154, level: 10 };
   const equipment = {};
   for (const s of EQUIP_SLOTS) equipment[s] = -1;
+  const pid = nextPlayerId++;
+  playerNames.set(pid, `Player ${pid}`);
+  if (!friendsData.has(pid)) friendsData.set(pid, new Set());
   return {
-    id: nextPlayerId++, ws, x: sx, y: sy, prevX: sx, prevY: sy, hp: 10, maxHp: 10,
+    id: pid, ws, x: sx, y: sy, prevX: sx, prevY: sy, hp: 10, maxHp: 10,
     gender: 'male', sentChunks: new Set(),
     path: [], gathering: null, actionTick: 0,
     combatTarget: null, clickedNpc: null, pendingPickup: null, pendingTalk: null, gatherCluster: null,
@@ -1490,7 +1532,81 @@ function handleMessage(ws, data) {
   switch (msg.t) {
     case 'chat': {
       const text = (msg.msg || '').trim().slice(0, 100);
-      if (text) broadcast({ t: 'chat', msg: `Player ${p.id}: ${text}`, color: '#0000aa' });
+      const chatName = playerNames.get(p.id) || `Player ${p.id}`;
+      if (text) broadcast({ t: 'chat', msg: `${chatName}: ${text}`, color: '#0000aa' });
+      break;
+    }
+    case 'set_name': {
+      const name = (msg.name || '').trim().slice(0, 20);
+      if (name.length < 1) { sendChat(p, 'Name must be at least 1 character.', '#f44'); break; }
+      // Check for duplicate names
+      let nameTaken = false;
+      for (const [id, n] of playerNames) {
+        if (n.toLowerCase() === name.toLowerCase() && id !== p.id) { nameTaken = true; break; }
+      }
+      if (nameTaken) { sendChat(p, 'That name is already taken.', '#f44'); break; }
+      playerNames.set(p.id, name);
+      sendChat(p, `Name set to: ${name}`, '#22c55e');
+      sendFriendsList(p);
+      // Update friends lists of anyone who has us as friend
+      for (const [, op] of players) {
+        const opFriends = friendsData.get(op.id);
+        if (opFriends && opFriends.has(p.id)) sendFriendsList(op);
+      }
+      // Send updated online list to all
+      const onlineList = [];
+      for (const [, op] of players) onlineList.push({ id: op.id, name: playerNames.get(op.id) || `Player ${op.id}` });
+      broadcast({ t: 'online_players', list: onlineList });
+      break;
+    }
+    case 'friend_add': {
+      const targetName = (msg.name || '').trim();
+      if (!targetName) break;
+      // Find by name first, then by ID
+      let target = getPlayerByName(targetName);
+      if (!target && /^\d+$/.test(targetName)) target = getPlayerById(parseInt(targetName));
+      // Allow adding by name even if offline (check playerNames)
+      let targetId = null;
+      if (target) {
+        targetId = target.id;
+      } else {
+        // Search playerNames for offline match
+        for (const [id, name] of playerNames) {
+          if (name.toLowerCase() === targetName.toLowerCase()) { targetId = id; break; }
+        }
+      }
+      if (targetId === null) { sendChat(p, `Player "${targetName}" not found.`, '#f44'); break; }
+      if (targetId === p.id) { sendChat(p, "You can't add yourself.", '#f44'); break; }
+      const myFriends = friendsData.get(p.id);
+      if (myFriends.has(targetId)) { sendChat(p, `Already on your friends list.`, '#f44'); break; }
+      myFriends.add(targetId);
+      const friendName = playerNames.get(targetId) || `Player ${targetId}`;
+      sendChat(p, `Added ${friendName} to friends list.`, '#22c55e');
+      sendFriendsList(p);
+      break;
+    }
+    case 'friend_remove': {
+      const rid = msg.id;
+      const myFriends = friendsData.get(p.id);
+      if (!myFriends || !myFriends.has(rid)) break;
+      myFriends.delete(rid);
+      const removedName = playerNames.get(rid) || `Player ${rid}`;
+      sendChat(p, `Removed ${removedName} from friends list.`, '#ff981f');
+      sendFriendsList(p);
+      break;
+    }
+    case 'pm': {
+      const targetId = msg.to;
+      const text = (msg.msg || '').trim().slice(0, 200);
+      if (!text) break;
+      const target = getPlayerById(targetId);
+      const myName = playerNames.get(p.id) || `Player ${p.id}`;
+      const targetName = playerNames.get(targetId) || `Player ${targetId}`;
+      if (!target) { sendChat(p, `${targetName} is not online.`, '#f44'); break; }
+      // Send to recipient
+      send(target.ws, { t: 'pm', from: p.id, fromName: myName, msg: text });
+      // Confirm to sender
+      send(p.ws, { t: 'pm_sent', to: targetId, toName: targetName, msg: text });
       break;
     }
     case 'move': {
@@ -1707,16 +1823,30 @@ wss.on('connection', (ws) => {
   console.log(`[join] Player ${p.id} at (${p.x}, ${p.y}) (${players.size} online)`);
 
   const namesObj = {}; for (const [k, v] of customNames) namesObj[k] = v;
-  send(ws, { t: 'welcome', id: p.id, x: p.x, y: p.y, customNames: namesObj, chunkSize: CHUNK_SIZE });
+  const pName = playerNames.get(p.id) || `Player ${p.id}`;
+  send(ws, { t: 'welcome', id: p.id, x: p.x, y: p.y, customNames: namesObj, chunkSize: CHUNK_SIZE, name: pName });
   updatePlayerChunks(p);
   sendStats(p);
+  sendFriendsList(p);
   sendChat(p, `Welcome to MiniScape! ${players.size} player(s) online.`, '#ff981f');
-  broadcast({ t: 'chat', msg: `Player ${p.id} has joined.`, color: '#0ff' });
+  broadcast({ t: 'chat', msg: `${pName} has joined.`, color: '#0ff' });
+  notifyFriendsOfStatus(p.id, true);
+
+  // Broadcast online players list to all (including new player)
+  const onlineList = [];
+  for (const [, op] of players) onlineList.push({ id: op.id, name: playerNames.get(op.id) || `Player ${op.id}` });
+  broadcast({ t: 'online_players', list: onlineList });
 
   ws.on('message', (data) => handleMessage(ws, data.toString()));
   ws.on('close', () => {
     players.delete(ws);
-    broadcast({ t: 'chat', msg: `Player ${p.id} has left.`, color: '#888' });
+    const leaveName = playerNames.get(p.id) || `Player ${p.id}`;
+    broadcast({ t: 'chat', msg: `${leaveName} has left.`, color: '#888' });
+    notifyFriendsOfStatus(p.id, false);
+    // Update online list for remaining players
+    const onlineList = [];
+    for (const [, op] of players) onlineList.push({ id: op.id, name: playerNames.get(op.id) || `Player ${op.id}` });
+    broadcast({ t: 'online_players', list: onlineList });
     console.log(`[leave] Player ${p.id} disconnected (${players.size} online)`);
   });
 });

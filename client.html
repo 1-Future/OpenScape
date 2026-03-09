@@ -529,6 +529,38 @@
   .inv-slot.filled { background: rgba(80,65,40,0.5); color: #ff981f; }
   .placeholder-text { color: #666; font-size: 11px; margin-top: 8px; }
 
+  /* Friends list */
+  .friend-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 6px; border-radius: 4px;
+    transition: background 0.15s; cursor: default;
+  }
+  .friend-row:hover { background: rgba(255,255,255,0.05); }
+  .friend-dot {
+    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  }
+  .friend-dot.online { background: #22c55e; box-shadow: 0 0 4px rgba(34,197,94,0.5); }
+  .friend-dot.offline { background: #555; }
+  .friend-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .friend-name.online { color: #e8f0ec; }
+  .friend-name.offline { color: #666; }
+  .friend-world { font-size: 9px; color: #888; margin-right: 2px; }
+  .friend-actions { display: flex; gap: 3px; opacity: 0; transition: opacity 0.15s; }
+  .friend-row:hover .friend-actions { opacity: 1; }
+  .friend-actions button {
+    font-size: 9px; padding: 1px 5px; cursor: pointer;
+    background: var(--panel-bg2); border: 1px solid var(--panel-border);
+    border-radius: 3px; color: #aaa; transition: color 0.15s, border-color 0.15s;
+  }
+  .friend-actions button:hover { color: #fff; border-color: #888; }
+  .friend-actions button.pm-btn { color: var(--cyan); }
+  .friend-actions button.rm-btn { color: #ef4444; }
+  .online-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 2px 6px; font-size: 11px; color: #aaa;
+  }
+  .online-row .friend-dot { background: #22c55e; box-shadow: 0 0 4px rgba(34,197,94,0.5); }
+
   /* ── Chat Panel ───────────────────────────────────────────────────── */
   #panel-chat {
     bottom: 28px; left: 0; width: calc(100vw - var(--sidebar-w));
@@ -1151,6 +1183,7 @@
     <div class="tab-icon" data-tab="equip" title="Equipment">&#9823;</div>
     <div class="tab-icon" data-tab="prayer" title="Prayer">&#10022;</div>
     <div class="tab-icon" data-tab="magic" title="Magic">&#10038;</div>
+    <div class="tab-icon" data-tab="friends" title="Friends">&#9829;</div>
   </div>
   <div id="tab-content">
     <div id="tab-combat" class="tab-pane active">
@@ -1183,6 +1216,19 @@
     <div id="tab-magic" class="tab-pane">
       <h3>Magic</h3>
       <div class="placeholder-text">No spells yet.</div>
+    </div>
+    <div id="tab-friends" class="tab-pane">
+      <h3 style="margin-bottom:6px;">Friends</h3>
+      <div id="my-name-display" style="font-size:11px;color:#aaa;margin-bottom:8px;">Name: <span id="my-name-val">—</span> <button id="btn-set-name" style="font-size:10px;padding:1px 6px;cursor:pointer;background:var(--panel-bg2);color:var(--gold);border:1px solid var(--panel-border);border-radius:3px;margin-left:4px;">Rename</button></div>
+      <div id="friend-add-row" style="display:flex;gap:4px;margin-bottom:10px;">
+        <input id="friend-add-input" type="text" placeholder="Player name or ID" style="flex:1;padding:3px 6px;font:11px 'Courier New',monospace;background:var(--panel-bg2);color:var(--text-light);border:1px solid var(--panel-border);border-radius:3px;outline:none;" />
+        <button id="friend-add-btn" style="padding:3px 8px;font:bold 11px monospace;cursor:pointer;background:var(--panel-bg2);color:#22c55e;border:1px solid #22c55e;border-radius:3px;">+</button>
+      </div>
+      <div id="friends-list" style="font-size:11px;"></div>
+      <div style="margin-top:12px;border-top:1px solid var(--panel-border);padding-top:8px;">
+        <h3 style="font-size:12px;margin-bottom:4px;">Online</h3>
+        <div id="online-players-list" style="font-size:11px;color:#aaa;"></div>
+      </div>
     </div>
   </div>
   <div class="resize-handle"></div>
@@ -2784,6 +2830,11 @@ function handleServerMsg(msg) {
       showChat('Click to move. Click NPCs to attack.', '#0000cc');
       showChat('Click trees to chop, rocks to mine.', '#0000cc');
       showChat('Press M to toggle OSRS map overlay.', '#0000cc');
+      // Set name from login and update display
+      if (msg.name) document.getElementById('my-name-val').textContent = msg.name;
+      if (typeof playerUsername !== 'undefined' && playerUsername) {
+        sendMsg({ t: 'set_name', name: playerUsername });
+      }
       break;
     case 'chunk': {
       const key = chunkKey(msg.cx, msg.cy);
@@ -2881,8 +2932,99 @@ function handleServerMsg(msg) {
         clearTimeout(npcDialogueTimer);
       }
       break;
+    case 'friends':
+      updateFriendsList(msg.list);
+      if (msg.name) document.getElementById('my-name-val').textContent = msg.name;
+      break;
+    case 'online_players':
+      knownPlayers = msg.list;
+      updateOnlinePlayersList(msg.list);
+      break;
+    case 'pm':
+      showChat(`[PM from ${msg.fromName}]: ${msg.msg}`, '#c084fc');
+      lastPmFrom = msg.from;
+      break;
+    case 'pm_sent':
+      showChat(`[PM to ${msg.toName}]: ${msg.msg}`, '#9966cc');
+      break;
   }
 }
+
+let lastPmFrom = null;
+let knownPlayers = []; // { id, name } from online_players messages
+
+function getPlayerByNameClient(name) {
+  const lower = name.toLowerCase();
+  return knownPlayers.find(p => p.name.toLowerCase() === lower) || null;
+}
+
+function updateFriendsList(list) {
+  const container = document.getElementById('friends-list');
+  if (!container) return;
+  // Sort: online first, then alphabetical
+  list.sort((a, b) => {
+    if (a.online !== b.online) return b.online - a.online;
+    return a.name.localeCompare(b.name);
+  });
+  if (list.length === 0) {
+    container.innerHTML = '<div style="color:#666;font-size:11px;padding:4px;">No friends yet. Add someone!</div>';
+    return;
+  }
+  container.innerHTML = list.map(f => `
+    <div class="friend-row">
+      <div class="friend-dot ${f.online ? 'online' : 'offline'}"></div>
+      <span class="friend-name ${f.online ? 'online' : 'offline'}">${f.name}</span>
+      ${f.online ? '<span class="friend-world">W1</span>' : ''}
+      <span class="friend-actions">
+        ${f.online ? `<button class="pm-btn" onclick="startPM(${f.id}, '${f.name.replace(/'/g, "\\'")}')">PM</button>` : ''}
+        <button class="rm-btn" onclick="removeFriend(${f.id})">X</button>
+      </span>
+    </div>
+  `).join('');
+}
+
+function updateOnlinePlayersList(list) {
+  const container = document.getElementById('online-players-list');
+  if (!container) return;
+  const others = list.filter(p => p.id !== myId);
+  if (others.length === 0) {
+    container.innerHTML = '<div style="color:#666;">No other players online.</div>';
+    return;
+  }
+  container.innerHTML = others.map(p => `
+    <div class="online-row">
+      <div class="friend-dot online"></div>
+      <span>${p.name}</span>
+      <button onclick="sendMsg({t:'friend_add',name:'${p.name.replace(/'/g, "\\'")}'});this.textContent='Added';this.disabled=true;" style="margin-left:auto;font-size:9px;padding:1px 5px;cursor:pointer;background:var(--panel-bg2);color:#22c55e;border:1px solid #22c55e;border-radius:3px;">+</button>
+    </div>
+  `).join('');
+}
+
+function removeFriend(id) {
+  sendMsg({ t: 'friend_remove', id });
+}
+
+function startPM(id, name) {
+  const input = document.getElementById('chat-input');
+  input.value = `/pm ${name} `;
+  input.focus();
+}
+
+// Friend add button
+document.getElementById('friend-add-btn').addEventListener('click', () => {
+  const input = document.getElementById('friend-add-input');
+  const name = input.value.trim();
+  if (name) { sendMsg({ t: 'friend_add', name }); input.value = ''; }
+});
+document.getElementById('friend-add-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('friend-add-btn').click();
+});
+
+// Rename button
+document.getElementById('btn-set-name').addEventListener('click', () => {
+  const name = prompt('Enter your display name:');
+  if (name && name.trim()) sendMsg({ t: 'set_name', name: name.trim() });
+});
 
 let pendingBucketUndo = null;
 let bucketNewTarget = null;
@@ -4383,7 +4525,20 @@ document.addEventListener('keydown', (e) => {
     if (chatActive) {
       const msg = chatInput.value.trim();
       if (msg) {
-        sendMsg({ t: 'chat', msg });
+        // Handle /pm command
+        const pmMatch = msg.match(/^\/pm\s+(\S+)\s+(.*)/i);
+        if (pmMatch) {
+          const targetName = pmMatch[1];
+          const pmText = pmMatch[2].trim();
+          if (pmText) {
+            // Find target by name from last known friends/online list
+            const target = getPlayerByNameClient(targetName);
+            if (target) sendMsg({ t: 'pm', to: target.id, msg: pmText });
+            else showChat(`Player "${targetName}" not found. Use exact name.`, '#f44');
+          }
+        } else {
+          sendMsg({ t: 'chat', msg });
+        }
       }
       chatInput.value = '';
       chatInput.blur();
