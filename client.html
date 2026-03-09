@@ -831,7 +831,7 @@
     background: rgba(0, 220, 255, 0.25); pointer-events: none;
   }
   .anchor-line-v {
-    position: absolute; top: 0; bottom: 0; width: 1px;
+    position: absolute; top: 0; width: 1px;
     background: rgba(0, 220, 255, 0.25); pointer-events: none;
   }
   .anchor-dot {
@@ -1083,7 +1083,7 @@
 
 <div id="conn" style="display:none">Connecting to server...</div>
 <div id="anchor-grid"></div>
-<div id="ui-unlock-banner">UI UNLOCKED — <span>U</span> lock — <button id="ui-reset-btn" onclick="resetUIAndReload()" style="margin-left:4px;background:#600;color:#fff;border:1px solid #a00;padding:2px 8px;cursor:pointer;font:bold 11px monospace;border-radius:3px;">RESET</button><span id="anchor-controls"> X <button onclick="changeAnchor('x',-1)">-</button><span class="anchor-label" id="anchor-x-val">4</span><button onclick="changeAnchor('x',1)">+</button> Y <button onclick="changeAnchor('y',-1)">-</button><span class="anchor-label" id="anchor-y-val">3</span><button onclick="changeAnchor('y',1)">+</button></span> <span style="margin-left:8px;opacity:0.7;">|</span> <label style="margin-left:8px;cursor:pointer;" title="Set ALL panel backgrounds">All BG <input type="color" id="universal-bg" value="#1a1510" style="width:20px;height:16px;border:none;padding:0;cursor:pointer;vertical-align:middle;"></label> <label style="cursor:pointer;" title="Set ALL label bar colors">All Label <input type="color" id="universal-label" value="#d4981f" style="width:20px;height:16px;border:none;padding:0;cursor:pointer;vertical-align:middle;"></label> <button id="btn-corners" onclick="cycleCorners()" style="margin-left:8px;background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;border-radius:3px;" title="Cycle corner style: Round → Square → Chamfer">◯ Round</button> <button id="btn-edges" onclick="toggleBevel()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Toggle beveled 3D edges">▭ Flat</button> <button id="btn-inner" onclick="toggleInnerEdges()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Toggle inner panel dividers">⊟ Inner</button> <button id="btn-weight" onclick="cycleWeight()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle border weight">⊡ Default</button> <button id="btn-style" onclick="cycleStyle()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle border style">― Solid</button> <button id="btn-depth" onclick="cycleDepth()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle shadow depth">◫ Default</button> <button id="btn-glow" onclick="cycleGlow()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle glow effect">✦ No Glow</button> <button id="btn-texture" onclick="cycleTexture()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle panel texture">▦ No Tex</button> <button id="btn-logo" onclick="cycleLogo()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle panel logo watermark">⚑ No Logo</button> <button id="btn-stickers" onclick="toggleStickerPicker()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Place stickers on screen">🎨 Stickers</button> <button id="btn-glass" onclick="toggleGlass()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Toggle glass/frosted panel effect">◇ Glass</button> <button id="btn-all-labels" onclick="toggleAllLabels()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Toggle labels on/off for all panels">T All Labels</button> <span style="margin-left:4px;opacity:0.7;">|</span> <button onclick="changeUniversalFont(-1)" style="margin-left:4px;background:#333;color:#ccc;border:1px solid #555;padding:2px 6px;cursor:pointer;font:bold 13px monospace;" title="Decrease all text size">a</button><span id="universal-font-val" style="display:inline-block;min-width:22px;text-align:center;font:bold 11px monospace;color:#ccc;vertical-align:middle;">14</span><button onclick="changeUniversalFont(1)" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 6px;cursor:pointer;font:bold 15px monospace;" title="Increase all text size">A</button></div>
+<div id="ui-unlock-banner">UI UNLOCKED — <span>U</span> lock — <button id="ui-reset-btn" onclick="resetUIAndReload()" style="margin-left:4px;background:#600;color:#fff;border:1px solid #a00;padding:2px 8px;cursor:pointer;font:bold 11px monospace;border-radius:3px;">RESET</button><span id="anchor-controls"> X <button onclick="changeAnchor('x',-1)">-</button><span class="anchor-label" id="anchor-x-val">4</span><button onclick="changeAnchor('x',1)">+</button> Y <button onclick="changeAnchor('y',-1)">-</button><span class="anchor-label" id="anchor-y-val">3</span><button onclick="changeAnchor('y',1)">+</button></span> <span style="margin-left:8px;opacity:0.7;">|</span> <label style="margin-left:8px;cursor:pointer;" title="Set ALL panel backgrounds">All BG <input type="color" id="universal-bg" value="#1a1510" style="width:20px;height:16px;border:none;padding:0;cursor:pointer;vertical-align:middle;"></label> <label style="cursor:pointer;" title="Set ALL label bar colors">All Label <input type="color" id="universal-label" value="#d4981f" style="width:20px;height:16px;border:none;padding:0;cursor:pointer;vertical-align:middle;"></label> <span style="margin-left:4px;opacity:0.7;">|</span> <label style="margin-left:4px;cursor:pointer;" title="Gradient primary color">G1 <input type="color" id="grad-primary" value="#1a1510" style="width:20px;height:16px;border:none;padding:0;cursor:pointer;vertical-align:middle;"></label> <label style="cursor:pointer;" title="Gradient accent color">G2 <input type="color" id="grad-accent" value="#2a1a30" style="width:20px;height:16px;border:none;padding:0;cursor:pointer;vertical-align:middle;"></label> <button id="btn-grad-dir" onclick="cycleGradDir()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle gradient direction">↓ Top-Down</button> <button id="btn-grad-apply" onclick="applyGradient()" style="background:#444;color:#ffd;border:1px solid #666;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Apply gradient to all panels">Apply Grad</button> <button id="btn-grad-clear" onclick="clearGradient()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Remove gradient from all panels">✕ Grad</button> <span style="margin-left:4px;opacity:0.7;">|</span> <button id="btn-corners" onclick="cycleCorners()" style="margin-left:8px;background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;border-radius:3px;" title="Cycle corner style: Round → Square → Chamfer">◯ Round</button> <button id="btn-edges" onclick="toggleBevel()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Toggle beveled 3D edges">▭ Flat</button> <button id="btn-inner" onclick="toggleInnerEdges()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Toggle inner panel dividers">⊟ Inner</button> <button id="btn-weight" onclick="cycleWeight()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle border weight">⊡ Default</button> <button id="btn-style" onclick="cycleStyle()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle border style">― Solid</button> <button id="btn-depth" onclick="cycleDepth()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle shadow depth">◫ Default</button> <button id="btn-glow" onclick="cycleGlow()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle glow effect">✦ No Glow</button> <button id="btn-texture" onclick="cycleTexture()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle panel texture">▦ No Tex</button> <button id="btn-logo" onclick="cycleLogo()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle panel logo watermark">⚑ No Logo</button> <button id="btn-stickers" onclick="toggleStickerPicker()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Place stickers on screen">🎨 Stickers</button> <button id="btn-glass" onclick="toggleGlass()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Toggle glass/frosted panel effect">◇ Glass</button> <button id="btn-all-labels" onclick="toggleAllLabels()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Toggle labels on/off for all panels">T All Labels</button> <span style="margin-left:4px;opacity:0.7;">|</span> <button onclick="changeUniversalFont(-1)" style="margin-left:4px;background:#333;color:#ccc;border:1px solid #555;padding:2px 6px;cursor:pointer;font:bold 13px monospace;" title="Decrease all text size">a</button><span id="universal-font-val" style="display:inline-block;min-width:22px;text-align:center;font:bold 11px monospace;color:#ccc;vertical-align:middle;">14</span><button onclick="changeUniversalFont(1)" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 6px;cursor:pointer;font:bold 15px monospace;" title="Increase all text size">A</button></div>
 
 <!-- Taskbar -->
 <div id="taskbar"></div>
@@ -1961,6 +1961,11 @@ function resetUIAndReload() {
   localStorage.removeItem('miniscape-tex-mode');
   localStorage.removeItem('miniscape-logo-mode');
   localStorage.removeItem('miniscape-stickers');
+  localStorage.removeItem('miniscape-grad-primary');
+  localStorage.removeItem('miniscape-grad-accent');
+  localStorage.removeItem('miniscape-grad-dir');
+  localStorage.removeItem('miniscape-grad-active');
+  gradDirIdx = 0;
   cornerMode = 'round'; edgeMode = 'flat'; innerEdges = false;
   weightMode = 'default'; styleMode = 'solid'; depthMode = 'default';
   glowMode = 'none'; texMode = 'none'; logoMode = 'none';
@@ -2064,8 +2069,8 @@ function getOtherPanelRects(excludeEl) {
 }
 
 function constrainMove(el, newX, newY, w, h) {
-  const vw = window.innerWidth, vh = window.innerHeight;
-  // Clamp to screen
+  const vw = window.innerWidth, vh = window.innerHeight - getTaskbarHeight();
+  // Clamp to screen (above taskbar)
   newX = Math.max(0, Math.min(vw - w, newX));
   newY = Math.max(0, Math.min(vh - h, newY));
   const others = getOtherPanelRects(el);
@@ -2100,16 +2105,16 @@ function constrainMove(el, newX, newY, w, h) {
       }
     }
   }
-  // Final screen clamp
+  // Final screen clamp (above taskbar)
   newX = Math.max(0, Math.min(vw - w, newX));
   newY = Math.max(0, Math.min(vh - h, newY));
   return { x: newX, y: newY };
 }
 
 function constrainResize(el, newW, newH) {
-  const vw = window.innerWidth, vh = window.innerHeight;
+  const vw = window.innerWidth, vh = window.innerHeight - getTaskbarHeight();
   const rect = el.getBoundingClientRect();
-  // Clamp to screen edge
+  // Clamp to screen edge (above taskbar)
   newW = Math.min(newW, vw - rect.left);
   newH = Math.min(newH, vh - rect.top);
   // Clamp to nearest panel edge
@@ -2258,6 +2263,11 @@ function getAnchorPoints() {
   return points;
 }
 
+function getTaskbarHeight() {
+  const tb = document.getElementById('taskbar');
+  return (tb && tb.classList.contains('visible')) ? tb.offsetHeight : 0;
+}
+
 function getAnchorLinesX() {
   const vw = window.innerWidth, lines = [];
   for (let i = 0; i <= anchorX; i++) lines.push(Math.round(i * vw / anchorX));
@@ -2265,7 +2275,7 @@ function getAnchorLinesX() {
 }
 
 function getAnchorLinesY() {
-  const vh = window.innerHeight, lines = [];
+  const vh = window.innerHeight - getTaskbarHeight(), lines = [];
   for (let i = 0; i <= anchorY; i++) lines.push(Math.round(i * vh / anchorY));
   return lines;
 }
@@ -2305,7 +2315,7 @@ function snapToAnchors(x, y, w, h) {
 function renderAnchorGrid() {
   const container = document.getElementById('anchor-grid');
   container.innerHTML = '';
-  const vw = window.innerWidth, vh = window.innerHeight;
+  const vw = window.innerWidth, vh = window.innerHeight - getTaskbarHeight();
 
   // Vertical lines
   for (let i = 0; i <= anchorX; i++) {
@@ -2313,6 +2323,7 @@ function renderAnchorGrid() {
     const line = document.createElement('div');
     line.className = 'anchor-line-v';
     line.style.left = x + 'px';
+    line.style.height = vh + 'px';
     container.appendChild(line);
   }
   // Horizontal lines
@@ -3692,6 +3703,139 @@ function applyUniversalLabel(color) {
     }
     applyUniversalLabel(e.target.value);
   });
+}
+
+// ── Gradient System ──────────────────────────────────────────────────────────
+const gradDirs = [
+  { css: 'to bottom', label: '↓ Top-Down' },
+  { css: 'to top', label: '↑ Bottom-Up' },
+  { css: 'to right', label: '→ Left-Right' },
+  { css: 'to left', label: '← Right-Left' },
+  { css: 'to bottom right', label: '↘ Diagonal' },
+  { css: 'to top left', label: '↖ Diagonal' },
+  { css: 'to bottom left', label: '↙ Diagonal' },
+  { css: 'to top right', label: '↗ Diagonal' },
+  { css: '135deg', label: '◎ Radial' }, // special case
+];
+let gradDirIdx = parseInt(localStorage.getItem('miniscape-grad-dir') || '0', 10);
+
+// Restore saved gradient colors
+{
+  const savedP = localStorage.getItem('miniscape-grad-primary');
+  const savedA = localStorage.getItem('miniscape-grad-accent');
+  if (savedP) document.getElementById('grad-primary').value = savedP;
+  if (savedA) document.getElementById('grad-accent').value = savedA;
+  const btn = document.getElementById('btn-grad-dir');
+  if (btn) btn.textContent = gradDirs[gradDirIdx].label;
+}
+
+function cycleGradDir() {
+  gradDirIdx = (gradDirIdx + 1) % gradDirs.length;
+  localStorage.setItem('miniscape-grad-dir', gradDirIdx);
+  const btn = document.getElementById('btn-grad-dir');
+  btn.textContent = gradDirs[gradDirIdx].label;
+  // Re-apply if gradient is active
+  if (localStorage.getItem('miniscape-grad-active') === '1') applyGradient();
+}
+
+function buildGradientCSS(c1, c2, dirIdx) {
+  const dir = gradDirs[dirIdx];
+  if (dir.label.includes('Radial')) {
+    return `radial-gradient(circle at center, ${c1}, ${c2})`;
+  }
+  return `linear-gradient(${dir.css}, ${c1}, ${c2})`;
+}
+
+function applyGradient() {
+  const c1 = document.getElementById('grad-primary').value;
+  const c2 = document.getElementById('grad-accent').value;
+  localStorage.setItem('miniscape-grad-primary', c1);
+  localStorage.setItem('miniscape-grad-accent', c2);
+  localStorage.setItem('miniscape-grad-active', '1');
+
+  const grad = buildGradientCSS(c1, c2, gradDirIdx);
+  // Average luminance for text contrast
+  const lum1 = hexToLuminance(c1), lum2 = hexToLuminance(c2);
+  const avgLum = (lum1 + lum2) / 2;
+  const textColor = avgLum > 0.35 ? '#000000' : '#ffffff';
+
+  document.querySelectorAll('.unlockable').forEach(el => {
+    const id = el.id;
+    if (!id) return;
+    if (!panelCustomize[id]) panelCustomize[id] = {};
+    panelCustomize[id].bgColor = c1; // store primary for smart contrast
+    panelCustomize[id].textColor = textColor;
+    panelCustomize[id].gradient = grad;
+    el.style.setProperty('background', grad, 'important');
+    el.style.color = textColor;
+    // Apply to inner containers too
+    el.querySelectorAll('#log, #tab-content, .clone-tab-content, .clone-chat-log, #chat-tabs, #chat-input, #tab-icons, .clone-tab-icons').forEach(inner => {
+      inner.style.setProperty('background', 'transparent', 'important');
+    });
+    el.querySelectorAll('.tab-icon').forEach(ti => {
+      ti.style.setProperty('background', 'transparent', 'important');
+      ti.style.color = textColor;
+    });
+    // Stone column borders transparent
+    const tabContent = el.querySelector('#tab-content') || el.querySelector('.clone-tab-content');
+    if (tabContent) {
+      tabContent.style.borderLeftColor = 'transparent';
+      tabContent.style.borderRightColor = 'transparent';
+      tabContent.style.color = textColor;
+    }
+  });
+
+  // Clones
+  if (typeof clonedPanels !== 'undefined') clonedPanels.forEach(c => {
+    c.el.style.setProperty('background', grad, 'important');
+    c.el.style.color = textColor;
+    c.el.querySelectorAll('.clone-tab-content, .clone-chat-log, .clone-tab-icons').forEach(inner => {
+      inner.style.setProperty('background', 'transparent', 'important');
+    });
+  });
+
+  savePanelCustomize();
+  if (glassMode) applyGlassToAll();
+  showChat('Gradient applied — individual panels can still be customized', '#d4981f');
+}
+
+function clearGradient() {
+  localStorage.removeItem('miniscape-grad-active');
+  // Remove gradient from all panels, restore to primary color as solid
+  const c1 = document.getElementById('grad-primary').value;
+  document.querySelectorAll('.unlockable').forEach(el => {
+    const id = el.id;
+    if (!id) return;
+    if (panelCustomize[id]) delete panelCustomize[id].gradient;
+    const saved = panelCustomize[id]?.bgColor;
+    if (saved) {
+      applyBgToPanel(el, saved, panelCustomize[id]?.textColor || autoContrastText(saved));
+    } else {
+      el.style.removeProperty('background');
+    }
+  });
+  if (typeof clonedPanels !== 'undefined') clonedPanels.forEach(c => {
+    c.el.style.removeProperty('background');
+  });
+  savePanelCustomize();
+  if (glassMode) applyGlassToAll();
+  showChat('Gradient removed', '#d4981f');
+}
+
+// Re-apply gradient on load if it was active
+if (localStorage.getItem('miniscape-grad-active') === '1') {
+  setTimeout(applyGradient, 150);
+}
+
+// Live preview as user drags color pickers
+{
+  const p = document.getElementById('grad-primary');
+  const a = document.getElementById('grad-accent');
+  const liveApply = () => {
+    if (localStorage.getItem('miniscape-grad-active') === '1') applyGradient();
+  };
+  p.addEventListener('input', liveApply);
+  a.addEventListener('input', liveApply);
 }
 
 // ── Tab Pop-out System ────────────────────────────────────────────────────────
