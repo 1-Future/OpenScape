@@ -13,6 +13,10 @@ const DATA_DIR = path.join(__dirname, 'data');
 const CHUNKS_DIR = path.join(DATA_DIR, 'chunks');
 const TILE_DATA_DIR = path.join(DATA_DIR, 'tile-data');
 const NAMES_FILE = path.join(DATA_DIR, 'names.json');
+const FRIENDS_FILE = path.join(DATA_DIR, 'friends.json');
+const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1480654483095552123/AsoMuMPfGyKNYma5hh-kYnIaNLm4sLF8Ui3rVewiZf37anEXyw5qU_7I8E8gQkDcDm1E';
+const DISCORD_BOT_USER_ID = '1464768627709313044';
+const BOT_PLAYER_ID = 0; // Reserved ID for Discord bot "AI"
 
 const CHUNK_SIZE = 64;
 const VIEW_DIST = 3;
@@ -298,9 +302,35 @@ let tick = 0;
 let nextPlayerId = 1;
 
 // ── Friends System ────────────────────────────────────────────────────────────
-// friendsData: Map<playerId, Set<friendPlayerId>> — persists in memory per session
 const friendsData = new Map(); // id -> Set of friend ids
 const playerNames = new Map(); // id -> display name
+
+// Load friends from disk
+function loadFriends() {
+  try {
+    if (fs.existsSync(FRIENDS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(FRIENDS_FILE, 'utf8'));
+      if (data.friends) for (const [id, friends] of Object.entries(data.friends)) {
+        friendsData.set(parseInt(id), new Set(friends));
+      }
+      if (data.names) for (const [id, name] of Object.entries(data.names)) {
+        playerNames.set(parseInt(id), name);
+      }
+      if (data.nextId) nextPlayerId = data.nextId;
+      console.log(`[friends] Loaded ${friendsData.size} friend lists, ${playerNames.size} names`);
+    }
+  } catch (e) { console.log('[friends] Load error:', e.message); }
+}
+
+function saveFriends() {
+  try {
+    const friends = {};
+    for (const [id, set] of friendsData) friends[id] = [...set];
+    const names = {};
+    for (const [id, name] of playerNames) names[id] = name;
+    fs.writeFileSync(FRIENDS_FILE, JSON.stringify({ friends, names, nextId: nextPlayerId }));
+  } catch (e) { console.log('[friends] Save error:', e.message); }
+}
 
 function getPlayerById(id) {
   for (const [, p] of players) if (p.id === id) return p;
@@ -313,12 +343,21 @@ function getPlayerByName(name) {
 }
 function getFriendsList(playerId) {
   const friends = friendsData.get(playerId) || new Set();
-  return [...friends].map(fid => ({
-    id: fid,
-    name: playerNames.get(fid) || `Player ${fid}`,
-    online: !!getPlayerById(fid),
-    world: getPlayerById(fid) ? 1 : 0,
-  }));
+  return [...friends].map(fid => {
+    const isOnline = fid === BOT_PLAYER_ID ? discordConnected : !!getPlayerById(fid);
+    return {
+      id: fid,
+      name: playerNames.get(fid) || `Player ${fid}`,
+      online: isOnline,
+      world: isOnline ? 1 : 0,
+    };
+  });
+}
+function buildOnlineList() {
+  const list = [];
+  for (const [, op] of players) list.push({ id: op.id, name: playerNames.get(op.id) || `Player ${op.id}` });
+  if (discordConnected) list.push({ id: BOT_PLAYER_ID, name: 'AI' });
+  return list;
 }
 function sendFriendsList(p) {
   send(p.ws, { t: 'friends', list: getFriendsList(p.id), name: playerNames.get(p.id) || `Player ${p.id}` });
@@ -735,6 +774,118 @@ function send(ws, msg) {
 function broadcast(msg) {
   const s = JSON.stringify(msg);
   for (const [ws] of players) if (ws.readyState === WebSocket.OPEN) ws.send(s);
+}
+
+// ── Discord Bridge (integrated) ──────────────────────────────────────────────
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || '';
+const DISCORD_CHANNEL_ID = '1480654372131180635';
+const DISCORD_API = 'https://discord.com/api/v10';
+const POLL_INTERVAL_MS = 3000; // check for new messages every 3s
+
+let discordConnected = false;
+let lastPmToBot = null;
+let pendingNpcTalk = null;
+let lastSeenMessageId = null;
+let discordPollTimer = null;
+
+function postToDiscord(content) {
+  if (!DISCORD_WEBHOOK) return;
+  fetch(DISCORD_WEBHOOK, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content })
+  }).catch(e => console.error('[discord] webhook error:', e.message));
+}
+
+function initBotPlayer() {
+  playerNames.set(BOT_PLAYER_ID, 'AI');
+  if (!friendsData.has(BOT_PLAYER_ID)) friendsData.set(BOT_PLAYER_ID, new Set());
+}
+
+function setBotOnline(online) {
+  discordConnected = online;
+  if (online) {
+    broadcast({ t: 'chat', msg: 'AI has connected.', color: '#7289da' });
+  } else {
+    broadcast({ t: 'chat', msg: 'AI has disconnected.', color: '#888' });
+  }
+  notifyFriendsOfStatus(BOT_PLAYER_ID, online);
+  broadcast({ t: 'online_players', list: buildOnlineList() });
+}
+
+// Poll Discord channel for new messages from FUTURE BOT
+async function pollDiscordMessages() {
+  try {
+    const url = lastSeenMessageId
+      ? `${DISCORD_API}/channels/${DISCORD_CHANNEL_ID}/messages?after=${lastSeenMessageId}&limit=10`
+      : `${DISCORD_API}/channels/${DISCORD_CHANNEL_ID}/messages?limit=1`;
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` }
+    });
+    if (!res.ok) {
+      console.error(`[discord] Poll error: ${res.status}`);
+      return;
+    }
+    const messages = await res.json();
+    if (!Array.isArray(messages) || messages.length === 0) return;
+
+    // Messages come newest-first, reverse to process in order
+    messages.reverse();
+
+    // On first poll, just record the latest ID (don't process old messages)
+    if (!lastSeenMessageId) {
+      lastSeenMessageId = messages[messages.length - 1].id;
+      if (!discordConnected) {
+        setBotOnline(true);
+        console.log('[discord] Polling active, AI online');
+      }
+      return;
+    }
+
+    for (const msg of messages) {
+      lastSeenMessageId = msg.id;
+
+      // Skip webhook messages (those are from us)
+      if (msg.webhook_id) continue;
+
+      const isBot = msg.author.id === DISCORD_BOT_USER_ID;
+      const name = isBot ? 'AI' : msg.author.username;
+      const text = (msg.content || '').trim().slice(0, 200);
+      if (!text) continue;
+
+      console.log(`[discord] → Game: ${name}: ${text}`);
+
+      if (isBot) {
+        // Route NPC talk response
+        if (pendingNpcTalk) {
+          const recipient = getPlayerById(pendingNpcTalk.playerId);
+          if (recipient) {
+            send(recipient.ws, { t: 'chat', msg: `[${pendingNpcTalk.npcName}] ${text}`, color: '#0ff' });
+          }
+          pendingNpcTalk = null;
+          continue;
+        }
+        // Route PM reply
+        if (lastPmToBot !== null) {
+          const recipient = getPlayerById(lastPmToBot);
+          if (recipient) {
+            send(recipient.ws, { t: 'pm', from: BOT_PLAYER_ID, fromName: 'AI', msg: text });
+          }
+          continue;
+        }
+      }
+      // Show in game chat
+      broadcast({ t: 'chat', msg: `${name}: ${text}`, color: '#7289da' });
+    }
+  } catch (e) {
+    console.error('[discord] Poll error:', e.message);
+  }
+}
+
+function startDiscordPolling() {
+  console.log('[discord] Starting message polling...');
+  pollDiscordMessages(); // initial poll to get last message ID
+  discordPollTimer = setInterval(pollDiscordMessages, POLL_INTERVAL_MS);
 }
 function broadcastTiles(changes) {
   const byChunk = new Map();
@@ -1484,7 +1635,7 @@ function gameTick() {
         }
       }
       const nArr = npcs.filter(n => !n.dead && Math.abs(n.x - p.x) <= ENTITY_VIEW && Math.abs(n.y - p.y) <= ENTITY_VIEW)
-        .map(n => ({ id: n.id, x: n.x, y: n.y, hp: n.hp, maxHp: n.maxHp, name: n.name, color: n.color, atk: n.attack || 1, def: n.defence || 1, talk: n.tutorialNpc || false }));
+        .map(n => ({ id: n.id, did: n.defId, x: n.x, y: n.y, hp: n.hp, maxHp: n.maxHp, name: n.name, color: n.color, atk: n.attack || 1, def: n.defence || 1, talk: true }));
       const gArr = groundItems.filter(g => Math.abs(g.x - p.x) <= ENTITY_VIEW && Math.abs(g.y - p.y) <= ENTITY_VIEW)
         .map(g => ({ id: g.id, name: g.name, x: g.x, y: g.y }));
       const dArr = [...openDoors.values()].filter(d => Math.abs(d.ox - p.x) <= ENTITY_VIEW && Math.abs(d.oy - p.y) <= ENTITY_VIEW);
@@ -1533,7 +1684,11 @@ function handleMessage(ws, data) {
     case 'chat': {
       const text = (msg.msg || '').trim().slice(0, 100);
       const chatName = playerNames.get(p.id) || `Player ${p.id}`;
-      if (text) broadcast({ t: 'chat', msg: `${chatName}: ${text}`, color: '#0000aa' });
+      if (text) {
+        broadcast({ t: 'chat', msg: `${chatName}: ${text}`, color: '#0000aa' });
+        // Forward to Discord webhook
+        postToDiscord(`**${chatName}:** ${text}`);
+      }
       break;
     }
     case 'set_name': {
@@ -1554,9 +1709,8 @@ function handleMessage(ws, data) {
         if (opFriends && opFriends.has(p.id)) sendFriendsList(op);
       }
       // Send updated online list to all
-      const onlineList = [];
-      for (const [, op] of players) onlineList.push({ id: op.id, name: playerNames.get(op.id) || `Player ${op.id}` });
-      broadcast({ t: 'online_players', list: onlineList });
+      broadcast({ t: 'online_players', list: buildOnlineList() });
+      saveFriends();
       break;
     }
     case 'friend_add': {
@@ -1576,13 +1730,14 @@ function handleMessage(ws, data) {
         }
       }
       if (targetId === null) { sendChat(p, `Player "${targetName}" not found.`, '#f44'); break; }
-      if (targetId === p.id) { sendChat(p, "You can't add yourself.", '#f44'); break; }
+      // if (targetId === p.id) { sendChat(p, "You can't add yourself.", '#f44'); break; }
       const myFriends = friendsData.get(p.id);
       if (myFriends.has(targetId)) { sendChat(p, `Already on your friends list.`, '#f44'); break; }
       myFriends.add(targetId);
       const friendName = playerNames.get(targetId) || `Player ${targetId}`;
       sendChat(p, `Added ${friendName} to friends list.`, '#22c55e');
       sendFriendsList(p);
+      saveFriends();
       break;
     }
     case 'friend_remove': {
@@ -1593,19 +1748,28 @@ function handleMessage(ws, data) {
       const removedName = playerNames.get(rid) || `Player ${rid}`;
       sendChat(p, `Removed ${removedName} from friends list.`, '#ff981f');
       sendFriendsList(p);
+      saveFriends();
       break;
     }
     case 'pm': {
       const targetId = msg.to;
       const text = (msg.msg || '').trim().slice(0, 200);
       if (!text) break;
-      const target = getPlayerById(targetId);
       const myName = playerNames.get(p.id) || `Player ${p.id}`;
       const targetName = playerNames.get(targetId) || `Player ${targetId}`;
+
+      // If PMing the AI bot, forward to Discord
+      if (targetId === BOT_PLAYER_ID) {
+        if (!discordConnected) { sendChat(p, 'AI is not online.', '#f44'); break; }
+        postToDiscord(`**[PM from ${myName}]:** ${text}`);
+        lastPmToBot = p.id;
+        send(p.ws, { t: 'pm_sent', to: targetId, toName: 'AI', msg: text });
+        break;
+      }
+
+      const target = getPlayerById(targetId);
       if (!target) { sendChat(p, `${targetName} is not online.`, '#f44'); break; }
-      // Send to recipient
       send(target.ws, { t: 'pm', from: p.id, fromName: myName, msg: text });
-      // Confirm to sender
       send(p.ws, { t: 'pm_sent', to: targetId, toName: targetName, msg: text });
       break;
     }
@@ -1699,7 +1863,29 @@ function handleMessage(ws, data) {
       sendChat(p, `Auto Retaliate: ${p.autoRetaliate ? 'ON' : 'OFF'}`, '#ff0');
       break;
     }
-    case 'talk': // fall through — talk is same as clicking an NPC
+    case 'skip_tutorial': {
+      if (!p.tutorialComplete) completeTutorial(p);
+      break;
+    }
+    case 'talk': {
+      const npcId = Math.floor(msg.id);
+      if (npcId < 0 || npcId >= npcs.length || npcs[npcId].dead) break;
+      const npc = npcs[npcId];
+
+      // Also handle tutorial progression if applicable
+      if (npc.tutorialNpc && !p.tutorialComplete) {
+        handleTutorialTalk(p, npc);
+      }
+
+      // AI NPC talk — forward to Discord for AI response
+      const chatName = playerNames.get(p.id) || `Player ${p.id}`;
+      const npcDesc = `${npc.name} (Level ${npc.combatLevel || 0}, near ${Math.floor(npc.x)},${Math.floor(npc.y)})`;
+      const playerMsg = (msg.msg || 'Hello').trim().slice(0, 200);
+      pendingNpcTalk = { playerId: p.id, npcName: npc.name };
+      postToDiscord(`**[NPC: ${npcDesc}]** ${chatName} says: "${playerMsg}"\n_Respond in character as ${npc.name}. Keep it short (1-2 sentences). Stay in OSRS lore._`);
+      sendChat(p, `You talk to ${npc.name}...`, '#0ff');
+      break;
+    }
     case 'attack': {
       const npcId = Math.floor(msg.id);
       if (npcId < 0 || npcId >= npcs.length || npcs[npcId].dead) return;
@@ -1806,6 +1992,18 @@ const clientPath = path.join(__dirname, 'client.html');
 const mapPath = path.join(__dirname, 'map.html');
 const launcherPath = path.join(__dirname, 'launcher.html');
 const server = http.createServer((req, res) => {
+  // Serve model files from /models/
+  if (req.url.startsWith('/models/')) {
+    const modelFile = path.join(__dirname, req.url);
+    if (fs.existsSync(modelFile)) {
+      const ext = path.extname(modelFile).toLowerCase();
+      const mimeTypes = { '.gltf': 'model/gltf+json', '.glb': 'model/gltf-binary', '.bin': 'application/octet-stream', '.png': 'image/png', '.jpg': 'image/jpeg' };
+      res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'application/octet-stream', 'Cache-Control': 'public, max-age=86400', 'Access-Control-Allow-Origin': '*' });
+      res.end(fs.readFileSync(modelFile));
+      return;
+    }
+    res.writeHead(404); res.end('Not found'); return;
+  }
   let file;
   if (req.url === '/play') file = clientPath;
   else if (req.url === '/map') file = mapPath;
@@ -1833,9 +2031,7 @@ wss.on('connection', (ws) => {
   notifyFriendsOfStatus(p.id, true);
 
   // Broadcast online players list to all (including new player)
-  const onlineList = [];
-  for (const [, op] of players) onlineList.push({ id: op.id, name: playerNames.get(op.id) || `Player ${op.id}` });
-  broadcast({ t: 'online_players', list: onlineList });
+  broadcast({ t: 'online_players', list: buildOnlineList() });
 
   ws.on('message', (data) => handleMessage(ws, data.toString()));
   ws.on('close', () => {
@@ -1844,9 +2040,7 @@ wss.on('connection', (ws) => {
     broadcast({ t: 'chat', msg: `${leaveName} has left.`, color: '#888' });
     notifyFriendsOfStatus(p.id, false);
     // Update online list for remaining players
-    const onlineList = [];
-    for (const [, op] of players) onlineList.push({ id: op.id, name: playerNames.get(op.id) || `Player ${op.id}` });
-    broadcast({ t: 'online_players', list: onlineList });
+    broadcast({ t: 'online_players', list: buildOnlineList() });
     console.log(`[leave] Player ${p.id} disconnected (${players.size} online)`);
   });
 });
@@ -1976,16 +2170,21 @@ if (fs.existsSync(NAMES_FILE)) {
   console.log(`[load] ${customNames.size} custom names`);
 }
 loadDefinitions();
+loadFriends();
+initBotPlayer();
 spawnNpcs();
 spawnTutorialNpcs();
 
 setInterval(gameTick, TICK_MS);
 setInterval(saveAllChunks, SAVE_INTERVAL_MS);
-process.on('SIGINT', () => { saveAllChunks(); process.exit(); });
-process.on('SIGTERM', () => { saveAllChunks(); process.exit(); });
+setInterval(saveFriends, SAVE_INTERVAL_MS); // save friends alongside chunks
+process.on('SIGINT', () => { saveAllChunks(); saveFriends(); process.exit(); });
+process.on('SIGTERM', () => { saveAllChunks(); saveFriends(); process.exit(); });
 
 server.listen(PORT, () => {
   console.log(`[server] MiniScape running on http://localhost:${PORT}`);
   console.log(`[server] Chunk-based world (${CHUNK_SIZE}x${CHUNK_SIZE} chunks, view=${VIEW_DIST})`);
   console.log(`[server] Spawn: OSRS (${SPAWN_X}, ${SPAWN_Y}) Lumbridge`);
+  // Start Discord message polling
+  startDiscordPolling();
 });

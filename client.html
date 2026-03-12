@@ -683,10 +683,91 @@
     content: ''; position: absolute; inset: 3px; border: 1px solid rgba(212, 168, 83, 0.3);
     pointer-events: none;
   }
-  #dlg-name { color: #d4a853; font-weight: bold; font-size: 15px; padding: 10px 14px 6px; }
-  #dlg-sep { height: 1px; background: rgba(212, 168, 83, 0.4); margin: 0 14px; }
-  #dlg-lines { padding: 8px 14px 6px; line-height: 1.6; }
+  #dlg-name { display: none; }
+  #dlg-sep { display: none; }
+  #dlg-lines {
+    padding: 6px 10px; line-height: 1.5; overflow-y: auto; max-height: 300px;
+  }
+  .dlg-bubble {
+    padding: 8px 12px; margin: 4px 0; border-radius: 6px; position: relative;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .dlg-bubble-npc {
+    background: rgba(212, 168, 83, 0.15); border-right: 3px solid #d4a853;
+    border-left: none; flex-direction: row-reverse; text-align: right;
+  }
+  .dlg-bubble-npc .dlg-chathead,
+  .dlg-bubble-npc .dlg-chathead-placeholder {
+    transform: scaleX(-1);
+  }
+  .dlg-bubble-player {
+    background: rgba(100, 180, 255, 0.1); border-left: 3px solid #64b4ff;
+  }
+  .dlg-chathead {
+    width: 48px; height: 48px; flex-shrink: 0;
+    border-radius: 4px; border: 1px solid rgba(212, 168, 83, 0.3);
+    background: rgba(0,0,0,0.3); object-fit: contain;
+    image-rendering: pixelated;
+  }
+  .dlg-bubble-player .dlg-chathead {
+    border-color: rgba(100, 180, 255, 0.3);
+  }
+  .dlg-chathead-placeholder {
+    width: 48px; height: 48px; flex-shrink: 0;
+    border-radius: 4px; border: 1px solid rgba(212, 168, 83, 0.3);
+    background: rgba(0,0,0,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; color: rgba(212, 168, 83, 0.5);
+  }
+  .dlg-bubble-player .dlg-chathead-placeholder {
+    border-color: rgba(100, 180, 255, 0.3);
+    color: rgba(100, 180, 255, 0.5);
+  }
+  .dlg-bubble-content { flex: 1; min-width: 0; }
+  .dlg-speaker {
+    font-weight: bold; font-size: 11px; margin-bottom: 2px;
+  }
+  .dlg-bubble-npc .dlg-speaker { color: #d4a853; }
+  .dlg-bubble-player .dlg-speaker { color: #64b4ff; }
+  .dlg-bubble-text { font-size: 13px; }
   #dlg-dismiss { color: rgba(212, 168, 83, 0.5); font-size: 11px; text-align: right; padding: 2px 14px 8px; }
+
+  /* ── PM Chat Panel ─────────────────────────────────────────────── */
+  #panel-pm {
+    position: fixed; z-index: 66; display: none;
+    bottom: 28px; left: 0; width: 380px; height: 200px;
+    background: rgba(12, 8, 20, 0.95); border: 2px solid #9966cc;
+    font-family: 'Courier New', monospace; color: #d4c6e8; font-size: 12px;
+    pointer-events: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    flex-direction: column;
+  }
+  #panel-pm .unlock-handle {
+    display: flex !important; background: rgba(153, 102, 204, 0.7);
+  }
+  #panel-pm .unlock-resize {
+    display: block !important;
+  }
+  #panel-pm::after {
+    content: ''; position: absolute; inset: 3px; border: 1px solid rgba(153, 102, 204, 0.3);
+    pointer-events: none;
+  }
+  #pm-log {
+    flex: 1; overflow-y: auto; padding: 6px 8px; min-height: 0;
+    font: 12px 'Courier New', monospace;
+  }
+  #pm-log .msg { padding: 1px 0; }
+  #pm-input-row {
+    display: flex; border-top: 1px solid rgba(153, 102, 204, 0.3);
+  }
+  #pm-target-label {
+    background: rgba(153, 102, 204, 0.3); color: #c084fc; padding: 4px 8px;
+    font: bold 11px monospace; white-space: nowrap; display: flex; align-items: center;
+  }
+  #pm-input {
+    flex: 1; background: rgba(0,0,0,0.4); border: none; color: #d4c6e8;
+    font: 12px 'Courier New', monospace; padding: 4px 8px; outline: none;
+  }
+  body.ui-unlocked #panel-pm { position: fixed !important; }
   /* Clone +/- buttons in panel handle bars */
   .panel-clone-btn {
     width: 20px; height: 20px; background: rgba(0,0,0,0.2); border: none;
@@ -1115,7 +1196,7 @@
 
 <div id="conn" style="display:none">Connecting to server...</div>
 <div id="anchor-grid"></div>
-<div id="ui-unlock-banner">UI UNLOCKED — <span>U</span> lock — <button id="ui-reset-btn" onclick="resetUIAndReload()" style="margin-left:4px;background:#600;color:#fff;border:1px solid #a00;padding:2px 8px;cursor:pointer;font:bold 11px monospace;border-radius:3px;">RESET</button><span id="anchor-controls"> X <button onclick="changeAnchor('x',-1)">-</button><span class="anchor-label" id="anchor-x-val">4</span><button onclick="changeAnchor('x',1)">+</button> Y <button onclick="changeAnchor('y',-1)">-</button><span class="anchor-label" id="anchor-y-val">3</span><button onclick="changeAnchor('y',1)">+</button></span> <span style="margin-left:8px;opacity:0.7;">|</span> <label style="margin-left:8px;cursor:pointer;" title="Set ALL panel backgrounds">All BG <input type="color" id="universal-bg" value="#1a1510" style="width:20px;height:16px;border:none;padding:0;cursor:pointer;vertical-align:middle;"></label> <label style="cursor:pointer;" title="Set ALL label bar colors">All Label <input type="color" id="universal-label" value="#d4981f" style="width:20px;height:16px;border:none;padding:0;cursor:pointer;vertical-align:middle;"></label> <span style="margin-left:4px;opacity:0.7;">|</span> <label style="margin-left:4px;cursor:pointer;" title="Gradient primary color">G1 <input type="color" id="grad-primary" value="#1a1510" style="width:20px;height:16px;border:none;padding:0;cursor:pointer;vertical-align:middle;"></label> <label style="cursor:pointer;" title="Gradient accent color">G2 <input type="color" id="grad-accent" value="#2a1a30" style="width:20px;height:16px;border:none;padding:0;cursor:pointer;vertical-align:middle;"></label> <button id="btn-grad-dir" onclick="cycleGradDir()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle gradient direction">↓ Top-Down</button> <button id="btn-grad-apply" onclick="applyGradient()" style="background:#444;color:#ffd;border:1px solid #666;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Apply gradient to all panels">Apply Grad</button> <button id="btn-grad-clear" onclick="clearGradient()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Remove gradient from all panels">✕ Grad</button> <span style="margin-left:4px;opacity:0.7;">|</span> <button id="btn-corners" onclick="cycleCorners()" style="margin-left:8px;background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;border-radius:3px;" title="Cycle corner style: Round → Square → Chamfer">◯ Round</button> <button id="btn-edges" onclick="toggleBevel()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Toggle beveled 3D edges">▭ Flat</button> <button id="btn-inner" onclick="toggleInnerEdges()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Toggle inner panel dividers">⊟ Inner</button> <button id="btn-weight" onclick="cycleWeight()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle border weight">⊡ Default</button> <button id="btn-style" onclick="cycleStyle()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle border style">― Solid</button> <button id="btn-depth" onclick="cycleDepth()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle shadow depth">◫ Default</button> <button id="btn-glow" onclick="cycleGlow()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle glow effect">✦ No Glow</button> <button id="btn-texture" onclick="cycleTexture()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle panel texture">▦ No Tex</button> <button id="btn-logo" onclick="cycleLogo()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle panel logo watermark">⚑ No Logo</button> <button id="btn-stickers" onclick="toggleStickerPicker()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Place stickers on screen">🎨 Stickers</button> <button id="btn-glass" onclick="toggleGlass()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Toggle glass/frosted panel effect">◇ Glass</button> <button id="btn-all-labels" onclick="toggleAllLabels()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Toggle labels on/off for all panels">T All Labels</button> <span style="margin-left:4px;opacity:0.7;">|</span> <button onclick="changeUniversalFont(-1)" style="margin-left:4px;background:#333;color:#ccc;border:1px solid #555;padding:2px 6px;cursor:pointer;font:bold 13px monospace;" title="Decrease all text size">a</button><span id="universal-font-val" style="display:inline-block;min-width:22px;text-align:center;font:bold 11px monospace;color:#ccc;vertical-align:middle;">14</span><button onclick="changeUniversalFont(1)" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 6px;cursor:pointer;font:bold 15px monospace;" title="Increase all text size">A</button></div>
+<div id="ui-unlock-banner">UI UNLOCKED — <span>U</span> lock — <button id="ui-reset-btn" onclick="resetUIAndReload()" style="margin-left:4px;background:#600;color:#fff;border:1px solid #a00;padding:2px 8px;cursor:pointer;font:bold 11px monospace;border-radius:3px;">RESET</button> <button onclick="stackChats()" style="background:#339;color:#fff;border:1px solid #66c;padding:2px 8px;cursor:pointer;font:bold 11px monospace;border-radius:3px;" title="Stack PM and Dialogue panels on top of main chat">STACK CHATS</button><span id="anchor-controls"> X <button onclick="changeAnchor('x',-1)">-</button><span class="anchor-label" id="anchor-x-val">4</span><button onclick="changeAnchor('x',1)">+</button> Y <button onclick="changeAnchor('y',-1)">-</button><span class="anchor-label" id="anchor-y-val">3</span><button onclick="changeAnchor('y',1)">+</button></span> <span style="margin-left:8px;opacity:0.7;">|</span> <label style="margin-left:8px;cursor:pointer;" title="Set ALL panel backgrounds">All BG <input type="color" id="universal-bg" value="#1a1510" style="width:20px;height:16px;border:none;padding:0;cursor:pointer;vertical-align:middle;"></label> <label style="cursor:pointer;" title="Set ALL label bar colors">All Label <input type="color" id="universal-label" value="#d4981f" style="width:20px;height:16px;border:none;padding:0;cursor:pointer;vertical-align:middle;"></label> <span style="margin-left:4px;opacity:0.7;">|</span> <label style="margin-left:4px;cursor:pointer;" title="Gradient primary color">G1 <input type="color" id="grad-primary" value="#1a1510" style="width:20px;height:16px;border:none;padding:0;cursor:pointer;vertical-align:middle;"></label> <label style="cursor:pointer;" title="Gradient accent color">G2 <input type="color" id="grad-accent" value="#2a1a30" style="width:20px;height:16px;border:none;padding:0;cursor:pointer;vertical-align:middle;"></label> <button id="btn-grad-dir" onclick="cycleGradDir()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle gradient direction">↓ Top-Down</button> <button id="btn-grad-apply" onclick="applyGradient()" style="background:#444;color:#ffd;border:1px solid #666;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Apply gradient to all panels">Apply Grad</button> <button id="btn-grad-clear" onclick="clearGradient()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Remove gradient from all panels">✕ Grad</button> <span style="margin-left:4px;opacity:0.7;">|</span> <button id="btn-corners" onclick="cycleCorners()" style="margin-left:8px;background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;border-radius:3px;" title="Cycle corner style: Round → Square → Chamfer">◯ Round</button> <button id="btn-edges" onclick="toggleBevel()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Toggle beveled 3D edges">▭ Flat</button> <button id="btn-inner" onclick="toggleInnerEdges()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Toggle inner panel dividers">⊟ Inner</button> <button id="btn-weight" onclick="cycleWeight()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle border weight">⊡ Default</button> <button id="btn-style" onclick="cycleStyle()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle border style">― Solid</button> <button id="btn-depth" onclick="cycleDepth()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle shadow depth">◫ Default</button> <button id="btn-glow" onclick="cycleGlow()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle glow effect">✦ No Glow</button> <button id="btn-texture" onclick="cycleTexture()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle panel texture">▦ No Tex</button> <button id="btn-logo" onclick="cycleLogo()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Cycle panel logo watermark">⚑ No Logo</button> <button id="btn-stickers" onclick="toggleStickerPicker()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Place stickers on screen">🎨 Stickers</button> <button id="btn-glass" onclick="toggleGlass()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Toggle glass/frosted panel effect">◇ Glass</button> <button id="btn-all-labels" onclick="toggleAllLabels()" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 8px;cursor:pointer;font:bold 11px monospace;" title="Toggle labels on/off for all panels">T All Labels</button> <span style="margin-left:4px;opacity:0.7;">|</span> <button onclick="changeUniversalFont(-1)" style="margin-left:4px;background:#333;color:#ccc;border:1px solid #555;padding:2px 6px;cursor:pointer;font:bold 13px monospace;" title="Decrease all text size">a</button><span id="universal-font-val" style="display:inline-block;min-width:22px;text-align:center;font:bold 11px monospace;color:#ccc;vertical-align:middle;">14</span><button onclick="changeUniversalFont(1)" style="background:#333;color:#ccc;border:1px solid #555;padding:2px 6px;cursor:pointer;font:bold 15px monospace;" title="Increase all text size">A</button></div>
 
 <!-- Taskbar -->
 <div id="taskbar"></div>
@@ -1158,7 +1239,28 @@
   <div id="dlg-name"></div>
   <div id="dlg-sep"></div>
   <div id="dlg-lines"></div>
-  <div id="dlg-dismiss">click to dismiss</div>
+  <div id="dlg-chat-row" style="display:none;border-top:1px solid rgba(212,168,83,0.3);padding:4px 8px;">
+    <input id="dlg-chat-input" type="text" placeholder="Say something..." maxlength="200" style="width:100%;background:rgba(0,0,0,0.4);border:1px solid rgba(212,168,83,0.3);color:#e8f0ec;font:12px 'Courier New',monospace;padding:4px 8px;outline:none;border-radius:3px;box-sizing:border-box;">
+  </div>
+  <div id="dlg-dismiss">click to dismiss — or type to chat</div>
+</div>
+
+<!-- PM Chat Panel -->
+<div id="panel-pm" class="unlockable" data-clone-type="pm">
+  <div class="unlock-handle">
+    <span id="pm-panel-title">PRIVATE MESSAGE</span>
+    <span class="dlg-bar-buttons">
+      <button onclick="closePMPanel()" title="Close PM" style="background:rgba(0,0,0,0.2);border:none;border-left:1px solid rgba(0,0,0,0.3);color:#000;font:bold 13px monospace;cursor:pointer;width:20px;height:20px;display:flex;align-items:center;justify-content:center;">✕</button>
+      <span class="unlock-resize-grip">&#x2921;</span>
+    </span>
+  </div>
+  <div class="unlock-resize"></div>
+  <div id="pm-log"></div>
+  <div id="pm-input-row">
+    <div id="pm-target-label">To: —</div>
+    <input id="pm-input" type="text" placeholder="Type a message..." maxlength="200">
+    <button id="pm-send-btn" style="background:rgba(153,102,204,0.5);border:none;border-left:1px solid rgba(153,102,204,0.3);color:#d4c6e8;font:bold 11px monospace;padding:4px 8px;cursor:pointer;">Send</button>
+  </div>
 </div>
 
 <!-- Minimap (separate panel) -->
@@ -1293,6 +1395,7 @@
 <canvas id="game"></canvas>
 <canvas id="game3d"></canvas>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -2192,7 +2295,7 @@ function initUIUnlock() {
   document.querySelectorAll('.unlock-handle').forEach(handle => {
     handle.addEventListener('mousedown', (e) => {
       const el = handle.closest('.unlockable');
-      const alwaysDraggable = el && el.id === 'panel-dialogue';
+      const alwaysDraggable = el && (el.id === 'panel-dialogue' || el.id === 'panel-pm');
       if (!uiUnlocked && !alwaysDraggable) return;
       e.preventDefault();
       e.stopPropagation();
@@ -2223,7 +2326,7 @@ function initUIUnlock() {
   document.querySelectorAll('.unlock-resize').forEach(handle => {
     handle.addEventListener('mousedown', (e) => {
       const el = handle.closest('.unlockable');
-      const alwaysDraggable = el && el.id === 'panel-dialogue';
+      const alwaysDraggable = el && (el.id === 'panel-dialogue' || el.id === 'panel-pm');
       if (!uiUnlocked && !alwaysDraggable) return;
       e.preventDefault();
       e.stopPropagation();
@@ -2238,7 +2341,7 @@ function initUIUnlock() {
 
   window.addEventListener('mousemove', (e) => {
     if (uiDrag.active && uiDrag.el) {
-      if (!uiUnlocked && uiDrag.el.id !== 'panel-dialogue') { uiDrag.active = false; return; }
+      if (!uiUnlocked && uiDrag.el.id !== 'panel-dialogue' && uiDrag.el.id !== 'panel-pm') { uiDrag.active = false; return; }
       const dx = e.clientX - uiDrag.startX;
       const dy = e.clientY - uiDrag.startY;
       let newX = uiDrag.elX + dx;
@@ -2262,7 +2365,7 @@ function initUIUnlock() {
       uiDrag.el.style.transform = 'none';
     }
     if (uiResize.active && uiResize.el) {
-      if (!uiUnlocked && uiResize.el.id !== 'panel-dialogue') { uiResize.active = false; return; }
+      if (!uiUnlocked && uiResize.el.id !== 'panel-dialogue' && uiResize.el.id !== 'panel-pm') { uiResize.active = false; return; }
       let newW = uiResize.startW + (e.clientX - uiResize.startX);
       let newH = uiResize.startH + (e.clientY - uiResize.startY);
 
@@ -2577,6 +2680,7 @@ let targetGlow = null;
 let myStats = { hp: 10, maxHp: 10, skills: {}, inv: [] };
 let myGender = 'male';
 let tutorialHint = null;
+let skipTutorialBtn = null;
 let npcDialogueLines = [];
 let npcDialogueTimer = null;
 let npcDialogueName = '';
@@ -2831,7 +2935,7 @@ function handleServerMsg(msg) {
       showChat('Click trees to chop, rocks to mine.', '#0000cc');
       showChat('Press M to toggle OSRS map overlay.', '#0000cc');
       // Set name from login and update display
-      if (msg.name) document.getElementById('my-name-val').textContent = msg.name;
+      if (msg.name) { document.getElementById('my-name-val').textContent = msg.name; myDisplayName = msg.name; }
       if (typeof playerUsername !== 'undefined' && playerUsername) {
         sendMsg({ t: 'set_name', name: playerUsername });
       }
@@ -2925,16 +3029,18 @@ function handleServerMsg(msg) {
       if (dlgMatch && msg.color === '#0ff') {
         if (npcDialogueName !== dlgMatch[1]) {
           npcDialogueLines = [];
+          dlgConvo = [];
           npcDialogueName = dlgMatch[1];
         }
         npcDialogueLines.push(dlgMatch[2]);
+        dlgConvo.push({ speaker: 'npc', name: dlgMatch[1], text: dlgMatch[2] });
         showDialoguePanel();
         clearTimeout(npcDialogueTimer);
       }
       break;
     case 'friends':
       updateFriendsList(msg.list);
-      if (msg.name) document.getElementById('my-name-val').textContent = msg.name;
+      if (msg.name) { document.getElementById('my-name-val').textContent = msg.name; myDisplayName = msg.name; }
       break;
     case 'online_players':
       knownPlayers = msg.list;
@@ -2943,6 +3049,14 @@ function handleServerMsg(msg) {
     case 'pm':
       showChat(`[PM from ${msg.fromName}]: ${msg.msg}`, '#c084fc');
       lastPmFrom = msg.from;
+      // Add to PM conversation and auto-open panel
+      addPMMessage(msg.from, msg.fromName, msg.msg, '#c084fc');
+      if (!pmPanelOpen || pmTargetId !== msg.from) {
+        pmTargetId = msg.from;
+        pmTargetName = msg.fromName;
+        openPMPanel();
+        renderPMLog();
+      }
       break;
     case 'pm_sent':
       showChat(`[PM to ${msg.toName}]: ${msg.msg}`, '#9966cc');
@@ -3004,10 +3118,103 @@ function removeFriend(id) {
   sendMsg({ t: 'friend_remove', id });
 }
 
+// ── PM Panel System ───────────────────────────────────────────────────────────
+let pmPanelOpen = false;
+let pmTargetId = null;
+let pmTargetName = '';
+const pmConversations = {}; // { id: [{from, msg, color}] }
+
 function startPM(id, name) {
-  const input = document.getElementById('chat-input');
-  input.value = `/pm ${name} `;
-  input.focus();
+  pmTargetId = id;
+  pmTargetName = name;
+  openPMPanel();
+  renderPMLog();
+  document.getElementById('pm-input').focus();
+}
+
+function openPMPanel() {
+  pmPanelOpen = true;
+  const panel = document.getElementById('panel-pm');
+  panel.style.display = 'flex';
+  document.getElementById('pm-target-label').textContent = `To: ${pmTargetName}`;
+  document.getElementById('pm-panel-title').textContent = `PM — ${pmTargetName}`;
+}
+
+function closePMPanel() {
+  pmPanelOpen = false;
+  document.getElementById('panel-pm').style.display = 'none';
+}
+
+function addPMMessage(targetId, from, msg, color) {
+  if (!pmConversations[targetId]) pmConversations[targetId] = [];
+  pmConversations[targetId].push({ from, msg, color });
+  // Keep max 100 messages per conversation
+  if (pmConversations[targetId].length > 100) pmConversations[targetId].shift();
+  // If this conversation is currently open, re-render
+  if (pmTargetId === targetId && pmPanelOpen) renderPMLog();
+}
+
+function renderPMLog() {
+  const log = document.getElementById('pm-log');
+  const msgs = pmConversations[pmTargetId] || [];
+  log.innerHTML = '';
+  for (const m of msgs) {
+    const div = document.createElement('div');
+    div.className = 'msg';
+    div.style.color = m.color;
+    div.textContent = `${m.from}: ${m.msg}`;
+    log.appendChild(div);
+  }
+  log.scrollTop = log.scrollHeight;
+}
+
+function sendPM() {
+  const pmInput = document.getElementById('pm-input');
+  const text = pmInput.value.trim();
+  if (text && pmTargetId !== null) {
+    sendMsg({ t: 'pm', to: pmTargetId, msg: text });
+    addPMMessage(pmTargetId, 'You', text, '#9966cc');
+    pmInput.value = '';
+    pmInput.focus();
+  }
+}
+document.getElementById('pm-send-btn').addEventListener('click', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  sendPM();
+});
+document.getElementById('pm-input').addEventListener('keydown', (e) => {
+  e.stopPropagation();
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    sendPM();
+  }
+});
+
+// Stack all chat panels on top of main chat
+function stackChats() {
+  const chat = document.getElementById('panel-chat');
+  const chatRect = chat.getBoundingClientRect();
+  const baseLeft = chatRect.left;
+  const baseBottom = window.innerHeight - chatRect.top;
+
+  const pm = document.getElementById('panel-pm');
+  pm.style.left = baseLeft + 'px';
+  pm.style.bottom = baseBottom + 'px';
+  pm.style.top = 'auto';
+  pm.style.right = 'auto';
+  pm.style.transform = 'none';
+  pm.style.width = Math.min(380, chatRect.width) + 'px';
+
+  const dlg = document.getElementById('panel-dialogue');
+  dlg.style.left = baseLeft + 'px';
+  dlg.style.bottom = (baseBottom + (pmPanelOpen ? pm.offsetHeight + 2 : 0)) + 'px';
+  dlg.style.top = 'auto';
+  dlg.style.right = 'auto';
+  dlg.style.transform = 'none';
+  dlg.style.width = Math.min(460, chatRect.width) + 'px';
+
+  showChat('Chat panels stacked.', '#ff981f');
 }
 
 // Friend add button
@@ -3156,6 +3363,7 @@ function initTaskbar() {
     { id: 'combat-overlay', label: 'Combat', icon: '\u2694' },
     { id: 'toolbar', label: 'Tools', icon: '\u270E' },
     { id: 'panel-dialogue', label: 'Dialogue', icon: '\u2606' },
+    { id: 'panel-pm', label: 'PM', icon: '\u2709' },
   ];
 
   for (const p of panels) {
@@ -3207,6 +3415,8 @@ function toggleMinimize(panelId) {
       if (combatTargetId !== null) state.el.style.display = 'block';
     } else if (tag === 'panel-dialogue') {
       if (npcDialogueLines.length > 0) state.el.style.display = 'block';
+    } else if (tag === 'panel-pm') {
+      if (pmPanelOpen) state.el.style.display = 'flex';
     } else {
       state.el.style.display = state.prevDisplay || 'block';
     }
@@ -3272,23 +3482,80 @@ function changeDlgFont(delta) {
   applyDlgStyle();
 }
 
+let dlgNpcId = null; // which NPC we're currently talking to
+let dlgConvo = []; // [{speaker: 'npc'|'player', name: string, text: string}]
+let myDisplayName = 'You';
+
+const chatheadCache = {}; // name -> url or null
+
+function getChatheadUrl(name) {
+  // OSRS Wiki chathead URL pattern
+  const encoded = name.replace(/ /g, '_');
+  return `https://oldschool.runescape.wiki/images/${encoded}_chathead.png`;
+}
+
+function renderChathead(name, isNpc) {
+  if (!isNpc) {
+    return `<img class="dlg-chathead" src="https://oldschool.runescape.wiki/images/Broken_Handz_chathead.png" alt="You" onerror="this.outerHTML='<div class=\\'dlg-chathead-placeholder\\'>👤</div>'">`;
+  }
+  const url = getChatheadUrl(name);
+  return `<img class="dlg-chathead" src="${url}" alt="${name}" onerror="this.outerHTML='<div class=\\'dlg-chathead-placeholder\\'>👹</div>'">`;
+}
+
+function renderDlgBubbles() {
+  const container = document.getElementById('dlg-lines');
+  container.innerHTML = dlgConvo.map(m => {
+    const isNpc = m.speaker === 'npc';
+    return `<div class="dlg-bubble ${isNpc ? 'dlg-bubble-npc' : 'dlg-bubble-player'}">
+      ${renderChathead(m.name, isNpc)}
+      <div class="dlg-bubble-content">
+        <div class="dlg-speaker">${m.name}</div>
+        <div class="dlg-bubble-text">${m.text}</div>
+      </div>
+    </div>`;
+  }).join('');
+  container.scrollTop = container.scrollHeight;
+}
+
 function showDialoguePanel() {
   const panel = document.getElementById('panel-dialogue');
-  document.getElementById('dlg-name').textContent = npcDialogueName;
-  document.getElementById('dlg-lines').innerHTML = npcDialogueLines.map(l => `<div>${l}</div>`).join('');
+  renderDlgBubbles();
   applyDlgStyle();
   panel.style.display = 'block';
+  const chatRow = document.getElementById('dlg-chat-row');
+  if (dlgNpcId !== null) {
+    chatRow.style.display = 'block';
+  }
 }
 function hideDialoguePanel() {
   npcDialogueLines = []; npcDialogueName = '';
+  dlgNpcId = null;
+  dlgConvo = [];
   clearTimeout(npcDialogueTimer);
   document.getElementById('panel-dialogue').style.display = 'none';
+  document.getElementById('dlg-chat-row').style.display = 'none';
+  document.getElementById('dlg-chat-input').value = '';
 }
 // Click dialogue dismiss button
 document.getElementById('dlg-dismiss').addEventListener('click', (e) => { e.stopPropagation(); hideDialoguePanel(); });
 document.getElementById('panel-dialogue').addEventListener('click', (e) => {
-  if (e.target.closest('.unlock-handle') || e.target.closest('.unlock-resize') || e.target.closest('#dlg-font-controls')) return;
+  if (e.target.closest('.unlock-handle') || e.target.closest('.unlock-resize') || e.target.closest('#dlg-font-controls') || e.target.closest('#dlg-chat-row')) return;
   hideDialoguePanel();
+});
+// Dialogue chat input
+document.getElementById('dlg-chat-input').addEventListener('keydown', (e) => {
+  e.stopPropagation();
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const input = document.getElementById('dlg-chat-input');
+    const text = input.value.trim();
+    if (text && dlgNpcId !== null) {
+      sendMsg({ t: 'talk', id: dlgNpcId, msg: text });
+      dlgConvo.push({ speaker: 'player', name: myDisplayName, text });
+      showDialoguePanel();
+      input.value = '';
+    }
+  }
 });
 
 // ── Panel Cloning System ─────────────────────────────────────────────────────
@@ -4346,7 +4613,7 @@ canvas.addEventListener('mousemove', (e) => {
   // Check NPCs
   for (const npc of npcList) {
     if (npc.x === tx && npc.y === ty) {
-      icon = npc.talk ? '\uD83D\uDCAC' : '\u2694\uFE0F'; // 💬 talk, ⚔️ fight
+      icon = '\uD83D\uDCAC'; // 💬 talk (shift+click to attack)
       break;
     }
   }
@@ -4411,8 +4678,7 @@ canvas.addEventListener('contextmenu', (e) => {
   }
   for (const npc of npcList) {
     if (npc.x === tx && npc.y === ty) {
-      if (npc.talk) showChat(`Talk-to: ${npc.name}`, '#0ff');
-      else showChat(`Examine: ${npc.name} (Level ${Math.ceil(npc.maxHp / 2)}) - HP: ${npc.hp}/${npc.maxHp}`, '#333');
+      showChat(`Talk-to: ${npc.name} (Level ${Math.ceil(npc.maxHp / 2)}) — Click to talk, Shift+click to attack`, '#0ff');
       return;
     }
   }
@@ -4431,6 +4697,19 @@ canvas.addEventListener('contextmenu', (e) => {
 
 canvas.addEventListener('mousedown', (e) => {
   if (e.button !== 0 || !connected) return;
+  // Skip tutorial button click
+  if (skipTutorialBtn && tutorialHint) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    if (cx >= skipTutorialBtn.x && cx <= skipTutorialBtn.x + skipTutorialBtn.w &&
+        cy >= skipTutorialBtn.y && cy <= skipTutorialBtn.y + skipTutorialBtn.h) {
+      sendMsg({ t: 'skip_tutorial' });
+      tutorialHint = null;
+      skipTutorialBtn = null;
+      return;
+    }
+  }
   // Dismiss NPC dialogue on click
   if (npcDialogueLines.length > 0) {
     hideDialoguePanel();
@@ -4479,10 +4758,13 @@ canvas.addEventListener('mousedown', (e) => {
   for (const npc of npcList) {
     if (npc.x === tx && npc.y === ty) {
       targetGlow = { x: tx, y: ty, w: 1, h: 1 };
-      if (npc.talk) {
-        sendMsg({ t: 'talk', id: npc.id });
-      } else {
+      if (e.shiftKey) {
+        // Shift+click = attack
         sendMsg({ t: 'attack', id: npc.id }); combatTargetId = npc.id;
+      } else {
+        // Normal click = talk
+        dlgNpcId = npc.id;
+        sendMsg({ t: 'talk', id: npc.id });
       }
       return;
     }
@@ -4520,6 +4802,21 @@ const chatInput = document.getElementById('chat-input');
 const chatInputRow = document.getElementById('chat-input-row');
 
 document.addEventListener('keydown', (e) => {
+  // PM/Dialogue input — block ALL keys from reaching game handlers
+  if (document.activeElement && (document.activeElement.id === 'pm-input' || document.activeElement.id === 'dlg-chat-input')) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const pmInput = document.getElementById('pm-input');
+      const text = pmInput.value.trim();
+      if (text && pmTargetId !== null) {
+        sendMsg({ t: 'pm', to: pmTargetId, msg: text });
+        addPMMessage(pmTargetId, 'You', text, '#9966cc');
+        pmInput.value = '';
+      }
+    }
+    return;
+  }
   // Chat input handling
   if (e.key === 'Enter') {
     if (chatActive) {
@@ -4531,10 +4828,17 @@ document.addEventListener('keydown', (e) => {
           const targetName = pmMatch[1];
           const pmText = pmMatch[2].trim();
           if (pmText) {
-            // Find target by name from last known friends/online list
             const target = getPlayerByNameClient(targetName);
-            if (target) sendMsg({ t: 'pm', to: target.id, msg: pmText });
-            else showChat(`Player "${targetName}" not found. Use exact name.`, '#f44');
+            if (target) {
+              sendMsg({ t: 'pm', to: target.id, msg: pmText });
+              addPMMessage(target.id, 'You', pmText, '#9966cc');
+              if (!pmPanelOpen || pmTargetId !== target.id) {
+                pmTargetId = target.id;
+                pmTargetName = target.name;
+                openPMPanel();
+                renderPMLog();
+              }
+            } else showChat(`Player "${targetName}" not found. Use exact name.`, '#f44');
           }
         } else {
           sendMsg({ t: 'chat', msg });
@@ -5273,6 +5577,24 @@ function render() {
     ctx.stroke();
     ctx.fillStyle = '#0ff';
     ctx.fillText(hintText, hx + 10, 21);
+
+    // Skip tutorial button
+    const skipText = '[Skip Tutorial]';
+    ctx.font = 'bold 12px monospace';
+    const sw = ctx.measureText(skipText).width + 16;
+    const sx = hx + hw + 8;
+    ctx.beginPath();
+    if (r > 0 && ctx.roundRect) ctx.roundRect(sx, 4, sw, 24, r);
+    else ctx.rect(sx, 4, sw, 24);
+    ctx.fillStyle = 'rgba(80,0,0,0.85)';
+    ctx.fill();
+    ctx.strokeStyle = '#f44';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#f44';
+    ctx.fillText(skipText, sx + 8, 21);
+    // Store for click detection
+    skipTutorialBtn = { x: sx, y: 4, w: sw, h: 24 };
   }
 
   updateCombatUI();
@@ -5286,31 +5608,125 @@ let mode3d = false;
 let scene3d, camera3d, renderer3d;
 let terrain3dMeshes = new Map();
 let terrain3dBuilt = new Set();
-let cam3dAngle = 0, cam3dPitch = 0.9, cam3dDist = 120;
+let cam3dAngle = 0, cam3dPitch = 0.9, cam3dDist = 40;
 let cam3dDragging = false, cam3dLastX = 0, cam3dLastY = 0;
-let cam3dTargetX = 0, cam3dTargetZ = 0; // for smooth follow
+let cam3dTargetX = 0, cam3dTargetZ = 0;
+
+// ── Model cache ──
+const gltfLoader = typeof THREE !== 'undefined' && THREE.GLTFLoader ? new THREE.GLTFLoader() : null;
+const modelCache = {};       // name → THREE.Group (template)
+const modelLoadingSet = new Set();
+const MODEL_SCALE = 0.008;   // RS2 units → game tiles (1 tile ≈ 1 unit)
+
+// Build model filename from NPC/object name + defId (matches auto-exporter output)
+function npcModelName(name, defId) {
+  if (!defId && defId !== 0) return null;
+  const safe = name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+  return `npc_${safe}_${defId}`;
+}
+function objModelName(name, objId) {
+  const safe = name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+  return `obj_${safe}_${objId}`;
+}
+
+// Fallback: old hardcoded map for NPCs exported before the auto-exporter
+const NPC_MODEL_FALLBACK = {
+  'Man': 'npc_man', 'Woman': 'npc_woman', 'Hans': 'npc_hans', 'Cook': 'npc_cook',
+  'Guard': 'npc_guard', 'Goblin': 'npc_goblin', 'Cow': 'npc_cow', 'Chicken': 'npc_chicken',
+  'Giant rat': 'npc_rat', 'Rat': 'npc_small_rat',
+  'Giant spider': 'npc_giant_spider', 'Spider': 'npc_spider',
+  'Gielinor Guide': 'npc_gielinor_guide', 'Survival Expert': 'npc_survival_expert',
+  'Master Chef': 'npc_master_chef', 'Zulrah': 'npc_zulrah',
+  'Fishing spot': 'fishing_spot', 'Rod Fishing spot': 'fishing_spot',
+};
+// Track which model names have already 404'd so we don't retry
+const modelNotFound = new Set();
+
+function loadModel(name, cb, fallbackName) {
+  if (modelNotFound.has(name) && !fallbackName) return;
+  if (modelNotFound.has(name) && fallbackName) { name = fallbackName; }
+  if (modelCache[name]) { cb(modelCache[name]); return; }
+  if (modelLoadingSet.has(name)) { setTimeout(() => loadModel(name, cb), 200); return; }
+  if (!gltfLoader) return;
+  modelLoadingSet.add(name);
+  gltfLoader.load(`/models/${name}.gltf`, (gltf) => {
+    const model = gltf.scene;
+    model.scale.set(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
+    modelCache[name] = model;
+    modelLoadingSet.delete(name);
+    cb(model);
+  }, undefined, (err) => {
+    modelLoadingSet.delete(name);
+    modelNotFound.add(name);
+    // Try fallback if provided
+    if (fallbackName && !modelNotFound.has(fallbackName)) {
+      loadModel(fallbackName, cb);
+    }
+  });
+}
+
+// ── Placed objects in scene ──
+let placed3dObjects = new Map();  // "type_x_y" → mesh
+let npc3dMeshes = new Map();      // npcId → mesh
+let player3dMeshes = new Map();   // playerId → mesh
+let myPlayer3dMesh = null;
+let npc3dLabels = new Map();      // npcId → sprite
+let player3dLabels = new Map();   // playerId → sprite
+
+function makeTextSprite(text, color) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 48;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(0, 0, 256, 48);
+  ctx.font = 'bold 22px RuneScape UF, Courier New, monospace';
+  ctx.fillStyle = color || '#ffff00';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 128, 24);
+  const tex = new THREE.CanvasTexture(c);
+  const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(3, 0.6, 1);
+  return sprite;
+}
 
 function init3D() {
   const c = document.getElementById('game3d');
   scene3d = new THREE.Scene();
-  scene3d.background = new THREE.Color(0x87ceeb);
+  scene3d.background = new THREE.Color(0x6baed6);
+  scene3d.fog = new THREE.Fog(0x6baed6, 60, 200);
 
-  camera3d = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.5, 3000);
+  camera3d = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.5, 500);
   renderer3d = new THREE.WebGLRenderer({ canvas: c, antialias: true, preserveDrawingBuffer: true });
-  renderer3d.setClearColor(0x87ceeb);
+  renderer3d.setClearColor(0x6baed6);
   renderer3d.setSize(window.innerWidth, window.innerHeight);
   renderer3d.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer3d.shadowMap.enabled = true;
+  renderer3d.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  // Bright lighting so terrain colors are visible
-  scene3d.add(new THREE.AmbientLight(0xffffff, 0.6));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.0);
-  sun.position.set(100, 200, 50);
+  // Lighting
+  scene3d.add(new THREE.AmbientLight(0xffffff, 0.5));
+  const sun = new THREE.DirectionalLight(0xfff4e0, 1.0);
+  sun.position.set(80, 120, 40);
+  sun.castShadow = true;
+  sun.shadow.mapSize.width = 2048;
+  sun.shadow.mapSize.height = 2048;
+  sun.shadow.camera.near = 1;
+  sun.shadow.camera.far = 300;
+  sun.shadow.camera.left = -80;
+  sun.shadow.camera.right = 80;
+  sun.shadow.camera.top = 80;
+  sun.shadow.camera.bottom = -80;
   scene3d.add(sun);
-  const fill = new THREE.DirectionalLight(0xffffff, 0.3);
-  fill.position.set(-50, 100, -100);
+  const fill = new THREE.DirectionalLight(0x8888cc, 0.3);
+  fill.position.set(-50, 60, -80);
   scene3d.add(fill);
 
-  // Mouse controls on the 3d canvas
+  // Hemisphere light for sky/ground color bleed
+  scene3d.add(new THREE.HemisphereLight(0x87ceeb, 0x3a5c1f, 0.3));
+
+  // Mouse controls
   let cam3dDidDrag = false;
   const raycaster3d = new THREE.Raycaster();
   const mouse3d = new THREE.Vector2();
@@ -5326,14 +5742,13 @@ function init3D() {
     const dx = e.clientX - cam3dLastX, dy = e.clientY - cam3dLastY;
     if (Math.abs(dx) > 2 || Math.abs(dy) > 2) cam3dDidDrag = true;
     cam3dAngle -= dx * 0.008;
-    cam3dPitch += dy * 0.004;
+    cam3dPitch = Math.max(0.1, Math.min(1.4, cam3dPitch + dy * 0.004));
     cam3dLastX = e.clientX; cam3dLastY = e.clientY;
   });
   window.addEventListener('mouseup', (e) => {
     const wasDrag = cam3dDidDrag;
     cam3dDragging = false;
     if (wasDrag || !mode3d || !camera3d) return;
-    // Click to move — raycast to terrain
     const rect = c.getBoundingClientRect();
     mouse3d.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     mouse3d.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -5343,13 +5758,11 @@ function init3D() {
     const hits = raycaster3d.intersectObjects(meshes, false);
     if (hits.length > 0) {
       const p = hits[0].point;
-      const wx = Math.floor(p.x);
-      const wy = Math.floor(-p.z);
-      sendMsg({ t: 'move', x: wx, y: wy });
+      sendMsg({ t: 'move', x: Math.floor(p.x), y: Math.floor(-p.z) });
     }
   });
   c.addEventListener('wheel', (e) => {
-    cam3dDist = Math.max(15, Math.min(500, cam3dDist * (1 + e.deltaY * 0.001)));
+    cam3dDist = Math.max(8, Math.min(200, cam3dDist * (1 + e.deltaY * 0.001)));
     e.preventDefault();
   }, { passive: false });
 
@@ -5359,20 +5772,32 @@ function init3D() {
     camera3d.updateProjectionMatrix();
     renderer3d.setSize(window.innerWidth, window.innerHeight);
   });
+
+  // Preload common models
+  ['tree_normal', 'tree_oak', 'rock_tin', 'rock_copper', 'npc_man', 'npc_goblin', 'npc_cow'].forEach(n => loadModel(n, () => {}));
 }
 
-let heightScale = 1 / 128; // tunable: [ and ] keys in 3D mode
+let heightScale = 1 / 128;
 let freeRoam3d = false;
 
-function heatColor(h) {
-  // Hypsometric: green (low) -> yellow -> red (high)
-  const minH = 0, maxH = 500;
-  const t = Math.max(0, Math.min(1, (h - minH) / (maxH - minH)));
-  let r, g, b;
-  if (t < 0.5) { r = t * 2; g = 1; b = 0; }
-  else { r = 1; g = 1 - (t - 0.5) * 2; b = 0; }
-  return [r, g, b];
-}
+// Map tile type to terrain color (RGB 0-1)
+const TILE_COLORS_3D = {
+  [T.GRASS]:     [0.22, 0.35, 0.12],
+  [T.WATER]:     [0.16, 0.32, 0.64],
+  [T.TREE]:      [0.20, 0.32, 0.10],  // grass underneath trees
+  [T.PATH]:      [0.33, 0.29, 0.29],
+  [T.ROCK]:      [0.35, 0.33, 0.30],  // ground under rocks
+  [T.SAND]:      [0.78, 0.70, 0.39],
+  [T.WALL]:      [0.50, 0.48, 0.45],
+  [T.FLOOR]:     [0.55, 0.45, 0.33],
+  [T.DOOR]:      [0.55, 0.45, 0.33],
+  [T.BRIDGE]:    [0.42, 0.36, 0.23],
+  [T.FISH_SPOT]: [0.16, 0.32, 0.64],
+  [T.FLOWER]:    [0.25, 0.38, 0.15],
+  [T.BUSH]:      [0.18, 0.30, 0.10],
+  [T.DARK_GRASS]:[0.18, 0.29, 0.09],
+  [T.CUSTOM]:    [0.50, 0.25, 0.50],
+};
 
 function buildChunkMesh(cx, cy) {
   const key = `${cx}_${cy}`;
@@ -5393,33 +5818,30 @@ function buildChunkMesh(cx, cy) {
       const v3 = vi * 3;
       const rawH = chunk.heights[iy * 64 + ix] || 0;
       const h = rawH * heightScale;
+      verts[v3] = ix; verts[v3 + 1] = h; verts[v3 + 2] = -iy;
 
-      verts[v3]     = ix;
-      verts[v3 + 1] = h;
-      verts[v3 + 2] = -iy;
+      // Use tile type color, fall back to terrain RGB or default grass
+      const wx = cx * 64 + ix, wy = cy * 64 + iy;
+      const tile = tileAt(wx, wy);
+      const tc = TILE_COLORS_3D[tile] || TILE_COLORS_3D[T.GRASS];
 
-      // Blend terrain color with heat map
       const ti = (iy * 64 + ix) * 3;
       const r = chunk.terrain[ti], g = chunk.terrain[ti + 1], b = chunk.terrain[ti + 2];
-      const [hr, hg, hb] = heatColor(rawH);
       if (r === 0 && g === 0 && b === 0) {
-        // No terrain data — use pure heat color
-        colors[v3] = hr; colors[v3 + 1] = hg; colors[v3 + 2] = hb;
+        colors[v3] = tc[0]; colors[v3+1] = tc[1]; colors[v3+2] = tc[2];
       } else {
-        // Blend 50% terrain + 50% heat
-        colors[v3] = r / 255 * 0.5 + hr * 0.5;
-        colors[v3 + 1] = g / 255 * 0.5 + hg * 0.5;
-        colors[v3 + 2] = b / 255 * 0.5 + hb * 0.5;
+        // Blend 60% terrain color + 40% tile color
+        colors[v3]   = r/255 * 0.6 + tc[0] * 0.4;
+        colors[v3+1] = g/255 * 0.6 + tc[1] * 0.4;
+        colors[v3+2] = b/255 * 0.6 + tc[2] * 0.4;
       }
     }
   }
 
-  // Triangle indices
   for (let iy = 0; iy < S - 1; iy++) {
     for (let ix = 0; ix < S - 1; ix++) {
       const a = iy * S + ix, b = a + 1, c = a + S, d = c + 1;
-      indices.push(a, b, c);
-      indices.push(c, b, d);
+      indices.push(a, b, c); indices.push(c, b, d);
     }
   }
 
@@ -5430,131 +5852,222 @@ function buildChunkMesh(cx, cy) {
 
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
   const mesh = new THREE.Mesh(geo, mat);
+  mesh.receiveShadow = true;
 
-  // Tile grid lines (every tile)
-  const tileVerts = [];
-  for (let iy = 0; iy < S; iy++) {
-    for (let ix = 0; ix < S - 1; ix++) {
-      const h1 = (chunk.heights[iy * 64 + ix] || 0) * heightScale + 0.03;
-      const h2 = (chunk.heights[iy * 64 + ix + 1] || 0) * heightScale + 0.03;
-      tileVerts.push(ix, h1, -iy, ix + 1, h2, -iy);
+  // Grid lines (only if grid is on)
+  if (showGrid) {
+    const tileVerts = [];
+    for (let iy = 0; iy < S; iy++) for (let ix = 0; ix < S - 1; ix++) {
+      const h1 = (chunk.heights[iy*64+ix]||0)*heightScale+0.02;
+      const h2 = (chunk.heights[iy*64+ix+1]||0)*heightScale+0.02;
+      tileVerts.push(ix, h1, -iy, ix+1, h2, -iy);
     }
-  }
-  for (let ix = 0; ix < S; ix++) {
-    for (let iy = 0; iy < S - 1; iy++) {
-      const h1 = (chunk.heights[iy * 64 + ix] || 0) * heightScale + 0.03;
-      const h2 = (chunk.heights[(iy + 1) * 64 + ix] || 0) * heightScale + 0.03;
-      tileVerts.push(ix, h1, -iy, ix, h2, -(iy + 1));
+    for (let ix = 0; ix < S; ix++) for (let iy = 0; iy < S - 1; iy++) {
+      const h1 = (chunk.heights[iy*64+ix]||0)*heightScale+0.02;
+      const h2 = (chunk.heights[(iy+1)*64+ix]||0)*heightScale+0.02;
+      tileVerts.push(ix, h1, -iy, ix, h2, -(iy+1));
     }
-  }
-  const tileGeo = new THREE.BufferGeometry();
-  tileGeo.setAttribute('position', new THREE.Float32BufferAttribute(tileVerts, 3));
-  const tileMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.15 });
-  const tileLines = new THREE.LineSegments(tileGeo, tileMat);
-  mesh.add(tileLines);
-
-  // 8x8 chunk grid lines (blue, bolder)
-  const chunkVerts = [];
-  for (let g = 0; g <= S; g += 8) {
-    const gy = Math.min(g, S - 1);
-    for (let ix = 0; ix < S - 1; ix++) {
-      const h1 = (chunk.heights[gy * 64 + ix] || 0) * heightScale + 0.06;
-      const h2 = (chunk.heights[gy * 64 + ix + 1] || 0) * heightScale + 0.06;
-      chunkVerts.push(ix, h1, -gy, ix + 1, h2, -gy);
-    }
-    const gx = Math.min(g, S - 1);
-    for (let iy = 0; iy < S - 1; iy++) {
-      const h1 = (chunk.heights[iy * 64 + gx] || 0) * heightScale + 0.06;
-      const h2 = (chunk.heights[(iy + 1) * 64 + gx] || 0) * heightScale + 0.06;
-      chunkVerts.push(gx, h1, -iy, gx, h2, -(iy + 1));
-    }
-  }
-  const chunkGeo = new THREE.BufferGeometry();
-  chunkGeo.setAttribute('position', new THREE.Float32BufferAttribute(chunkVerts, 3));
-  const chunkMat = new THREE.LineBasicMaterial({ color: 0x4488ff, transparent: true, opacity: 0.6, depthTest: false });
-  const chunkLines = new THREE.LineSegments(chunkGeo, chunkMat);
-  mesh.add(chunkLines);
-
-  // Coordinate labels at 8x8 intersections
-  const labelCanvas = document.createElement('canvas');
-  labelCanvas.width = 128; labelCanvas.height = 32;
-  const lctx = labelCanvas.getContext('2d');
-  for (let gy = 0; gy <= S; gy += 8) {
-    for (let gx = 0; gx <= S; gx += 8) {
-      const lx = Math.min(gx, S - 1), ly = Math.min(gy, S - 1);
-      const wx = cx * 64 + gx, wy = cy * 64 + gy;
-      const h = (chunk.heights[ly * 64 + lx] || 0) * heightScale + 0.4;
-      lctx.clearRect(0, 0, 128, 32);
-      lctx.fillStyle = '#fff';
-      lctx.font = 'bold 20px Courier New';
-      lctx.textAlign = 'center';
-      lctx.fillText(`${wx},${wy}`, 64, 22);
-      const tex = new THREE.CanvasTexture(lctx.getImageData(0, 0, 128, 32));
-      // Need a fresh canvas per label since we reuse lctx
-      const lc2 = document.createElement('canvas');
-      lc2.width = 128; lc2.height = 32;
-      const lx2 = lc2.getContext('2d');
-      lx2.fillStyle = 'rgba(0,0,0,0.7)';
-      lx2.fillRect(0, 0, 128, 32);
-      lx2.fillStyle = '#fff';
-      lx2.font = 'bold 18px Courier New';
-      lx2.textAlign = 'center';
-      lx2.fillText(`${wx},${wy}`, 64, 22);
-      const tex2 = new THREE.CanvasTexture(lc2);
-      const spriteMat = new THREE.SpriteMaterial({ map: tex2, depthTest: false });
-      const sprite = new THREE.Sprite(spriteMat);
-      sprite.position.set(gx, h, -gy);
-      sprite.scale.set(4, 1, 1);
-      mesh.add(sprite);
-    }
+    const tGeo = new THREE.BufferGeometry();
+    tGeo.setAttribute('position', new THREE.Float32BufferAttribute(tileVerts, 3));
+    mesh.add(new THREE.LineSegments(tGeo, new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.08 })));
   }
 
   mesh.position.set(cx * 64, 0, -(cy * 64));
   mesh.userData = { cx, cy };
 
-  // Chunk boundary lines
-  const borderGeo = new THREE.BufferGeometry();
-  const bVerts = [];
-  // Sample heights along each edge for a border that follows terrain
-  for (let i = 0; i < 63; i++) {
-    const h1 = (chunk.heights[0 * 64 + i] || 0) * heightScale + 0.3;
-    const h2 = (chunk.heights[0 * 64 + i + 1] || 0) * heightScale + 0.3;
-    bVerts.push(i, h1, 0, i + 1, h2, 0); // south edge
-    const h3 = (chunk.heights[63 * 64 + i] || 0) * heightScale + 0.3;
-    const h4 = (chunk.heights[63 * 64 + i + 1] || 0) * heightScale + 0.3;
-    bVerts.push(i, h3, -63, i + 1, h4, -63); // north edge
-    const h5 = (chunk.heights[i * 64 + 0] || 0) * heightScale + 0.3;
-    const h6 = (chunk.heights[(i + 1) * 64 + 0] || 0) * heightScale + 0.3;
-    bVerts.push(0, h5, -i, 0, h6, -(i + 1)); // west edge
-    const h7 = (chunk.heights[i * 64 + 63] || 0) * heightScale + 0.3;
-    const h8 = (chunk.heights[(i + 1) * 64 + 63] || 0) * heightScale + 0.3;
-    bVerts.push(63, h7, -i, 63, h8, -(i + 1)); // east edge
+  // Place 3D objects on tiles (trees, rocks) within this chunk
+  for (let iy = 0; iy < S; iy++) {
+    for (let ix = 0; ix < S; ix++) {
+      const wx = cx * 64 + ix, wy = cy * 64 + iy;
+      const tile = tileAt(wx, wy);
+      const objKey = `${tile}_${wx}_${wy}`;
+      if (placed3dObjects.has(objKey)) continue;
+
+      let modelName = null;
+      if (tile === T.TREE) modelName = (wx + wy) % 3 === 0 ? 'tree_oak' : 'tree_normal';
+      else if (tile === T.ROCK) modelName = (wx + wy) % 2 === 0 ? 'rock_copper' : 'rock_tin';
+
+      if (modelName) {
+        const tileH = (chunk.heights[iy * 64 + ix] || 0) * heightScale;
+        loadModel(modelName, (template) => {
+          const obj = template.clone();
+          obj.position.set(wx + 0.5, tileH, -(wy + 0.5));
+          // Vary rotation slightly for natural look
+          obj.rotation.y = ((wx * 7 + wy * 13) % 628) / 100;
+          scene3d.add(obj);
+          placed3dObjects.set(objKey, obj);
+        });
+      }
+
+      // Water tiles: add a blue translucent plane
+      if (tile === T.WATER || tile === T.FISH_SPOT) {
+        const waterGeo = new THREE.PlaneGeometry(1, 1);
+        const waterMat = new THREE.MeshLambertMaterial({
+          color: 0x2851a4, transparent: true, opacity: 0.6, side: THREE.DoubleSide
+        });
+        const waterPlane = new THREE.Mesh(waterGeo, waterMat);
+        const waterH = (chunk.heights[iy * 64 + ix] || 0) * heightScale + 0.05;
+        waterPlane.rotation.x = -Math.PI / 2;
+        waterPlane.position.set(wx + 0.5, waterH, -(wy + 0.5));
+        scene3d.add(waterPlane);
+        placed3dObjects.set(`water_${wx}_${wy}`, waterPlane);
+      }
+
+      // Wall tiles: add a small box
+      if (tile === T.WALL) {
+        const wallGeo = new THREE.BoxGeometry(1, 2, 1);
+        const wallMat = new THREE.MeshLambertMaterial({ color: 0x888888 });
+        const wallMesh = new THREE.Mesh(wallGeo, wallMat);
+        const wallH = (chunk.heights[iy * 64 + ix] || 0) * heightScale;
+        wallMesh.position.set(wx + 0.5, wallH + 1, -(wy + 0.5));
+        wallMesh.castShadow = true;
+        scene3d.add(wallMesh);
+        placed3dObjects.set(`wall_${wx}_${wy}`, wallMesh);
+      }
+    }
   }
-  borderGeo.setAttribute('position', new THREE.Float32BufferAttribute(bVerts, 3));
-  const borderMat = new THREE.LineBasicMaterial({ color: 0xff0000, depthTest: false });
-  const borderLine = new THREE.LineSegments(borderGeo, borderMat);
-  mesh.add(borderLine);
 
   scene3d.add(mesh);
   terrain3dMeshes.set(key, mesh);
 }
 
-let playerMesh3d = null;
+// ── NPC + Player 3D updates ──
+function updateEntities3D() {
+  // Update NPCs
+  const activeNpcIds = new Set();
+  for (const npc of npcList) {
+    activeNpcIds.add(npc.id);
+    const h = getTerrainHeight(npc.x, npc.y) * heightScale;
+
+    if (!npc3dMeshes.has(npc.id)) {
+      // Fallback: yellow capsule (shown until model loads)
+      const capsGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.2, 8);
+      const capsMat = new THREE.MeshLambertMaterial({ color: 0xffcc00 });
+      const capsule = new THREE.Mesh(capsGeo, capsMat);
+      capsule.castShadow = true;
+      capsule.userData.isFallback = true;
+      capsule.position.set(npc.x + 0.5, h + 0.6, -(npc.y + 0.5));
+      scene3d.add(capsule);
+      npc3dMeshes.set(npc.id, capsule);
+
+      // Try to load actual RS2 model and replace capsule
+      const primaryName = npcModelName(npc.name, npc.did);
+      const fallbackName = NPC_MODEL_FALLBACK[npc.name] || null;
+      const tryName = primaryName || fallbackName;
+      if (tryName && !modelNotFound.has(tryName)) {
+        const npcId = npc.id;
+        loadModel(tryName, (template) => {
+          const old = npc3dMeshes.get(npcId);
+          if (old) scene3d.remove(old);
+          const obj = template.clone();
+          obj.userData.isFallback = false;
+          scene3d.add(obj);
+          npc3dMeshes.set(npcId, obj);
+        }, fallbackName);
+      }
+
+      // Name label
+      const label = makeTextSprite(npc.name || 'NPC', '#ffff00');
+      label.position.set(npc.x + 0.5, h + 2.5, -(npc.y + 0.5));
+      scene3d.add(label);
+      npc3dLabels.set(npc.id, label);
+    }
+    // Update position smoothly (always runs)
+    {
+      const mesh = npc3dMeshes.get(npc.id);
+      const sm = npcSmooth.get(npc.id);
+      const sx = sm ? sm.x : npc.x, sy = sm ? sm.y : npc.y;
+      const sh = getTerrainHeight(Math.floor(sx), Math.floor(sy)) * heightScale;
+      mesh.position.set(sx + 0.5, sh + (mesh.userData.isFallback ? 0.6 : 0), -(sy + 0.5));
+      const label = npc3dLabels.get(npc.id);
+      if (label) label.position.set(sx + 0.5, sh + 2.5, -(sy + 0.5));
+    }
+  }
+  // Remove despawned NPCs
+  for (const [id, mesh] of npc3dMeshes) {
+    if (!activeNpcIds.has(id)) {
+      scene3d.remove(mesh);
+      npc3dMeshes.delete(id);
+      const label = npc3dLabels.get(id);
+      if (label) { scene3d.remove(label); npc3dLabels.delete(id); }
+    }
+  }
+
+  // Update other players
+  const activePlayerIds = new Set();
+  for (const p of otherPlayers) {
+    activePlayerIds.add(p.id);
+    const h = getTerrainHeight(p.x, p.y) * heightScale;
+    const sm = playerSmooth.get(p.id);
+    const sx = sm ? sm.x : p.x, sy = sm ? sm.y : p.y;
+    const sh = getTerrainHeight(Math.floor(sx), Math.floor(sy)) * heightScale;
+
+    if (!player3dMeshes.has(p.id)) {
+      const capsGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.4, 8);
+      const capsMat = new THREE.MeshLambertMaterial({ color: 0x00ccff });
+      const capsule = new THREE.Mesh(capsGeo, capsMat);
+      capsule.castShadow = true;
+      capsule.userData.isFallback = true;
+      scene3d.add(capsule);
+      player3dMeshes.set(p.id, capsule);
+
+      const playerId = p.id;
+      loadModel('npc_man', (template) => {
+        const old = player3dMeshes.get(playerId);
+        if (old) scene3d.remove(old);
+        const obj = template.clone();
+        obj.userData.isFallback = false;
+        scene3d.add(obj);
+        player3dMeshes.set(playerId, obj);
+      });
+
+      const kp = knownPlayers.find(k => k.id === p.id);
+      const pName = kp ? kp.name : `Player ${p.id}`;
+      const label = makeTextSprite(pName, '#00ffcc');
+      scene3d.add(label);
+      player3dLabels.set(p.id, label);
+    }
+
+    const mesh = player3dMeshes.get(p.id);
+    mesh.position.set(sx + 0.5, sh + (mesh.userData.isFallback ? 0.7 : 0), -(sy + 0.5));
+    const label = player3dLabels.get(p.id);
+    if (label) label.position.set(sx + 0.5, sh + 2.5, -(sy + 0.5));
+  }
+  // Remove disconnected players
+  for (const [id, mesh] of player3dMeshes) {
+    if (!activePlayerIds.has(id)) {
+      scene3d.remove(mesh);
+      player3dMeshes.delete(id);
+      const label = player3dLabels.get(id);
+      if (label) { scene3d.remove(label); player3dLabels.delete(id); }
+    }
+  }
+
+  // My player
+  const myH = getTerrainHeight(myX, myY) * heightScale;
+  if (!myPlayer3dMesh) {
+    const capsGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.4, 8);
+    const capsMat = new THREE.MeshLambertMaterial({ color: 0xff00ff });
+    myPlayer3dMesh = new THREE.Mesh(capsGeo, capsMat);
+    myPlayer3dMesh.castShadow = true;
+    myPlayer3dMesh.userData.isFallback = true;
+    scene3d.add(myPlayer3dMesh);
+
+    loadModel('npc_man', (template) => {
+      if (myPlayer3dMesh) scene3d.remove(myPlayer3dMesh);
+      myPlayer3dMesh = template.clone();
+      myPlayer3dMesh.userData.isFallback = false;
+      scene3d.add(myPlayer3dMesh);
+    });
+  }
+  myPlayer3dMesh.position.set(myX + 0.5, myH + (myPlayer3dMesh.userData.isFallback ? 0.7 : 0), -(myY + 0.5));
+}
+
+let playerMesh3d = null; // kept for compat
 function update3D() {
   if (!mode3d || !scene3d) return;
 
-  // Player marker (centered on tile)
-  if (!playerMesh3d) {
-    const pGeo = new THREE.BoxGeometry(0.8, 2, 0.8);
-    const pMat = new THREE.MeshLambertMaterial({ color: 0xff00ff });
-    playerMesh3d = new THREE.Mesh(pGeo, pMat);
-    scene3d.add(playerMesh3d);
-  }
-  const playerH = getTerrainHeight(myX, myY) * heightScale;
-  playerMesh3d.position.set(myX + 0.5, playerH + 1, -(myY + 0.5));
-
   if (freeRoam3d) {
-    // WASD free roam movement
     const moveSpeed = 1.5;
     if (keysDown.has('w') || keysDown.has('s') || keysDown.has('a') || keysDown.has('d')) {
       const fwd = keysDown.has('w') ? 1 : keysDown.has('s') ? -1 : 0;
@@ -5565,43 +6078,32 @@ function update3D() {
       cam3dTargetZ += dz * moveSpeed;
     }
   } else {
-    // Locked to player
     cam3dTargetX += (myX + 0.5 - cam3dTargetX) * 0.15;
     cam3dTargetZ += (-(myY + 0.5) - cam3dTargetZ) * 0.15;
   }
 
-  // Build meshes for loaded chunks
+  // Build chunk meshes
   const pcx = Math.floor(cam3dTargetX / 64), pcy = Math.floor(-cam3dTargetZ / 64);
-  for (let dx = -3; dx <= 3; dx++) {
-    for (let dy = -3; dy <= 3; dy++) {
+  for (let dx = -2; dx <= 2; dx++) {
+    for (let dy = -2; dy <= 2; dy++) {
       buildChunkMesh(pcx + dx, pcy + dy);
     }
   }
 
-  const pH = getTerrainHeight(Math.floor(cam3dTargetX), Math.floor(-cam3dTargetZ)) * heightScale;
-  const targetY = pH;
+  // Update entities
+  updateEntities3D();
 
-  // Orbit: angle rotates horizontally, pitch controls vertical tilt
+  // Camera orbit
+  const pH = getTerrainHeight(Math.floor(cam3dTargetX), Math.floor(-cam3dTargetZ)) * heightScale;
   const offX = Math.sin(cam3dAngle) * Math.cos(cam3dPitch) * cam3dDist;
   const offZ = Math.cos(cam3dAngle) * Math.cos(cam3dPitch) * cam3dDist;
   const offY = Math.sin(cam3dPitch) * cam3dDist;
 
-  camera3d.position.set(
-    cam3dTargetX + offX,
-    targetY + offY,
-    cam3dTargetZ + offZ
-  );
-  camera3d.lookAt(cam3dTargetX, targetY, cam3dTargetZ);
+  camera3d.position.set(cam3dTargetX + offX, pH + offY, cam3dTargetZ + offZ);
+  camera3d.lookAt(cam3dTargetX, pH + 1, cam3dTargetZ);
 
   renderer3d.render(scene3d, camera3d);
-
-  // Draw compass HUD overlay
-  const cc = document.getElementById('game3d');
-  const ctx2 = cc.getContext('2d');
-  if (!ctx2) {
-    // WebGL canvas — draw compass on a separate overlay
-    drawCompass3D();
-  }
+  drawCompass3D();
 }
 
 function drawCompass3D() {
@@ -5609,8 +6111,7 @@ function drawCompass3D() {
   if (!compassCanvas) {
     compassCanvas = document.createElement('canvas');
     compassCanvas.id = 'compass3d';
-    compassCanvas.width = 80;
-    compassCanvas.height = 80;
+    compassCanvas.width = 80; compassCanvas.height = 80;
     compassCanvas.style.cssText = 'position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:61;cursor:pointer;';
     compassCanvas.addEventListener('click', () => { cam3dAngle = 0; });
     document.body.appendChild(compassCanvas);
@@ -5618,62 +6119,51 @@ function drawCompass3D() {
   compassCanvas.style.display = mode3d ? 'block' : 'none';
   const ctx = compassCanvas.getContext('2d');
   const cx = 40, cy = 40, r = 30;
-
   ctx.clearRect(0, 0, 80, 80);
-
-  // Background circle
-  ctx.beginPath();
-  ctx.arc(cx, cy, r + 5, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  ctx.fill();
-  ctx.strokeStyle = '#3e3529';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  // In our 3D: cam3dAngle=0 means camera is at +Z looking toward -Z
-  // -Z = north in game (higher Y). So cam3dAngle=0 = looking north.
-  const angle = cam3dAngle; // rotation of camera around target
-
-  // Cardinal direction markers
+  ctx.beginPath(); ctx.arc(cx, cy, r + 5, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fill();
+  ctx.strokeStyle = '#3e3529'; ctx.lineWidth = 2; ctx.stroke();
+  const angle = cam3dAngle;
   const dirs = [
-    { label: 'N', angle: 0, color: '#ff0000' },      // North = +Z = angle 0
+    { label: 'N', angle: 0, color: '#ff0000' },
     { label: 'E', angle: Math.PI / 2, color: '#ccc' },
     { label: 'S', angle: Math.PI, color: '#ccc' },
     { label: 'W', angle: -Math.PI / 2, color: '#ccc' },
   ];
-
   for (const d of dirs) {
-    const a = d.angle - angle; // offset by camera rotation
-    const dx = Math.sin(a) * r;
-    const dy = -Math.cos(a) * r;
+    const a = d.angle - angle;
     ctx.font = d.label === 'N' ? 'bold 14px Courier New' : '11px Courier New';
-    ctx.fillStyle = d.color;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(d.label, cx + dx, cy + dy);
+    ctx.fillStyle = d.color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(d.label, cx + Math.sin(a) * r, cy - Math.cos(a) * r);
   }
-
-  // North arrow
   const na = -angle;
-  const nx = Math.sin(na) * (r - 12);
-  const ny = -Math.cos(na) * (r - 12);
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(cx + nx, cy + ny);
-  ctx.strokeStyle = '#ff0000';
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.sin(na) * (r - 12), cy - Math.cos(na) * (r - 12));
+  ctx.strokeStyle = '#ff0000'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff'; ctx.fill();
+}
 
-  // Center dot
-  ctx.beginPath();
-  ctx.arc(cx, cy, 2, 0, Math.PI * 2);
-  ctx.fillStyle = '#fff';
-  ctx.fill();
+function clearScene3D() {
+  // Remove all placed objects, NPCs, players
+  for (const [, obj] of placed3dObjects) scene3d.remove(obj);
+  placed3dObjects.clear();
+  for (const [, obj] of npc3dMeshes) scene3d.remove(obj);
+  npc3dMeshes.clear();
+  for (const [, obj] of npc3dLabels) scene3d.remove(obj);
+  npc3dLabels.clear();
+  for (const [, obj] of player3dMeshes) scene3d.remove(obj);
+  player3dMeshes.clear();
+  for (const [, obj] of player3dLabels) scene3d.remove(obj);
+  player3dLabels.clear();
+  if (myPlayer3dMesh) { scene3d.remove(myPlayer3dMesh); myPlayer3dMesh = null; }
+  for (const [k, m] of terrain3dMeshes) { scene3d.remove(m); if (m.geometry) m.geometry.dispose(); }
+  terrain3dMeshes.clear();
+  terrain3dBuilt.clear();
 }
 
 function toggle3D() {
   mode3d = !mode3d;
-  // Stop any active recording when switching modes
   if (clipRecording && clipRecorder && clipRecorder.state === 'recording') {
     try { clipRecorder.stop(); } catch(e){}
   }
@@ -5683,17 +6173,12 @@ function toggle3D() {
     c2d.style.display = 'none';
     c3d.style.display = 'block';
     if (!scene3d) init3D();
-    // Force correct size after display
     renderer3d.setSize(window.innerWidth, window.innerHeight);
     camera3d.aspect = window.innerWidth / window.innerHeight;
     camera3d.updateProjectionMatrix();
-    // Initialize camera at player position
-    cam3dTargetX = myX;
-    cam3dTargetZ = -myY;
-    terrain3dBuilt.clear();
-    for (const [k, m] of terrain3dMeshes) { scene3d.remove(m); m.geometry.dispose(); }
-    terrain3dMeshes.clear();
-    showChat('3D Mode ON (WASD move, drag orbit, scroll zoom, [/] height, P screenshot)', '#333');
+    cam3dTargetX = myX; cam3dTargetZ = -myY;
+    clearScene3D();
+    showChat('3D Mode ON — RS2 models loaded! (WASD, drag orbit, scroll zoom)', '#333');
     (function animate3d() {
       if (!mode3d) return;
       update3D();
