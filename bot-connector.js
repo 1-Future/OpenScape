@@ -1,4 +1,4 @@
-// bot-connector.js — Claude as a player in miniscape
+// bot-connector.js — Claude as a player in openscape
 const WebSocket = require('ws');
 
 const GAME_WS = 'ws://localhost:3000'; // change port if needed

@@ -2037,7 +2037,7 @@ wss.on('connection', (ws) => {
   updatePlayerChunks(p);
   sendStats(p);
   sendFriendsList(p);
-  sendChat(p, `Welcome to MiniScape! ${players.size} player(s) online.`, '#ff981f');
+  sendChat(p, `Welcome to OpenScape! ${players.size} player(s) online.`, '#ff981f');
   broadcast({ t: 'chat', msg: `${pName} has joined.`, color: '#0ff' });
   notifyFriendsOfStatus(p.id, true);
 
@@ -2069,7 +2069,7 @@ syncServer.on('connection', (ws) => {
       const msg = JSON.parse(data.toString());
       if (msg.t === 'sync') {
         osrsSync = msg;
-        // Mirror player position, stats, and equipment to first MiniScape player
+        // Mirror player position, stats, and equipment to first OpenScape player
         if (msg.player && players.size > 0) {
           const firstPlayer = players.values().next().value;
           if (firstPlayer) {
@@ -2193,7 +2193,7 @@ process.on('SIGINT', () => { saveAllChunks(); saveFriends(); process.exit(); });
 process.on('SIGTERM', () => { saveAllChunks(); saveFriends(); process.exit(); });
 
 server.listen(PORT, () => {
-  console.log(`[server] MiniScape running on http://localhost:${PORT}`);
+  console.log(`[server] OpenScape running on http://localhost:${PORT}`);
   console.log(`[server] Chunk-based world (${CHUNK_SIZE}x${CHUNK_SIZE} chunks, view=${VIEW_DIST})`);
   console.log(`[server] Spawn: OSRS (${SPAWN_X}, ${SPAWN_Y}) Lumbridge`);
   // Start Discord message polling

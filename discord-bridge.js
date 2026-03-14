@@ -1,4 +1,4 @@
-// discord-bridge.js — Bridges Discord channel ↔ MiniScape game chat
+// discord-bridge.js — Bridges Discord channel ↔ OpenScape game chat
 // Run alongside server.js: node discord-bridge.js
 
 const WebSocket = require('ws');
@@ -66,7 +66,7 @@ function connectDiscord() {
           d: {
             token: BOT_TOKEN,
             intents: (1 << 9) | (1 << 15), // GUILD_MESSAGES | MESSAGE_CONTENT
-            properties: { os: 'windows', browser: 'miniscape', device: 'miniscape' }
+            properties: { os: 'windows', browser: 'openscape', device: 'openscape' }
           }
         }));
         break;
@@ -135,6 +135,6 @@ function handleDispatch(event, data) {
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-console.log('[bridge] Starting MiniScape ↔ Discord bridge...');
+console.log('[bridge] Starting OpenScape ↔ Discord bridge...');
 connectGame();
 connectDiscord();

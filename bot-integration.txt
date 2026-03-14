@@ -1,0 +1,94 @@
+BOT INTEGRATION — Talk to Claude from miniscape
+================================================
+
+OPTION A: Via OpenClaw (port 18789) — needs 1 config change first
+------------------------------------------------------------------
+1. Add this to openclaw.json inside "gateway": { ... }
+
+  "http": {
+    "endpoints": {
+      "chatCompletions": { "enabled": true }
+    }
+  }
+
+2. Then restart OpenClaw (openclaw gateway restart)
+
+3. In server.js, handle :: prefix like this:
+
+  case 'chat': {
+    const text = (msg.msg || '').trim().slice(0, 100);
+    const chatName = playerNames.get(p.id) || `Player ${p.id}`;
+    if (text.startsWith('::')) {
+      const question = text.slice(2).trim();
+      askBot(p, question);
+    } else {
+      if (text) broadcast({ t: 'chat', msg: `${chatName}: ${text}`, color: '#0000aa' });
+    }
+    break;
+  }
+
+4. Add this function to server.js:
+
+  async function askBot(p, question) {
+    try {
+      const res = await fetch('http://localhost:18789/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer 95d1643f0eba7bc2a6e5acca87e9e5dfabbe5f4b6bc4c5a7',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'openclaw:main',
+          messages: [{ role: 'user', content: question }]
+        })
+      });
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content || 'No response';
+      // Split long replies into chat-sized chunks
+      const chunks = reply.match(/.{1,90}/g) || [reply];
+      for (const chunk of chunks) {
+        sendChat(p, `[Bot] ${chunk}`, '#ffaa00');
+      }
+    } catch (e) {
+      sendChat(p, `[Bot] Error: ${e.message}`, '#ff4444');
+    }
+  }
+
+
+OPTION B: Direct Anthropic API — works immediately, no config change
+--------------------------------------------------------------------
+Get your API key from: https://console.anthropic.com/settings/api-keys
+
+  async function askBot(p, question) {
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': 'YOUR_ANTHROPIC_API_KEY_HERE',
+          'anthropic-version': '2023-06-01',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-5',
+          max_tokens: 256,
+          messages: [{ role: 'user', content: question }]
+        })
+      });
+      const data = await res.json();
+      const reply = data.content?.[0]?.text || 'No response';
+      const chunks = reply.match(/.{1,90}/g) || [reply];
+      for (const chunk of chunks) {
+        sendChat(p, `[Bot] ${chunk}`, '#ffaa00');
+      }
+    } catch (e) {
+      sendChat(p, `[Bot] Error: ${e.message}`, '#ff4444');
+    }
+  }
+
+
+USAGE IN GAME
+-------------
+Type in chat:  :: what should I train next?
+Bot responds:  [Bot] Try fishing — it's one of the most AFK skills...
+
+Note: fetch() is built into Node 18+. Check your version with: node --version

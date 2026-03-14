@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tick Queue System — MiniScape Devlog</title>
+<title>Tick Queue System — OpenScape Devlog</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -48,7 +48,7 @@ blockquote { border-left: 3px solid rgba(212, 168, 83, 0.4); padding-left: 20px;
 
 <header class="site-header">
   <div class="header-inner">
-    <a href="../" class="site-logo">MiniScape <span>Devlog</span></a>
+    <a href="../" class="site-logo">OpenScape <span>Devlog</span></a>
     <a href="../" class="back-link">&larr; All Posts</a>
   </div>
 </header>
@@ -73,7 +73,7 @@ blockquote { border-left: 3px solid rgba(212, 168, 83, 0.4); padding-left: 20px;
     <li>State is broadcast to clients</li>
   </ol>
 
-  <p>MiniScape replicates this with a <code>setInterval</code> running at exactly 600ms. Every scheduled action goes through the tick queue.</p>
+  <p>OpenScape replicates this with a <code>setInterval</code> running at exactly 600ms. Every scheduled action goes through the tick queue.</p>
 
   <h2>The Queue</h2>
 
@@ -103,7 +103,7 @@ setInterval(() => {
 
   <h2>Why Ticks Matter</h2>
 
-  <p>If you've ever played OSRS, you've experienced tick manipulation — prayer flicking, 1-tick cooking, 3-tick fishing. These techniques exploit the tick system's deterministic timing. If MiniScape's tick system doesn't match OSRS exactly, none of these techniques would work.</p>
+  <p>If you've ever played OSRS, you've experienced tick manipulation — prayer flicking, 1-tick cooking, 3-tick fishing. These techniques exploit the tick system's deterministic timing. If OpenScape's tick system doesn't match OSRS exactly, none of these techniques would work.</p>
 
   <p>Some examples of tick-dependent mechanics:</p>
 
@@ -119,7 +119,7 @@ setInterval(() => {
 </article>
 
 <footer class="site-footer">
-  <p>MiniScape &mdash; 1-Future &mdash; 2026</p>
+  <p>OpenScape &mdash; 1-Future &mdash; 2026</p>
 </footer>
 
 </body>

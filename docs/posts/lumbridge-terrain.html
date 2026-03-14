@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lumbridge & Terrain Rendering — MiniScape Devlog</title>
+<title>Lumbridge & Terrain Rendering — OpenScape Devlog</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -43,7 +43,7 @@ blockquote { border-left: 3px solid rgba(212, 168, 83, 0.4); padding-left: 20px;
 <body>
 <header class="site-header">
   <div class="header-inner">
-    <a href="../" class="site-logo">MiniScape <span>Devlog</span></a>
+    <a href="../" class="site-logo">OpenScape <span>Devlog</span></a>
     <a href="../" class="back-link">&larr; All Posts</a>
   </div>
 </header>
@@ -52,7 +52,7 @@ blockquote { border-left: 3px solid rgba(212, 168, 83, 0.4); padding-left: 20px;
   <h1>Lumbridge & Terrain Rendering from OSRS Cache</h1>
   <div class="post-date">5 March 2026</div>
 
-  <p>The OSRS game world is massive — thousands of regions, each containing 64x64 tiles of terrain data, object placements, and collision flags. MiniScape renders this world in the browser using data extracted from the game cache.</p>
+  <p>The OSRS game world is massive — thousands of regions, each containing 64x64 tiles of terrain data, object placements, and collision flags. OpenScape renders this world in the browser using data extracted from the game cache.</p>
 
   <h2>Cache Structure</h2>
 
@@ -74,7 +74,7 @@ blockquote { border-left: 3px solid rgba(212, 168, 83, 0.4); padding-left: 20px;
     <li><strong>Flags</strong> — collision, bridge, roof visibility</li>
   </ul>
 
-  <p>MiniScape uses a top-down 2D renderer. Each tile is drawn as a colored rectangle, with color determined by the underlay/overlay definitions. Objects like trees and rocks are drawn as sprites on top.</p>
+  <p>OpenScape uses a top-down 2D renderer. Each tile is drawn as a colored rectangle, with color determined by the underlay/overlay definitions. Objects like trees and rocks are drawn as sprites on top.</p>
 
   <h2>Collision Maps</h2>
 
@@ -86,12 +86,12 @@ blockquote { border-left: 3px solid rgba(212, 168, 83, 0.4); padding-left: 20px;
     <li>Projectile-blocking (affects ranged/magic line of sight)</li>
   </ul>
 
-  <p>MiniScape's pathfinding respects these flags exactly — if you can't walk somewhere in OSRS, you can't walk there in MiniScape.</p>
+  <p>OpenScape's pathfinding respects these flags exactly — if you can't walk somewhere in OSRS, you can't walk there in OpenScape.</p>
 
   <blockquote>The world isn't designed — it's extracted. Every tile, every collision flag, every object placement comes directly from the game cache.</blockquote>
 </article>
 <footer class="site-footer">
-  <p>MiniScape &mdash; 1-Future &mdash; 2026</p>
+  <p>OpenScape &mdash; 1-Future &mdash; 2026</p>
 </footer>
 </body>
 </html>

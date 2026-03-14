@@ -1,0 +1,45 @@
+BOT IN GAME — PLAN
+==================
+
+GOAL
+----
+Claude joins miniscape as a player and chats naturally.
+
+FLOW
+----
+1. Player types in game chat
+2. Game server POSTs message to Discord webhook
+3. Claude sees it in #game-bridge, responds
+4. WS client watching Discord picks up Claude's reply
+5. WS client sends reply back into game as "Claude: <msg>"
+
+PIECES
+------
+[ ] Game server  — on chat message, POST to webhook URL below
+[ ] WS client    — connects to Discord gateway, watches channel, pipes reply to game
+[ ] Game server  — receives reply, broadcasts as "Claude: <msg>"
+
+CREDENTIALS
+-----------
+Webhook URL:   [redacted - use env var DISCORD_WEBHOOK_URL]
+Channel ID:    [redacted - use env var DISCORD_CHANNEL_ID]
+Bot token:     [redacted - use env var DISCORD_BOT_TOKEN]
+Bot user ID:   [redacted]
+
+WEBHOOK POST (game → Discord)
+------------------------------
+POST to webhook URL with body:
+  { "username": "William (in-game)", "content": "<player message>" }
+
+WS CLIENT (Discord → game)
+---------------------------
+Connect to: wss://gateway.discord.gg/?v=10&encoding=json
+Identify with bot token
+Listen for MESSAGE_CREATE events in channel 1480654372131180635
+Filter: ignore messages from bot user ID 1464768627709313044 (avoid loops)
+On message → send to game server
+
+OPEN QUESTIONS
+--------------
+- Should Claude respond to ALL chat or only when addressed?
+- Should Claude know game context (player stats, location, etc)?

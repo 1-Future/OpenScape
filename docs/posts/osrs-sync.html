@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OSRS Sync — Real-Time Data Mirroring — MiniScape Devlog</title>
+<title>OSRS Sync — Real-Time Data Mirroring — OpenScape Devlog</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -48,7 +48,7 @@ blockquote { border-left: 3px solid rgba(212, 168, 83, 0.4); padding-left: 20px;
 
 <header class="site-header">
   <div class="header-inner">
-    <a href="../" class="site-logo">MiniScape <span>Devlog</span></a>
+    <a href="../" class="site-logo">OpenScape <span>Devlog</span></a>
     <a href="../" class="back-link">&larr; All Posts</a>
   </div>
 </header>
@@ -58,7 +58,7 @@ blockquote { border-left: 3px solid rgba(212, 168, 83, 0.4); padding-left: 20px;
   <h1>OSRS Sync — Real-Time Data Mirroring</h1>
   <div class="post-date">7 March 2026</div>
 
-  <p>Most private servers guess at game values or copy them from wikis. MiniScape takes a different approach: we capture data directly from the live game and mirror it into our server. No interpretation, no estimation — raw ground truth.</p>
+  <p>Most private servers guess at game values or copy them from wikis. OpenScape takes a different approach: we capture data directly from the live game and mirror it into our server. No interpretation, no estimation — raw ground truth.</p>
 
   <h2>The Pipeline</h2>
 
@@ -67,7 +67,7 @@ blockquote { border-left: 3px solid rgba(212, 168, 83, 0.4); padding-left: 20px;
   <ol>
     <li><strong>Capture</strong> — A RuneLite plugin intercepts game events in real-time</li>
     <li><strong>Log</strong> — Events are written to <code>~/.runelite/combat-debug.log</code> with timestamps</li>
-    <li><strong>Extract</strong> — We parse the log and encode values into MiniScape's data files</li>
+    <li><strong>Extract</strong> — We parse the log and encode values into OpenScape's data files</li>
   </ol>
 
   <h2>What We Capture</h2>
@@ -107,11 +107,11 @@ blockquote { border-left: 3px solid rgba(212, 168, 83, 0.4); padding-left: 20px;
     <li>The wiki documents <em>what</em> happens — we need to know <em>exactly when</em> it happens, down to the tick</li>
   </ul>
 
-  <blockquote>The log file is the single source of truth. If MiniScape behaves differently from what the log says, MiniScape is wrong.</blockquote>
+  <blockquote>The log file is the single source of truth. If OpenScape behaves differently from what the log says, OpenScape is wrong.</blockquote>
 </article>
 
 <footer class="site-footer">
-  <p>MiniScape &mdash; 1-Future &mdash; 2026</p>
+  <p>OpenScape &mdash; 1-Future &mdash; 2026</p>
 </footer>
 
 </body>

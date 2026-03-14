@@ -1,8 +1,8 @@
-# MiniScape Vision
+# OpenScape Vision
 
 ## 1. RuneLite Plugins as Native Features
 
-RuneLite has ~200+ plugins that solve real pain points in the vanilla OSRS client. Since MiniScape builds the engine from scratch, we can integrate these directly as first-class features instead of bolting them on as plugins.
+RuneLite has ~200+ plugins that solve real pain points in the vanilla OSRS client. Since OpenScape builds the engine from scratch, we can integrate these directly as first-class features instead of bolting them on as plugins.
 
 ### High-Priority Integrations
 - **Ground Items** — show item names/values on the ground with color coding
@@ -35,7 +35,7 @@ Use AI vision models to automatically classify every tile in the OSRS world from
 2. **Extract**: Each 256x256 image contains tiles at various densities per zoom level
 3. **Classify**: Feed tiles through a vision model (Claude, GPT-4V, or local model) to identify tile type: grass, water, tree, rock, sand, path, wall, floor, door, etc.
 4. **Output**: Binary tilemap file — one byte per tile covering the entire OSRS world
-5. **Result**: MiniScape loads an accurate OSRS world automatically
+5. **Result**: OpenScape loads an accurate OSRS world automatically
 
 ### Scale
 - OSRS world is roughly 3000x3000 tiles in the main overworld

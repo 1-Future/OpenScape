@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>MiniScape</title>
+<title>OpenScape</title>
 <style>
   :root {
     --panel-bg: #3b3024;
@@ -1157,7 +1157,7 @@
 <div id="login-screen">
   <div id="login-bg-grain"></div>
   <div id="login-box">
-    <div id="login-title">MINISCAPE</div>
+    <div id="login-title">OPENSCAPE</div>
     <div id="login-subtitle">WELCOME TO GIELINOR</div>
     <input id="login-input" type="text" placeholder="Enter username" maxlength="20" autocomplete="off" spellcheck="false">
     <button id="login-play-btn" onclick="doLogin()">PLAY NOW</button>
@@ -1523,12 +1523,12 @@ function saveUILayout() {
       transform: el.style.transform,
     };
   });
-  try { localStorage.setItem('miniscape-ui-layout', JSON.stringify(layouts)); } catch(e) {}
+  try { localStorage.setItem('openscape-ui-layout', JSON.stringify(layouts)); } catch(e) {}
 }
 
 function loadUILayout() {
   try {
-    const saved = JSON.parse(localStorage.getItem('miniscape-ui-layout'));
+    const saved = JSON.parse(localStorage.getItem('openscape-ui-layout'));
     if (!saved) return false;
     for (const [id, props] of Object.entries(saved)) {
       const el = document.getElementById(id);
@@ -1546,18 +1546,18 @@ function loadUILayout() {
 }
 
 function resetUILayout() {
-  localStorage.removeItem('miniscape-ui-layout');
+  localStorage.removeItem('openscape-ui-layout');
 }
 
 // ── Corner Style (Round / Square / Chamfer) ──────────────────────────────────
 const cornerModes = ['round', 'square', 'chamfer'];
 const cornerLabels = { round: '◯ Round', square: '◻ Square', chamfer: '⬡ Chamfer' };
-let cornerMode = localStorage.getItem('miniscape-corner-mode') || 'round';
+let cornerMode = localStorage.getItem('openscape-corner-mode') || 'round';
 // Migrate old squareCorners setting
-if (localStorage.getItem('miniscape-square-corners') === '1' && cornerMode === 'round') {
+if (localStorage.getItem('openscape-square-corners') === '1' && cornerMode === 'round') {
   cornerMode = 'square';
-  localStorage.setItem('miniscape-corner-mode', 'square');
-  localStorage.removeItem('miniscape-square-corners');
+  localStorage.setItem('openscape-corner-mode', 'square');
+  localStorage.removeItem('openscape-square-corners');
 }
 let squareCorners = cornerMode === 'square' || cornerMode === 'chamfer'; // for canvas compat
 
@@ -1574,19 +1574,19 @@ applyCornerMode();
 function cycleCorners() {
   const idx = cornerModes.indexOf(cornerMode);
   cornerMode = cornerModes[(idx + 1) % cornerModes.length];
-  localStorage.setItem('miniscape-corner-mode', cornerMode);
+  localStorage.setItem('openscape-corner-mode', cornerMode);
   applyCornerMode();
 }
 
 // ── Edge Profile (Flat / Bevel / Inset / Ridge / Groove) ─────────────────────
 const edgeModes = ['flat', 'bevel', 'inset', 'ridge', 'groove'];
 const edgeLabels = { flat: '▭ Flat', bevel: '▥ Bevel', inset: '▣ Inset', ridge: '▤ Ridge', groove: '▧ Groove' };
-let edgeMode = localStorage.getItem('miniscape-edge-mode') || 'flat';
+let edgeMode = localStorage.getItem('openscape-edge-mode') || 'flat';
 // Migrate old bevel setting
-if (localStorage.getItem('miniscape-bevel-edges') === '1' && edgeMode === 'flat') {
+if (localStorage.getItem('openscape-bevel-edges') === '1' && edgeMode === 'flat') {
   edgeMode = 'bevel';
-  localStorage.setItem('miniscape-edge-mode', 'bevel');
-  localStorage.removeItem('miniscape-bevel-edges');
+  localStorage.setItem('openscape-edge-mode', 'bevel');
+  localStorage.removeItem('openscape-bevel-edges');
 }
 
 function applyEdgeMode() {
@@ -1600,12 +1600,12 @@ applyEdgeMode();
 function toggleBevel() {
   const idx = edgeModes.indexOf(edgeMode);
   edgeMode = edgeModes[(idx + 1) % edgeModes.length];
-  localStorage.setItem('miniscape-edge-mode', edgeMode);
+  localStorage.setItem('openscape-edge-mode', edgeMode);
   applyEdgeMode();
 }
 
 // ── Inner Edges (dividers inside panels) ─────────────────────────────────────
-let innerEdges = localStorage.getItem('miniscape-inner-edges') === '1';
+let innerEdges = localStorage.getItem('openscape-inner-edges') === '1';
 function applyInnerEdges() {
   document.body.classList.toggle('inner-edges', innerEdges);
   const btn = document.getElementById('btn-inner');
@@ -1615,14 +1615,14 @@ applyInnerEdges();
 
 function toggleInnerEdges() {
   innerEdges = !innerEdges;
-  localStorage.setItem('miniscape-inner-edges', innerEdges ? '1' : '0');
+  localStorage.setItem('openscape-inner-edges', innerEdges ? '1' : '0');
   applyInnerEdges();
 }
 
 // ── Border Weight (Default / None / Thin / Medium / Thick) ───────────────────
 const weightModes = ['default', 'none', 'thin', 'medium', 'thick'];
 const weightLabels = { default: '⊡ Default', none: '⊠ None', thin: '⊡ Thin', medium: '⊡ Medium', thick: '⊡ Thick' };
-let weightMode = localStorage.getItem('miniscape-weight-mode') || 'default';
+let weightMode = localStorage.getItem('openscape-weight-mode') || 'default';
 
 function applyWeight() {
   weightModes.forEach(m => document.body.classList.remove('weight-' + m));
@@ -1635,14 +1635,14 @@ applyWeight();
 function cycleWeight() {
   const idx = weightModes.indexOf(weightMode);
   weightMode = weightModes[(idx + 1) % weightModes.length];
-  localStorage.setItem('miniscape-weight-mode', weightMode);
+  localStorage.setItem('openscape-weight-mode', weightMode);
   applyWeight();
 }
 
 // ── Border Style (Solid / Dashed / Dotted / Double) ──────────────────────────
 const styleModes = ['solid', 'dashed', 'dotted', 'double'];
 const styleLabels = { solid: '― Solid', dashed: '┄ Dashed', dotted: '··· Dotted', double: '═ Double' };
-let styleMode = localStorage.getItem('miniscape-style-mode') || 'solid';
+let styleMode = localStorage.getItem('openscape-style-mode') || 'solid';
 
 function applyStyleMode() {
   styleModes.forEach(m => document.body.classList.remove('style-' + m));
@@ -1655,14 +1655,14 @@ applyStyleMode();
 function cycleStyle() {
   const idx = styleModes.indexOf(styleMode);
   styleMode = styleModes[(idx + 1) % styleModes.length];
-  localStorage.setItem('miniscape-style-mode', styleMode);
+  localStorage.setItem('openscape-style-mode', styleMode);
   applyStyleMode();
 }
 
 // ── Shadow / Depth (Default / None / Subtle / Lifted / Floating) ─────────────
 const depthModes = ['default', 'none', 'subtle', 'lifted', 'floating'];
 const depthLabels = { default: '◫ Default', none: '◻ No Shadow', subtle: '◫ Subtle', lifted: '◫ Lifted', floating: '◫ Floating' };
-let depthMode = localStorage.getItem('miniscape-depth-mode') || 'default';
+let depthMode = localStorage.getItem('openscape-depth-mode') || 'default';
 
 function applyDepth() {
   depthModes.forEach(m => document.body.classList.remove('depth-' + m));
@@ -1675,14 +1675,14 @@ applyDepth();
 function cycleDepth() {
   const idx = depthModes.indexOf(depthMode);
   depthMode = depthModes[(idx + 1) % depthModes.length];
-  localStorage.setItem('miniscape-depth-mode', depthMode);
+  localStorage.setItem('openscape-depth-mode', depthMode);
   applyDepth();
 }
 
 // ── Glow (None / Accent / Neon / Soft) ───────────────────────────────────────
 const glowModes = ['none', 'accent', 'neon', 'soft'];
 const glowLabels = { none: '✦ No Glow', accent: '✦ Accent', neon: '✦ Neon', soft: '✦ Soft' };
-let glowMode = localStorage.getItem('miniscape-glow-mode') || 'none';
+let glowMode = localStorage.getItem('openscape-glow-mode') || 'none';
 
 function applyGlow() {
   glowModes.forEach(m => document.body.classList.remove('glow-' + m));
@@ -1695,7 +1695,7 @@ applyGlow();
 function cycleGlow() {
   const idx = glowModes.indexOf(glowMode);
   glowMode = glowModes[(idx + 1) % glowModes.length];
-  localStorage.setItem('miniscape-glow-mode', glowMode);
+  localStorage.setItem('openscape-glow-mode', glowMode);
   applyGlow();
 }
 
@@ -1706,7 +1706,7 @@ const texLabels = {
   carbon:'▦ Carbon', diamond:'▦ Diamond', circuit:'▦ Circuit', hex:'▦ Hexagon',
   wood:'▦ Wood', marble:'▦ Marble', crosshatch:'▦ Crosshatch', linen:'▦ Linen'
 };
-let texMode = localStorage.getItem('miniscape-tex-mode') || 'none';
+let texMode = localStorage.getItem('openscape-tex-mode') || 'none';
 
 function applyTexture() {
   texModes.forEach(m => document.body.classList.remove('tex-' + m));
@@ -1719,7 +1719,7 @@ applyTexture();
 function cycleTexture() {
   const idx = texModes.indexOf(texMode);
   texMode = texModes[(idx + 1) % texModes.length];
-  localStorage.setItem('miniscape-tex-mode', texMode);
+  localStorage.setItem('openscape-tex-mode', texMode);
   applyTexture();
 }
 
@@ -1729,7 +1729,7 @@ const logoLabels = {
   none:'⚑ No Logo', sword:'⚔ Sword', skull:'💀 Skull', rune:'᚛ Rune', shield:'🛡 Shield',
   crown:'👑 Crown', dragon:'🐉 Dragon', star:'✧ Star', fire:'🔥 Fire', gem:'💎 Gem', eye:'👁 Eye'
 };
-let logoMode = localStorage.getItem('miniscape-logo-mode') || 'none';
+let logoMode = localStorage.getItem('openscape-logo-mode') || 'none';
 
 function applyLogo() {
   logoModes.forEach(m => document.body.classList.remove('logo-' + m));
@@ -1742,7 +1742,7 @@ applyLogo();
 function cycleLogo() {
   const idx = logoModes.indexOf(logoMode);
   logoMode = logoModes[(idx + 1) % logoModes.length];
-  localStorage.setItem('miniscape-logo-mode', logoMode);
+  localStorage.setItem('openscape-logo-mode', logoMode);
   applyLogo();
 }
 
@@ -1755,10 +1755,10 @@ const stickerEmojis = [
 ];
 
 let stickers = [];
-try { stickers = JSON.parse(localStorage.getItem('miniscape-stickers') || '[]'); } catch(e) { stickers = []; }
+try { stickers = JSON.parse(localStorage.getItem('openscape-stickers') || '[]'); } catch(e) { stickers = []; }
 
 function saveStickers() {
-  localStorage.setItem('miniscape-stickers', JSON.stringify(stickers.map(s => ({ emoji: s.emoji, x: s.x, y: s.y, size: s.size }))));
+  localStorage.setItem('openscape-stickers', JSON.stringify(stickers.map(s => ({ emoji: s.emoji, x: s.x, y: s.y, size: s.size }))));
 }
 
 function createStickerEl(s) {
@@ -1841,7 +1841,7 @@ function toggleStickerPicker() {
   document.body.appendChild(picker);
 }
 
-let glassMode = localStorage.getItem('miniscape-glass') === '1';
+let glassMode = localStorage.getItem('openscape-glass') === '1';
 if (glassMode) document.body.classList.add('glass-mode');
 
 function hexToGlass(hex, alpha) {
@@ -2028,7 +2028,7 @@ function applyGlassToAll() {
 function toggleGlass() {
   glassMode = !glassMode;
   document.body.classList.toggle('glass-mode', glassMode);
-  localStorage.setItem('miniscape-glass', glassMode ? '1' : '0');
+  localStorage.setItem('openscape-glass', glassMode ? '1' : '0');
   applyGlassToAll();
   const btn = document.getElementById('btn-glass');
   btn.textContent = glassMode ? '◆ Solid' : '◇ Glass';
@@ -2037,7 +2037,7 @@ function toggleGlass() {
 // Apply glass on load if saved
 if (glassMode) setTimeout(applyGlassToAll, 100);
 
-let allLabelsOn = localStorage.getItem('miniscape-all-labels') === '1';
+let allLabelsOn = localStorage.getItem('openscape-all-labels') === '1';
 
 function toggleAllLabels() {
   allLabelsOn = !allLabelsOn;
@@ -2058,14 +2058,14 @@ function toggleAllLabels() {
     else c.el.classList.remove('panel-label-on');
   });
   savePanelCustomize();
-  localStorage.setItem('miniscape-all-labels', allLabelsOn ? '1' : '0');
+  localStorage.setItem('openscape-all-labels', allLabelsOn ? '1' : '0');
   const btn = document.getElementById('btn-all-labels');
   btn.textContent = allLabelsOn ? 'T Labels Off' : 'T All Labels';
 }
 { const btn = document.getElementById('btn-all-labels'); if (btn && allLabelsOn) btn.textContent = 'T Labels Off'; }
 
 // ── Universal Font Size ──────────────────────────────────────────────────────
-let universalFontSize = parseInt(localStorage.getItem('miniscape-universal-font') || '14', 10);
+let universalFontSize = parseInt(localStorage.getItem('openscape-universal-font') || '14', 10);
 
 function applyUniversalFont() {
   const size = universalFontSize + 'px';
@@ -2086,7 +2086,7 @@ function applyUniversalFont() {
 
 function changeUniversalFont(delta) {
   universalFontSize = Math.max(8, Math.min(28, universalFontSize + delta));
-  localStorage.setItem('miniscape-universal-font', universalFontSize);
+  localStorage.setItem('openscape-universal-font', universalFontSize);
   applyUniversalFont();
 }
 
@@ -2097,23 +2097,23 @@ if (universalFontSize !== 14) setTimeout(applyUniversalFont, 100);
 function resetUIAndReload() {
   resetUILayout();
   // Reset universal font
-  localStorage.removeItem('miniscape-universal-font');
+  localStorage.removeItem('openscape-universal-font');
   universalFontSize = 14;
   // Reset all style settings
-  localStorage.removeItem('miniscape-corner-mode');
-  localStorage.removeItem('miniscape-edge-mode');
-  localStorage.removeItem('miniscape-inner-edges');
-  localStorage.removeItem('miniscape-weight-mode');
-  localStorage.removeItem('miniscape-style-mode');
-  localStorage.removeItem('miniscape-depth-mode');
-  localStorage.removeItem('miniscape-glow-mode');
-  localStorage.removeItem('miniscape-tex-mode');
-  localStorage.removeItem('miniscape-logo-mode');
-  localStorage.removeItem('miniscape-stickers');
-  localStorage.removeItem('miniscape-grad-primary');
-  localStorage.removeItem('miniscape-grad-accent');
-  localStorage.removeItem('miniscape-grad-dir');
-  localStorage.removeItem('miniscape-grad-active');
+  localStorage.removeItem('openscape-corner-mode');
+  localStorage.removeItem('openscape-edge-mode');
+  localStorage.removeItem('openscape-inner-edges');
+  localStorage.removeItem('openscape-weight-mode');
+  localStorage.removeItem('openscape-style-mode');
+  localStorage.removeItem('openscape-depth-mode');
+  localStorage.removeItem('openscape-glow-mode');
+  localStorage.removeItem('openscape-tex-mode');
+  localStorage.removeItem('openscape-logo-mode');
+  localStorage.removeItem('openscape-stickers');
+  localStorage.removeItem('openscape-grad-primary');
+  localStorage.removeItem('openscape-grad-accent');
+  localStorage.removeItem('openscape-grad-dir');
+  localStorage.removeItem('openscape-grad-active');
   gradDirIdx = 0;
   cornerMode = 'round'; edgeMode = 'flat'; innerEdges = false;
   weightMode = 'default'; styleMode = 'solid'; depthMode = 'default';
@@ -2124,7 +2124,7 @@ function resetUIAndReload() {
   stickers.forEach(s => { if (s.el) s.el.remove(); });
   stickers.length = 0;
   // Clear panel customizations
-  localStorage.removeItem('miniscape-panel-custom');
+  localStorage.removeItem('openscape-panel-custom');
   if (typeof panelCustomize !== 'undefined') {
     for (const k of Object.keys(panelCustomize)) delete panelCustomize[k];
   }
@@ -2177,7 +2177,7 @@ function toggleUIUnlock() {
     // Show pseudo dialogue so it can be repositioned/resized
     npcDialogueName = 'Gielinor Guide';
     npcDialogueLines = [
-      'Welcome to MiniScape! I\'m here to help you get started on your adventure.',
+      'Welcome to OpenScape! I\'m here to help you get started on your adventure.',
       'Use the +/- buttons below to adjust the font size until it\'s comfortable to read.',
       'You can also drag and resize this box. Press U when you\'re happy with it.',
     ];
@@ -2398,8 +2398,8 @@ function initUIUnlock() {
 }
 
 // ── Anchor Grid ──────────────────────────────────────────────────────────────
-let anchorX = parseInt(localStorage.getItem('miniscape-anchor-x') || '4', 10);
-let anchorY = parseInt(localStorage.getItem('miniscape-anchor-y') || '3', 10);
+let anchorX = parseInt(localStorage.getItem('openscape-anchor-x') || '4', 10);
+let anchorY = parseInt(localStorage.getItem('openscape-anchor-y') || '3', 10);
 
 function getAnchorPoints() {
   const vw = window.innerWidth, vh = window.innerHeight;
@@ -2501,10 +2501,10 @@ function renderAnchorGrid() {
 function changeAnchor(axis, delta) {
   if (axis === 'x') {
     anchorX = Math.max(1, Math.min(20, anchorX + delta));
-    localStorage.setItem('miniscape-anchor-x', anchorX);
+    localStorage.setItem('openscape-anchor-x', anchorX);
   } else {
     anchorY = Math.max(1, Math.min(20, anchorY + delta));
-    localStorage.setItem('miniscape-anchor-y', anchorY);
+    localStorage.setItem('openscape-anchor-y', anchorY);
   }
   renderAnchorGrid();
 }
@@ -2804,7 +2804,7 @@ const WORLDS = [
   { id: 12, activity: 'Minigames', location: 'Germany', type: 'Free', members: false },
 ];
 
-const worldFavs = new Set(JSON.parse(localStorage.getItem('miniscape-world-favs') || '[]'));
+const worldFavs = new Set(JSON.parse(localStorage.getItem('openscape-world-favs') || '[]'));
 
 function buildWorldTable() {
   const body = document.getElementById('world-table-body');
@@ -2846,7 +2846,7 @@ function buildWorldTable() {
       const wid = parseInt(star.dataset.world);
       if (worldFavs.has(wid)) { worldFavs.delete(wid); star.classList.remove('active'); }
       else { worldFavs.add(wid); star.classList.add('active'); }
-      localStorage.setItem('miniscape-world-favs', JSON.stringify([...worldFavs]));
+      localStorage.setItem('openscape-world-favs', JSON.stringify([...worldFavs]));
     });
   });
 }
@@ -2930,7 +2930,7 @@ function handleServerMsg(msg) {
       document.getElementById('toolbar').style.display = 'flex';
       initPanelSystem();
       if (glassMode) applyGlassToAll();
-      showChat('Welcome to MiniScape!', '#0000cc');
+      showChat('Welcome to OpenScape!', '#0000cc');
       showChat('Click to move. Click NPCs to attack.', '#0000cc');
       showChat('Click trees to chop, rocks to mine.', '#0000cc');
       showChat('Press M to toggle OSRS map overlay.', '#0000cc');
@@ -3450,9 +3450,9 @@ function removeFromTaskbar(panelId) {
 }
 
 // ── NPC Dialogue Panel ────────────────────────────────────────────────────────
-let dlgFontSize = parseInt(localStorage.getItem('miniscape-dlg-font') || '14', 10);
-let dlgTextColor = localStorage.getItem('miniscape-dlg-text-color') || '#e8f0ec';
-let dlgBgColor = localStorage.getItem('miniscape-dlg-bg-color') || '#0a0f0c';
+let dlgFontSize = parseInt(localStorage.getItem('openscape-dlg-font') || '14', 10);
+let dlgTextColor = localStorage.getItem('openscape-dlg-text-color') || '#e8f0ec';
+let dlgBgColor = localStorage.getItem('openscape-dlg-bg-color') || '#0a0f0c';
 
 function applyDlgStyle() {
   const panel = document.getElementById('panel-dialogue');
@@ -3464,12 +3464,12 @@ function applyDlgStyle() {
 
 document.getElementById('dlg-color-text').addEventListener('input', (e) => {
   dlgTextColor = e.target.value;
-  localStorage.setItem('miniscape-dlg-text-color', dlgTextColor);
+  localStorage.setItem('openscape-dlg-text-color', dlgTextColor);
   applyDlgStyle();
 });
 document.getElementById('dlg-color-bg').addEventListener('input', (e) => {
   dlgBgColor = e.target.value;
-  localStorage.setItem('miniscape-dlg-bg-color', dlgBgColor);
+  localStorage.setItem('openscape-dlg-bg-color', dlgBgColor);
   applyDlgStyle();
 });
 // Init color pickers from saved values
@@ -3478,7 +3478,7 @@ document.getElementById('dlg-color-bg').value = dlgBgColor;
 
 function changeDlgFont(delta) {
   dlgFontSize = Math.max(10, Math.min(28, dlgFontSize + delta));
-  localStorage.setItem('miniscape-dlg-font', dlgFontSize);
+  localStorage.setItem('openscape-dlg-font', dlgFontSize);
   applyDlgStyle();
 }
 
@@ -3805,10 +3805,10 @@ document.querySelectorAll('.panel-clone-add').forEach(btn => {
 });
 
 // ── Panel Customize (color, label, rename) ──────────────────────────────────
-const panelCustomize = JSON.parse(localStorage.getItem('miniscape-panel-custom') || '{}');
+const panelCustomize = JSON.parse(localStorage.getItem('openscape-panel-custom') || '{}');
 
 function savePanelCustomize() {
-  try { localStorage.setItem('miniscape-panel-custom', JSON.stringify(panelCustomize)); } catch(e) {}
+  try { localStorage.setItem('openscape-panel-custom', JSON.stringify(panelCustomize)); } catch(e) {}
 }
 
 function hexToLuminance(hex) {
@@ -4126,12 +4126,12 @@ const gradDirs = [
   { css: 'to top right', label: '↗ Diagonal' },
   { css: '135deg', label: '◎ Radial' }, // special case
 ];
-let gradDirIdx = parseInt(localStorage.getItem('miniscape-grad-dir') || '0', 10);
+let gradDirIdx = parseInt(localStorage.getItem('openscape-grad-dir') || '0', 10);
 
 // Restore saved gradient colors
 {
-  const savedP = localStorage.getItem('miniscape-grad-primary');
-  const savedA = localStorage.getItem('miniscape-grad-accent');
+  const savedP = localStorage.getItem('openscape-grad-primary');
+  const savedA = localStorage.getItem('openscape-grad-accent');
   if (savedP) document.getElementById('grad-primary').value = savedP;
   if (savedA) document.getElementById('grad-accent').value = savedA;
   const btn = document.getElementById('btn-grad-dir');
@@ -4140,11 +4140,11 @@ let gradDirIdx = parseInt(localStorage.getItem('miniscape-grad-dir') || '0', 10)
 
 function cycleGradDir() {
   gradDirIdx = (gradDirIdx + 1) % gradDirs.length;
-  localStorage.setItem('miniscape-grad-dir', gradDirIdx);
+  localStorage.setItem('openscape-grad-dir', gradDirIdx);
   const btn = document.getElementById('btn-grad-dir');
   btn.textContent = gradDirs[gradDirIdx].label;
   // Re-apply if gradient is active
-  if (localStorage.getItem('miniscape-grad-active') === '1') applyGradient();
+  if (localStorage.getItem('openscape-grad-active') === '1') applyGradient();
 }
 
 function buildGradientCSS(c1, c2, dirIdx) {
@@ -4158,9 +4158,9 @@ function buildGradientCSS(c1, c2, dirIdx) {
 function applyGradient() {
   const c1 = document.getElementById('grad-primary').value;
   const c2 = document.getElementById('grad-accent').value;
-  localStorage.setItem('miniscape-grad-primary', c1);
-  localStorage.setItem('miniscape-grad-accent', c2);
-  localStorage.setItem('miniscape-grad-active', '1');
+  localStorage.setItem('openscape-grad-primary', c1);
+  localStorage.setItem('openscape-grad-accent', c2);
+  localStorage.setItem('openscape-grad-active', '1');
 
   const grad = buildGradientCSS(c1, c2, gradDirIdx);
   // Average luminance for text contrast
@@ -4209,7 +4209,7 @@ function applyGradient() {
 }
 
 function clearGradient() {
-  localStorage.removeItem('miniscape-grad-active');
+  localStorage.removeItem('openscape-grad-active');
   // Remove gradient from all panels, restore to primary color as solid
   const c1 = document.getElementById('grad-primary').value;
   document.querySelectorAll('.unlockable').forEach(el => {
@@ -4232,7 +4232,7 @@ function clearGradient() {
 }
 
 // Re-apply gradient on load if it was active
-if (localStorage.getItem('miniscape-grad-active') === '1') {
+if (localStorage.getItem('openscape-grad-active') === '1') {
   setTimeout(applyGradient, 150);
 }
 
@@ -4241,7 +4241,7 @@ if (localStorage.getItem('miniscape-grad-active') === '1') {
   const p = document.getElementById('grad-primary');
   const a = document.getElementById('grad-accent');
   const liveApply = () => {
-    if (localStorage.getItem('miniscape-grad-active') === '1') applyGradient();
+    if (localStorage.getItem('openscape-grad-active') === '1') applyGradient();
   };
   p.addEventListener('input', liveApply);
   a.addEventListener('input', liveApply);
@@ -4518,7 +4518,7 @@ function takeScreenshot() {
   ctx2.fillText(`Mouse: (${hoverWX}, ${hoverWY})`, cmx + 35, cmy - 11);
   ctx2.restore();
   const link = document.createElement('a');
-  link.download = `miniscape_${myX}_${myY}_${Date.now()}.png`;
+  link.download = `openscape_${myX}_${myY}_${Date.now()}.png`;
   if (mode3d && renderer3d) {
     renderer3d.render(scene3d, camera3d);
     link.href = document.getElementById('game3d').toDataURL('image/png');
@@ -4552,7 +4552,7 @@ function startRecording() {
       const blob = new Blob(clipChunks, { type: clipRecorder.mimeType });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.download = `miniscape_clip_${Date.now()}.webm`;
+      link.download = `openscape_clip_${Date.now()}.webm`;
       link.href = url;
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
