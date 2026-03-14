@@ -1992,6 +1992,17 @@ const clientPath = path.join(__dirname, 'client.html');
 const mapPath = path.join(__dirname, 'map.html');
 const launcherPath = path.join(__dirname, 'launcher.html');
 const server = http.createServer((req, res) => {
+  // Serve static data files
+  if (req.url === '/data/object-placements.json' || req.url === '/data/object-defs.json') {
+    const dataFile = path.join(__dirname, req.url.slice(1)); // strip leading /
+    if (fs.existsSync(dataFile)) {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600', 'Access-Control-Allow-Origin': '*' });
+      res.end(fs.readFileSync(dataFile));
+      return;
+    }
+    res.writeHead(404); res.end('Not found'); return;
+  }
+
   // Serve model files from /models/
   if (req.url.startsWith('/models/')) {
     const modelFile = path.join(__dirname, req.url);

@@ -4613,7 +4613,7 @@ canvas.addEventListener('mousemove', (e) => {
   // Check NPCs
   for (const npc of npcList) {
     if (npc.x === tx && npc.y === ty) {
-      icon = '\uD83D\uDCAC'; // 💬 talk (shift+click to attack)
+      icon = '\u2694\uFE0F'; // ⚔️ attack (shift+click to talk)
       break;
     }
   }
@@ -4678,7 +4678,7 @@ canvas.addEventListener('contextmenu', (e) => {
   }
   for (const npc of npcList) {
     if (npc.x === tx && npc.y === ty) {
-      showChat(`Talk-to: ${npc.name} (Level ${Math.ceil(npc.maxHp / 2)}) — Click to talk, Shift+click to attack`, '#0ff');
+      showChat(`${npc.name} (Level ${Math.ceil(npc.maxHp / 2)}) — Click to attack, Shift+click to talk`, '#0ff');
       return;
     }
   }
@@ -4759,12 +4759,12 @@ canvas.addEventListener('mousedown', (e) => {
     if (npc.x === tx && npc.y === ty) {
       targetGlow = { x: tx, y: ty, w: 1, h: 1 };
       if (e.shiftKey) {
-        // Shift+click = attack
-        sendMsg({ t: 'attack', id: npc.id }); combatTargetId = npc.id;
-      } else {
-        // Normal click = talk
+        // Shift+click = talk
         dlgNpcId = npc.id;
         sendMsg({ t: 'talk', id: npc.id });
+      } else {
+        // Normal click = attack
+        sendMsg({ t: 'attack', id: npc.id }); combatTargetId = npc.id;
       }
       return;
     }
@@ -5665,6 +5665,35 @@ function loadModel(name, cb, fallbackName) {
   });
 }
 
+// ── OSRS Object Placements ──
+let objectPlacements = null;      // { objectNames: {id: name}, placements: [...] }
+let objectDefs = {};              // id → { sizeX, sizeY, rotated, offsetX, offsetY, offsetHeight, modelSizeX/Y/Height }
+let placementsByChunk = {};       // "cx_cy" → [{id, x, y, type, rotation}, ...]
+let placementsLoaded = false;
+
+function loadObjectPlacements() {
+  Promise.all([
+    fetch('/data/object-placements.json').then(r => r.ok ? r.json() : null),
+    fetch('/data/object-defs.json').then(r => r.ok ? r.json() : {})
+  ]).then(([data, defs]) => {
+    if (!data) return;
+    objectPlacements = data;
+    objectDefs = defs || {};
+    // Build spatial index: chunk coords → placements in that chunk
+    for (const p of data.placements) {
+      if (p.level > 0) continue; // ground floor only
+      const cx = Math.floor(p.x / 64), cy = Math.floor(p.y / 64);
+      const key = `${cx}_${cy}`;
+      if (!placementsByChunk[key]) placementsByChunk[key] = [];
+      placementsByChunk[key].push(p);
+    }
+    placementsLoaded = true;
+    console.log(`[placements] Loaded ${data.placements.length} placements, ${Object.keys(objectDefs).length} defs`);
+    // Force rebuild of already-built terrain chunks so objects get placed
+    terrain3dBuilt.clear();
+  }).catch(e => console.warn('[placements] Failed to load:', e));
+}
+
 // ── Placed objects in scene ──
 let placed3dObjects = new Map();  // "type_x_y" → mesh
 let npc3dMeshes = new Map();      // npcId → mesh
@@ -5725,6 +5754,9 @@ function init3D() {
 
   // Hemisphere light for sky/ground color bleed
   scene3d.add(new THREE.HemisphereLight(0x87ceeb, 0x3a5c1f, 0.3));
+
+  // Load OSRS object placements
+  loadObjectPlacements();
 
   // Mouse controls
   let cam3dDidDrag = false;
@@ -5924,6 +5956,82 @@ function buildChunkMesh(cx, cy) {
         scene3d.add(wallMesh);
         placed3dObjects.set(`wall_${wx}_${wy}`, wallMesh);
       }
+    }
+  }
+
+  // Place OSRS objects from cache placements
+  if (placementsLoaded) {
+    const ck = `${cx}_${cy}`;
+    const chunkPlacements = placementsByChunk[ck] || [];
+    for (const p of chunkPlacements) {
+      const pKey = `osrs_${p.id}_${p.x}_${p.y}`;
+      if (placed3dObjects.has(pKey)) continue;
+
+      const name = objectPlacements.objectNames[p.id];
+      const modelKey = name ? objModelName(name, p.id) : `obj_id_${p.id}`;
+      if (modelNotFound.has(modelKey)) continue;
+
+      const def = objectDefs[p.id] || {};
+      const sizeX = def.sizeX || 1;
+      const sizeY = def.sizeY || 1;
+
+      const rot = p.rotation || 0;
+      const isWall = p.type <= 3;
+
+      // Walls sit on tile edges, not centers
+      // rot 0=west edge, 1=north edge, 2=east edge, 3=south edge
+      let centerX, centerY;
+      if (isWall) {
+        if      (rot === 0) { centerX = p.x;       centerY = p.y + 0.5; } // west
+        else if (rot === 1) { centerX = p.x + 0.5; centerY = p.y;       } // north
+        else if (rot === 2) { centerX = p.x + 1;   centerY = p.y + 0.5; } // east
+        else                { centerX = p.x + 0.5; centerY = p.y + 1;   } // south
+      } else {
+        // Normal objects: center over footprint (swap sizeX/Y when rotated 90/270)
+        const footX = (rot === 1 || rot === 3) ? sizeY : sizeX;
+        const footY = (rot === 1 || rot === 3) ? sizeX : sizeY;
+        centerX = p.x + footX * 0.5;
+        centerY = p.y + footY * 0.5;
+      }
+
+      // Sample height at object's center tile (average 4 corners for slope accuracy)
+      const getH = (wx, wy) => {
+        const lx = wx - cx * 64, ly = wy - cy * 64;
+        const i = ly * 64 + lx;
+        return (chunk.heights && i >= 0 && i < chunk.heights.length) ? chunk.heights[i] : 0;
+      };
+      const cx0 = Math.floor(centerX), cy0 = Math.floor(centerY);
+      const h00 = getH(cx0, cy0), h10 = getH(cx0+1, cy0);
+      const h01 = getH(cx0, cy0+1), h11 = getH(cx0+1, cy0+1);
+      const avgH = (h00 + h10 + h01 + h11) / 4;
+      // Ground decorations (type 22) sit flush; others get tiny lift to avoid z-fighting
+      const yFloor = p.type === 22 ? 0.01 : 0;
+      const tileH = avgH * heightScale + yFloor;
+
+      // Offsets in RS2 units → tiles (RS2 uses 128 units/tile for offsets)
+      const offX = (def.offsetX || 0) / 128;
+      const offY = (def.offsetY || 0) / 128;
+      const offH = (def.offsetHeight || 0) / 128;
+
+      // Model scale (128 = 1.0x)
+      const scaleX = (def.modelSizeX || 128) / 128;
+      const scaleY = (def.modelSizeY || 128) / 128;
+      const scaleH = (def.modelSizeHeight || 128) / 128;
+
+      // Rotation: OSRS orientation 0-3 → CCW from above (east→north), matches Three.js +rotation.y
+      // Extra 45° if rotated flag set (diagonal objects)
+      const rotY = rot * Math.PI / 2 + (def.rotated ? Math.PI / 4 : 0);
+
+      loadModel(modelKey, (template) => {
+        const obj = template.clone();
+        // Apply model size scale on top of MODEL_SCALE
+        obj.scale.set(MODEL_SCALE * scaleX, MODEL_SCALE * scaleH, MODEL_SCALE * scaleY);
+        obj.position.set(centerX + offX, tileH + offH, -(centerY + offY));
+        obj.rotation.y = rotY;
+        obj.castShadow = true;
+        scene3d.add(obj);
+        placed3dObjects.set(pKey, obj);
+      });
     }
   }
 
