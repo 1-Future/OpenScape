@@ -998,6 +998,60 @@
   .taskbar-btn.minimized { opacity: 0.5; border-bottom: 1px solid var(--panel-border); }
   .taskbar-sep { width: 1px; height: 18px; background: var(--panel-border); margin: 0 2px; }
 
+  /* ── Build Mode Taskbar ─────────────────────────────────────────── */
+  .taskbar-btn.build-tab { color: #adc; }
+  .taskbar-btn.build-tab:hover { background: #2a3d2d; color: #cfe; }
+  .taskbar-btn.build-tab.active { background: var(--panel-bg); border-bottom: 2px solid #3a7; color: #3a7; }
+  #build-panel {
+    display: none; position: fixed; bottom: 32px; left: 10px; right: 10px;
+    max-height: 300px; overflow-y: auto; background: #1a1510;
+    border: 2px solid #3a7; border-radius: 4px; z-index: 199;
+    padding: 10px; font: 12px 'Courier New', monospace; color: #ccc;
+  }
+  #build-panel h3 { color: #3a7; margin: 0 0 8px 0; font-size: 13px; }
+  #build-panel .bp-section { margin-bottom: 10px; }
+  #build-panel .bp-section-title { color: #999; font-size: 10px; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 1px; }
+  #build-panel .bp-btn {
+    padding: 4px 12px; background: #2a2520; color: #ccc; border: 1px solid #5c4a2a;
+    cursor: pointer; font: 12px 'Courier New', monospace; border-radius: 3px;
+    transition: all 0.15s;
+  }
+  #build-panel .bp-btn:hover { background: #3a3530; color: #fff; border-color: #7c6a4a; }
+  #build-panel .bp-btn.active { background: #3a7; color: #000; border-color: #3a7; }
+  #build-panel .bp-tools { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+  #build-panel .bp-tex-grid { display: flex; gap: 2px; flex-wrap: wrap; max-height: 180px; overflow-y: auto; }
+  #build-panel .bp-tex-grid canvas {
+    width: 32px; height: 32px; border: 2px solid #555; cursor: pointer; border-radius: 2px;
+    image-rendering: pixelated;
+  }
+  #build-panel .bp-tex-grid canvas:hover { border-color: #999; }
+  #build-panel .bp-tex-grid canvas.selected { border-color: #3a7; }
+  #build-panel .bp-tex-filter { display: flex; gap: 2px; flex-wrap: wrap; margin-bottom: 4px; }
+  #build-panel .bp-tex-filter button {
+    padding: 1px 5px; font-size: 9px; background: #222; color: #999;
+    border: 1px solid #444; cursor: pointer; white-space: nowrap;
+  }
+  #build-panel .bp-tex-filter button.active { background: #3a7; color: #000; border-color: #3a7; }
+  #build-panel .bp-placeholder {
+    text-align: center; padding: 20px; color: #666; font-style: italic;
+  }
+  #build-panel .bp-placeholder .bp-title { color: #999; font-size: 14px; font-style: normal; margin-bottom: 8px; }
+  #build-panel .bp-categories { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 12px; }
+  #build-panel .bp-cat {
+    padding: 6px 14px; background: #2a2520; border: 1px solid #5c4a2a;
+    border-radius: 3px; color: #777; font-size: 11px;
+  }
+  #build-panel .bp-layer-current {
+    font-size: 24px; font-weight: bold; color: #3a7; text-align: center;
+    padding: 8px; background: #2a2520; border: 1px solid #5c4a2a; border-radius: 4px;
+    margin-bottom: 8px;
+  }
+  #build-panel .bp-search {
+    width: 100%; padding: 4px 8px; background: #2a2520; border: 1px solid #5c4a2a;
+    color: #999; font: 12px 'Courier New', monospace; border-radius: 3px;
+    margin-bottom: 8px;
+  }
+
   /* ── Login Screen ────────────────────────────────────────────────── */
   #login-screen {
     position: fixed; inset: 0; z-index: 500;
@@ -1428,6 +1482,11 @@
     <div class="chat-tab" data-filter="trade">Trade<br><small>On</small></div>
     <div class="chat-tab report">Report</div>
   </div>
+</div>
+
+<!-- Build Panel (appears above taskbar in build mode) -->
+<div id="build-panel">
+  <div id="build-panel-content"></div>
 </div>
 
 <!-- Toolbar (paint tools) -->
@@ -4360,6 +4419,18 @@ function handleServerMsg(msg) {
       document.getElementById('panel-minimap').style.display = 'block';
       document.getElementById('toolbar').style.display = 'flex';
       initPanelSystem();
+      // Apply initial build mode state (toolbar hidden, build taskbar shown)
+      if (typeof buildMode !== 'undefined' && buildMode) {
+        document.getElementById('toolbar').style.display = 'none';
+        document.getElementById('panel-sidebar').style.display = 'none';
+        const taskbar = document.getElementById('taskbar');
+        if (taskbar && !taskbar.dataset.originalHtml) {
+          taskbar.dataset.originalHtml = taskbar.innerHTML;
+          if (typeof populateBuildTaskbar === 'function') {
+            populateBuildTaskbar(taskbar);
+          }
+        }
+      }
       if (glassMode) applyGlassToAll();
       showChat('Welcome to OpenScape!', '#0000cc');
       showChat('Click to move. Click NPCs to attack.', '#0000cc');
@@ -6028,7 +6099,18 @@ curColorEl.addEventListener('contextmenu', (e) => {
 });
 document.getElementById('toolbar').addEventListener('contextmenu', (e) => e.preventDefault());
 
-function setTool(tool) { paintTool = (paintTool === tool) ? null : tool; if (paintTool) deactivateSelectTool(); updatePaintUI(); }
+function setTool(tool) {
+  paintTool = (paintTool === tool) ? null : tool;
+  if (paintTool) {
+    wallToolActive = false; roomToolActive = false; doorToolActive = false; eraserActive = false; activeElevTool = null;
+    deactivateSelectTool(); deactivateRoofTool();
+    var w = document.getElementById('btn-wall'); if (w) w.classList.remove('active');
+    var r = document.getElementById('btn-room'); if (r) r.classList.remove('active');
+    var d = document.getElementById('btn-door'); if (d) d.classList.remove('active');
+    var e = document.getElementById('btn-eraser'); if (e) e.classList.remove('active');
+  }
+  updatePaintUI();
+}
 function updatePaintUI() {
   // Draw the selected texture on the current-color swatch
   const texKey = `${paintTile}_${paintVariant}`;
@@ -6056,6 +6138,44 @@ function updatePaintUI() {
 
 // Build vs Play mode
 var buildMode = true;
+let activeBuildPanel = null;
+let buildTexFilterCategory = 'All';
+
+function populateBuildTaskbar(taskbar) {
+  taskbar.innerHTML = '';
+  const buildTabs = [
+    { id: 'terrain', label: 'Terrain', icon: '\u25A6' },
+    { id: 'walls', label: 'Walls', icon: '\u2B1C' },
+    { id: 'objects', label: 'Objects', icon: '\u2618' },
+    { id: 'roofs', label: 'Roofs', icon: '\u2302' },
+    { id: 'layers', label: 'Layers', icon: '\u2261' },
+    { id: 'npcs', label: 'NPCs', icon: '\u263A' },
+    { id: 'items', label: 'Items', icon: '\u2726' },
+  ];
+  for (const tab of buildTabs) {
+    const b = document.createElement('button');
+    b.className = 'taskbar-btn build-tab';
+    b.dataset.panel = 'build-' + tab.id;
+    b.innerHTML = tab.icon + ' ' + tab.label;
+    b.addEventListener('click', () => toggleBuildPanel(tab.id));
+    taskbar.appendChild(b);
+  }
+  // Add separator and play mode toggle
+  const sep = document.createElement('div');
+  sep.className = 'taskbar-sep';
+  sep.style.marginLeft = 'auto';
+  taskbar.appendChild(sep);
+  const playBtn = document.createElement('button');
+  playBtn.className = 'taskbar-btn';
+  playBtn.innerHTML = '\u25B6 PLAY';
+  playBtn.style.background = '#a53';
+  playBtn.style.color = '#fff';
+  playBtn.style.borderColor = '#832';
+  playBtn.title = 'Switch to Play mode (F3)';
+  playBtn.addEventListener('click', () => toggleBuildMode());
+  taskbar.appendChild(playBtn);
+}
+
 function toggleBuildMode() {
   buildMode = !buildMode;
   const btn = document.getElementById('btn-mode-toggle');
@@ -6072,6 +6192,9 @@ function toggleBuildMode() {
   // Close settings when switching modes
   closeSettings();
 
+  // Hide/show old toolbar
+  document.getElementById('toolbar').style.display = buildMode ? 'none' : 'flex';
+
   if (buildMode) {
     // Build mode: full screen 2D, hide play panels
     if (mode3d) toggle3D(); // exit 3D if active
@@ -6079,8 +6202,29 @@ function toggleBuildMode() {
     const combat = document.getElementById('combat-overlay');
     if (sidebar) sidebar.style.display = 'none';
     if (combat) combat.style.display = 'none';
+
+    // Swap taskbar to build tabs
+    const taskbar = document.getElementById('taskbar');
+    if (taskbar) {
+      taskbar.dataset.originalHtml = taskbar.innerHTML;
+      populateBuildTaskbar(taskbar);
+    }
   } else {
-    // Play mode: show play panels, reset tools
+    // Play mode: close build panel, restore taskbar
+    const buildPanel = document.getElementById('build-panel');
+    if (buildPanel) buildPanel.style.display = 'none';
+    activeBuildPanel = null;
+
+    // Restore play tabs
+    const taskbar = document.getElementById('taskbar');
+    if (taskbar && taskbar.dataset.originalHtml) {
+      taskbar.innerHTML = taskbar.dataset.originalHtml;
+      delete taskbar.dataset.originalHtml;
+      taskbarPanels.clear();
+      initTaskbar();
+    }
+
+    // Show toolbar again then restore play panels and reset tools
     const sidebar = document.getElementById('panel-sidebar');
     const combat = document.getElementById('combat-overlay');
     if (sidebar) sidebar.style.display = 'flex';
@@ -6091,6 +6235,194 @@ function toggleBuildMode() {
   showChat(buildMode ? 'Build Mode — F3 for Play' : 'Play Mode — F2 for Build', buildMode ? '#3a7' : '#a53');
 }
 document.getElementById('btn-mode-toggle').addEventListener('click', toggleBuildMode);
+
+// ── Build Panel System ───────────────────────────────────────────────────────
+function toggleBuildPanel(panel) {
+  const panelEl = document.getElementById('build-panel');
+  const content = document.getElementById('build-panel-content');
+
+  if (activeBuildPanel === panel) {
+    panelEl.style.display = 'none';
+    activeBuildPanel = null;
+    document.querySelectorAll('#taskbar .taskbar-btn.build-tab').forEach(t => t.classList.remove('active'));
+    return;
+  }
+
+  activeBuildPanel = panel;
+  panelEl.style.display = 'block';
+
+  document.querySelectorAll('#taskbar .taskbar-btn.build-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.panel === 'build-' + panel);
+  });
+
+  switch (panel) {
+    case 'terrain': renderTerrainBuildPanel(content); break;
+    case 'walls': content.innerHTML = renderWallsBuildPanel(); break;
+    case 'objects': content.innerHTML = renderObjectsBuildPanel(); break;
+    case 'roofs': content.innerHTML = renderRoofsBuildPanel(); break;
+    case 'layers': content.innerHTML = renderLayersBuildPanel(); break;
+    case 'npcs': content.innerHTML = renderNPCsBuildPanel(); break;
+    case 'items': content.innerHTML = renderItemsBuildPanel(); break;
+  }
+}
+window.toggleBuildPanel = toggleBuildPanel;
+
+function renderTerrainBuildPanel(container) {
+  const objectTypes = new Set([T.TREE, T.BUSH, T.FLOWER, T.FISH_SPOT, T.DOOR, T.CUSTOM]);
+  const base = allTextures.filter(t => !objectTypes.has(t.type));
+  const categories = ['All', ...new Set(base.map(t => t.category))];
+
+  let html = '<h3>Terrain</h3>';
+  html += '<div class="bp-section"><div class="bp-section-title">Tools</div><div class="bp-tools">';
+  html += '<button class="bp-btn' + (paintTool === 'pencil' ? ' active' : '') + '" onclick="setTool(\'pencil\');renderTerrainBuildPanel(document.getElementById(\'build-panel-content\'))">Pencil</button>';
+  html += '<button class="bp-btn' + (paintTool === 'bucket' ? ' active' : '') + '" onclick="setTool(\'bucket\');renderTerrainBuildPanel(document.getElementById(\'build-panel-content\'))">Bucket</button>';
+  html += '<button class="bp-btn' + (paintTool === 'bucket_all' ? ' active' : '') + '" onclick="setTool(\'bucket_all\');renderTerrainBuildPanel(document.getElementById(\'build-panel-content\'))">Bucket All</button>';
+  html += '<button class="bp-btn' + (paintTool === 'picker' ? ' active' : '') + '" onclick="setTool(\'picker\');renderTerrainBuildPanel(document.getElementById(\'build-panel-content\'))">Color Picker</button>';
+  html += '<button class="bp-btn' + (paintTool === 'tile_picker' ? ' active' : '') + '" onclick="setTool(\'tile_picker\');renderTerrainBuildPanel(document.getElementById(\'build-panel-content\'))">Tile Picker</button>';
+  html += '</div></div>';
+
+  // Tint color
+  html += '<div class="bp-section"><div class="bp-section-title">Tint</div>';
+  html += '<input type="color" id="build-tex-tint" value="' + (document.getElementById('tex-tint') ? document.getElementById('tex-tint').value : '#ffffff') + '" style="width:32px;height:24px;border:1px solid #555;cursor:pointer;padding:0;vertical-align:middle;">';
+  html += '</div>';
+
+  // Category filter
+  html += '<div class="bp-section"><div class="bp-section-title">Textures</div>';
+  html += '<div class="bp-tex-filter">';
+  for (const cat of categories) {
+    html += '<button class="' + (buildTexFilterCategory === cat ? 'active' : '') + '" onclick="buildTexFilterCategory=\'' + cat + '\';renderTerrainBuildPanel(document.getElementById(\'build-panel-content\'))">' + cat + '</button>';
+  }
+  html += '</div>';
+  html += '<div class="bp-tex-grid" id="build-tex-grid"></div>';
+  html += '</div>';
+
+  container.innerHTML = html;
+
+  // Sync tint picker
+  const buildTint = document.getElementById('build-tex-tint');
+  if (buildTint) {
+    buildTint.addEventListener('input', (e) => {
+      document.getElementById('tex-tint').value = e.target.value;
+      document.getElementById('tex-tint').dispatchEvent(new Event('input'));
+    });
+  }
+
+  // Render texture thumbnails as canvas elements
+  const grid = document.getElementById('build-tex-grid');
+  const filtered = buildTexFilterCategory === 'All' ? base : base.filter(t => t.category === buildTexFilterCategory);
+  for (const tex of filtered) {
+    const thumb = document.createElement('canvas');
+    thumb.width = 32; thumb.height = 32;
+    thumb.title = (tex.name || TILE_NAMES[tex.type] || tex.type) + ' v' + tex.variant;
+    const tctx = thumb.getContext('2d');
+    tctx.imageSmoothingEnabled = false;
+    tctx.drawImage(tex.canvas, 0, 0, 32, 32);
+    if (paintTile === tex.type && paintVariant === tex.variant) thumb.classList.add('selected');
+    thumb.addEventListener('click', () => {
+      paintTile = tex.type; paintVariant = tex.variant;
+      if (paintTool !== 'pencil' && paintTool !== 'bucket' && paintTool !== 'bucket_all' && paintTool !== 'bucket_new') paintTool = 'pencil';
+      updatePaintUI();
+      renderTerrainBuildPanel(container);
+    });
+    grid.appendChild(thumb);
+  }
+}
+window.renderTerrainBuildPanel = renderTerrainBuildPanel;
+
+function activateBuildTool(tool) {
+  // Clear everything first
+  paintTool = null; wallToolActive = false; roomToolActive = false; doorToolActive = false; eraserActive = false; activeElevTool = null;
+  deactivateSelectTool(); deactivateRoofTool();
+  // Activate the requested tool
+  if (tool === 'wall') wallToolActive = true;
+  else if (tool === 'room') roomToolActive = true;
+  else if (tool === 'door') doorToolActive = true;
+  else if (tool === 'eraser') eraserActive = true;
+  else if (tool === 'select') { selectToolActive = true; }
+  else if (tool === 'pencil') paintTool = 'pencil';
+  else if (tool === 'bucket') paintTool = 'bucket';
+  else if (tool === 'roof') roofToolActive = true;
+  updatePaintUI();
+}
+window.activateBuildTool = activateBuildTool;
+
+function renderWallsBuildPanel() {
+  return '<h3>Walls</h3>' +
+    '<div class="bp-section"><div class="bp-section-title">Tools</div><div class="bp-tools">' +
+    '<button class="bp-btn' + (wallToolActive ? ' active' : '') + '" onclick="activateBuildTool(\'wall\');setTimeout(()=>toggleBuildPanel(\'walls\'),50)">Wall</button>' +
+    '<button class="bp-btn' + (roomToolActive ? ' active' : '') + '" onclick="activateBuildTool(\'room\');setTimeout(()=>toggleBuildPanel(\'walls\'),50)">Room</button>' +
+    '<button class="bp-btn' + (doorToolActive ? ' active' : '') + '" onclick="activateBuildTool(\'door\');setTimeout(()=>toggleBuildPanel(\'walls\'),50)">Door</button>' +
+    '<button class="bp-btn' + (eraserActive ? ' active' : '') + '" onclick="activateBuildTool(\'eraser\');setTimeout(()=>toggleBuildPanel(\'walls\'),50)">Eraser</button>' +
+    '<button class="bp-btn' + (selectToolActive ? ' active' : '') + '" onclick="activateBuildTool(\'select\');setTimeout(()=>toggleBuildPanel(\'walls\'),50)">Select</button>' +
+    '</div></div>' +
+    '<div style="color:#777;font-size:11px;margin-top:4px;">Drag on the map to draw walls or rooms. Click walls to place doors.</div>';
+}
+
+function renderObjectsBuildPanel() {
+  return '<h3>Objects</h3>' +
+    '<div class="bp-placeholder">' +
+    '<div class="bp-title">Coming Soon — Object Placement System</div>' +
+    'Place trees, rocks, furniture, and interactive objects on the map.' +
+    '<div class="bp-categories">' +
+    '<span class="bp-cat">Trees</span><span class="bp-cat">Rocks</span><span class="bp-cat">Furniture</span><span class="bp-cat">Decorations</span><span class="bp-cat">Interactive</span>' +
+    '</div></div>';
+}
+
+function renderRoofsBuildPanel() {
+  const isActive = roofToolActive;
+  return '<h3>Roofs</h3>' +
+    '<div class="bp-section"><div class="bp-section-title">Roof Tool</div><div class="bp-tools">' +
+    '<button class="bp-btn' + (isActive ? ' active' : '') + '" onclick="document.getElementById(\'btn-roof\').click();setTimeout(()=>toggleBuildPanel(\'roofs\'),50)">Roof Tool ' + (isActive ? 'ON' : 'OFF') + '</button>' +
+    '</div></div>' +
+    '<div class="bp-section"><div class="bp-section-title">Type</div><div class="bp-tools">' +
+    '<button class="bp-btn' + (selectedRoofType === 'gabled' ? ' active' : '') + '" onclick="selectedRoofType=\'gabled\';document.querySelectorAll(\'.roof-type-btn\').forEach(b=>{b.style.background=b.dataset.type===selectedRoofType?\'#555\':\'#333\';b.style.borderColor=b.dataset.type===selectedRoofType?\'#ff981f\':\'#555\'});toggleBuildPanel(\'roofs\')">Gabled</button>' +
+    '<button class="bp-btn' + (selectedRoofType === 'hipped' ? ' active' : '') + '" onclick="selectedRoofType=\'hipped\';document.querySelectorAll(\'.roof-type-btn\').forEach(b=>{b.style.background=b.dataset.type===selectedRoofType?\'#555\':\'#333\';b.style.borderColor=b.dataset.type===selectedRoofType?\'#ff981f\':\'#555\'});toggleBuildPanel(\'roofs\')">Hipped</button>' +
+    '<button class="bp-btn' + (selectedRoofType === 'halfGabled' ? ' active' : '') + '" onclick="selectedRoofType=\'halfGabled\';document.querySelectorAll(\'.roof-type-btn\').forEach(b=>{b.style.background=b.dataset.type===selectedRoofType?\'#555\':\'#333\';b.style.borderColor=b.dataset.type===selectedRoofType?\'#ff981f\':\'#555\'});toggleBuildPanel(\'roofs\')">Half Gabled</button>' +
+    '<button class="bp-btn' + (selectedRoofType === 'flat' ? ' active' : '') + '" onclick="selectedRoofType=\'flat\';document.querySelectorAll(\'.roof-type-btn\').forEach(b=>{b.style.background=b.dataset.type===selectedRoofType?\'#555\':\'#333\';b.style.borderColor=b.dataset.type===selectedRoofType?\'#ff981f\':\'#555\'});toggleBuildPanel(\'roofs\')">Flat</button>' +
+    '</div></div>' +
+    '<div class="bp-section"><div class="bp-section-title">Pitch & Eaves</div>' +
+    '<label style="color:#999;">Pitch: <input type="range" min="0" max="100" value="' + (document.getElementById('roof-pitch') ? document.getElementById('roof-pitch').value : '50') + '" style="width:120px;vertical-align:middle;" oninput="document.getElementById(\'roof-pitch\').value=this.value;document.getElementById(\'roof-pitch\').dispatchEvent(new Event(\'input\'))"> <span style="font-size:10px;">' + (document.getElementById('roof-pitch-val') ? document.getElementById('roof-pitch-val').textContent : '0.5') + '</span></label><br>' +
+    '<label style="color:#999;margin-top:4px;display:inline-block;">Eaves: <input type="range" min="0" max="3" value="' + (document.getElementById('roof-eaves') ? document.getElementById('roof-eaves').value : '1') + '" style="width:80px;vertical-align:middle;" oninput="document.getElementById(\'roof-eaves\').value=this.value;document.getElementById(\'roof-eaves\').dispatchEvent(new Event(\'input\'))"> <span style="font-size:10px;">' + (document.getElementById('roof-eaves-val') ? document.getElementById('roof-eaves-val').textContent : '1') + '</span></label>' +
+    '</div>' +
+    '<div class="bp-section"><div class="bp-section-title">Edit Selected</div><div class="bp-tools">' +
+    '<button class="bp-btn" onclick="document.getElementById(\'roof-delete\').click()" style="color:#f44;">Delete Roof</button>' +
+    '<button class="bp-btn" onclick="document.getElementById(\'roof-rotate\').click()">Rotate</button>' +
+    '</div></div>';
+}
+
+function renderLayersBuildPanel() {
+  return '<h3>Layers</h3>' +
+    '<div class="bp-layer-current">Layer ' + currentLayer + '</div>' +
+    '<div class="bp-section"><div class="bp-tools" style="justify-content:center;">' +
+    '<button class="bp-btn" onclick="changeLayer(-1);setTimeout(()=>toggleBuildPanel(\'layers\'),50)" style="font-size:16px;padding:6px 16px;">&#x25BC; Down</button>' +
+    '<button class="bp-btn" onclick="changeLayer(1);setTimeout(()=>toggleBuildPanel(\'layers\'),50)" style="font-size:16px;padding:6px 16px;">&#x25B2; Up</button>' +
+    '</div></div>' +
+    '<div class="bp-section"><div class="bp-section-title">Layer Visibility</div>' +
+    '<div style="color:#777;font-size:11px;">Layer visibility controls coming soon.</div>' +
+    '</div>';
+}
+
+function renderNPCsBuildPanel() {
+  return '<h3>NPCs</h3>' +
+    '<div class="bp-placeholder">' +
+    '<input type="text" class="bp-search" placeholder="Search NPCs..." disabled>' +
+    '<div class="bp-title">Coming Soon — NPC Placement</div>' +
+    'Place and configure NPCs on the map with patrol routes and dialogue.' +
+    '<div class="bp-categories">' +
+    '<span class="bp-cat">Humanoid</span><span class="bp-cat">Monster</span><span class="bp-cat">Animal</span><span class="bp-cat">Boss</span>' +
+    '</div></div>';
+}
+
+function renderItemsBuildPanel() {
+  return '<h3>Items</h3>' +
+    '<div class="bp-placeholder">' +
+    '<input type="text" class="bp-search" placeholder="Search items..." disabled>' +
+    '<div class="bp-title">Coming Soon — Item Placement</div>' +
+    'Place item spawns, loot tables, and ground items on the map.' +
+    '<div class="bp-categories">' +
+    '<span class="bp-cat">Weapons</span><span class="bp-cat">Armor</span><span class="bp-cat">Food</span><span class="bp-cat">Materials</span>' +
+    '</div></div>';
+}
 
 document.getElementById('btn-pencil').addEventListener('click', () => setTool('pencil'));
 document.getElementById('btn-bucket').addEventListener('click', () => setTool('bucket'));
