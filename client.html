@@ -1003,53 +1003,77 @@
   .taskbar-btn.build-tab:hover { background: #2a3d2d; color: #cfe; }
   .taskbar-btn.build-tab.active { background: var(--panel-bg); border-bottom: 2px solid #3a7; color: #3a7; }
   #build-panel {
-    display: none; position: fixed; bottom: 32px; left: 10px; right: 10px;
-    max-height: 300px; overflow-y: auto; background: #1a1510;
-    border: 2px solid #3a7; border-radius: 4px; z-index: 199;
-    padding: 10px; font: 12px 'Courier New', monospace; color: #ccc;
+    display: none; position: fixed; top: 8px; right: 8px;
+    width: 220px; max-height: calc(100vh - 44px); overflow-y: auto; overflow-x: hidden;
+    background: rgba(18,14,10,0.95); border: 1px solid #3a7; border-radius: 6px;
+    z-index: 199; padding: 0; font: 11px 'Courier New', monospace; color: #ccc;
+    scrollbar-width: thin; scrollbar-color: #444 transparent;
+    resize: both;
   }
-  #build-panel h3 { color: #3a7; margin: 0 0 8px 0; font-size: 13px; }
-  #build-panel .bp-section { margin-bottom: 10px; }
-  #build-panel .bp-section-title { color: #999; font-size: 10px; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 1px; }
+  #build-panel-drag {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 3px 8px; background: rgba(30,26,20,0.8); cursor: grab;
+    border-bottom: 1px solid #2a2520; user-select: none; min-height: 18px;
+  }
+  #build-panel-drag:active { cursor: grabbing; }
+  #build-panel-drag .bp-close {
+    color: #555; cursor: pointer; font-size: 12px; padding: 0 2px;
+  }
+  #build-panel-drag .bp-close:hover { color: #f44; }
+  #build-panel::-webkit-scrollbar { width: 4px; }
+  #build-panel::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+  #build-panel h3 { display: none; }
+  #build-panel .bp-section { margin: 0; border-bottom: 1px solid #2a2520; }
+  #build-panel .bp-section-title {
+    color: #888; font-size: 9px; text-transform: uppercase; letter-spacing: 1px;
+    padding: 5px 8px; margin: 0; cursor: pointer; user-select: none;
+    display: flex; justify-content: space-between; align-items: center;
+    background: rgba(30,26,20,0.6);
+  }
+  #build-panel .bp-section-title:hover { color: #ccc; background: rgba(50,44,36,0.6); }
+  #build-panel .bp-section-title::after { content: '\u25B6'; font-size: 7px; transition: transform 0.15s; }
+  #build-panel .bp-section.open .bp-section-title::after { transform: rotate(90deg); }
+  #build-panel .bp-section-body { display: none; padding: 6px 8px; }
+  #build-panel .bp-section.open .bp-section-body { display: block; }
   #build-panel .bp-btn {
-    padding: 4px 12px; background: #2a2520; color: #ccc; border: 1px solid #5c4a2a;
-    cursor: pointer; font: 12px 'Courier New', monospace; border-radius: 3px;
-    transition: all 0.15s;
+    padding: 2px 6px; background: #2a2520; color: #aaa; border: 1px solid #3e3529;
+    cursor: pointer; font: 10px 'Courier New', monospace; border-radius: 2px;
+    transition: all 0.1s;
   }
-  #build-panel .bp-btn:hover { background: #3a3530; color: #fff; border-color: #7c6a4a; }
+  #build-panel .bp-btn:hover { background: #3a3530; color: #fff; border-color: #5c4a2a; }
   #build-panel .bp-btn.active { background: #3a7; color: #000; border-color: #3a7; }
-  #build-panel .bp-tools { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
-  #build-panel .bp-tex-grid { display: flex; gap: 2px; flex-wrap: wrap; max-height: 180px; overflow-y: auto; }
+  #build-panel .bp-tools { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 4px; }
+  #build-panel .bp-tex-grid { display: flex; gap: 2px; flex-wrap: wrap; max-height: 140px; overflow-y: auto; }
   #build-panel .bp-tex-grid canvas {
-    width: 32px; height: 32px; border: 2px solid #555; cursor: pointer; border-radius: 2px;
+    width: 24px; height: 24px; border: 1px solid #444; cursor: pointer; border-radius: 1px;
     image-rendering: pixelated;
   }
   #build-panel .bp-tex-grid canvas:hover { border-color: #999; }
-  #build-panel .bp-tex-grid canvas.selected { border-color: #3a7; }
-  #build-panel .bp-tex-filter { display: flex; gap: 2px; flex-wrap: wrap; margin-bottom: 4px; }
+  #build-panel .bp-tex-grid canvas.selected { border-color: #3a7; box-shadow: 0 0 4px #3a7; }
+  #build-panel .bp-tex-filter { display: flex; gap: 1px; flex-wrap: wrap; margin-bottom: 3px; }
   #build-panel .bp-tex-filter button {
-    padding: 1px 5px; font-size: 9px; background: #222; color: #999;
-    border: 1px solid #444; cursor: pointer; white-space: nowrap;
+    padding: 1px 4px; font-size: 8px; background: #1e1a14; color: #777;
+    border: 1px solid #333; cursor: pointer; white-space: nowrap;
   }
   #build-panel .bp-tex-filter button.active { background: #3a7; color: #000; border-color: #3a7; }
   #build-panel .bp-placeholder {
-    text-align: center; padding: 20px; color: #666; font-style: italic;
+    text-align: center; padding: 12px 8px; color: #555; font-style: italic; font-size: 10px;
   }
-  #build-panel .bp-placeholder .bp-title { color: #999; font-size: 14px; font-style: normal; margin-bottom: 8px; }
-  #build-panel .bp-categories { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 12px; }
+  #build-panel .bp-placeholder .bp-title { color: #888; font-size: 12px; font-style: normal; margin-bottom: 4px; }
+  #build-panel .bp-categories { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; margin-top: 6px; }
   #build-panel .bp-cat {
-    padding: 6px 14px; background: #2a2520; border: 1px solid #5c4a2a;
-    border-radius: 3px; color: #777; font-size: 11px;
+    padding: 3px 8px; background: #2a2520; border: 1px solid #3e3529;
+    border-radius: 2px; color: #666; font-size: 9px;
   }
   #build-panel .bp-layer-current {
-    font-size: 24px; font-weight: bold; color: #3a7; text-align: center;
-    padding: 8px; background: #2a2520; border: 1px solid #5c4a2a; border-radius: 4px;
-    margin-bottom: 8px;
+    font-size: 20px; font-weight: bold; color: #3a7; text-align: center;
+    padding: 4px; background: #2a2520; border: 1px solid #3e3529; border-radius: 3px;
+    margin-bottom: 4px;
   }
   #build-panel .bp-search {
-    width: 100%; padding: 4px 8px; background: #2a2520; border: 1px solid #5c4a2a;
-    color: #999; font: 12px 'Courier New', monospace; border-radius: 3px;
-    margin-bottom: 8px;
+    width: 100%; padding: 3px 6px; background: #2a2520; border: 1px solid #3e3529;
+    color: #999; font: 10px 'Courier New', monospace; border-radius: 2px;
+    margin-bottom: 4px;
   }
 
   /* ── Character Creation Screen ─────────────────────────────────── */
@@ -1397,14 +1421,14 @@
   <div id="login-bg-grain"></div>
   <div id="login-box">
     <div id="login-title">OPENSCAPE</div>
-    <div id="login-subtitle">WELCOME TO GIELINOR</div>
+    <div id="login-subtitle">WELCOME TO OPENSCAPE</div>
     <input id="login-input" type="text" placeholder="Enter username" maxlength="20" autocomplete="off" spellcheck="false">
     <button id="login-play-btn" onclick="doLogin()">PLAY NOW</button>
     <div id="login-btns">
       <button class="login-small-btn" onclick="showWorldSelector()">World <span id="login-world-num">1</span></button>
       <button class="login-small-btn" id="login-mute-btn" onclick="toggleLoginMute()">Sound: ON</button>
     </div>
-    <div id="login-world-label">World <span>1</span> — Lumbridge — <span style="color:#60c060">0 players</span></div>
+    <div id="login-world-label">World <span>1</span> — OpenScape — <span style="color:#60c060">0 players</span></div>
   </div>
 </div>
 
@@ -1719,47 +1743,24 @@
 
 <!-- Build Panel (appears above taskbar in build mode) -->
 <div id="build-panel">
+  <div id="build-panel-drag">
+    <span style="color:#3a7;font-size:9px;letter-spacing:1px;">BUILD</span>
+    <span class="bp-close" onclick="closeBuildPanel()">&times;</span>
+  </div>
   <div id="build-panel-content"></div>
 </div>
 
-<!-- Toolbar (paint tools) -->
-<div id="toolbar" class="unlockable">
+<!-- Toolbar (minimal — tools come from plugins) -->
+<div id="toolbar" class="unlockable" style="display:none;">
   <div class="unlock-handle"><span>TOOLBAR</span><span class="unlock-resize-grip">&#x2921;</span></div>
   <div class="unlock-resize"></div>
-  <button id="btn-mode-toggle" title="Toggle Build/Play mode (F2/F3)" style="font-weight:bold;background:#3a7;color:#fff;padding:2px 10px;border:2px solid #2a5;cursor:pointer;">BUILD</button>
+  <button id="btn-mode-toggle" title="Toggle Build/Play mode (F2/F3)" style="font-weight:bold;background:#3a7;color:#fff;padding:2px 10px;border:2px solid #2a5;cursor:pointer;" onclick="toggleBuildMode()">BUILD</button>
   <div class="sep"></div>
-  <button id="btn-pencil" title="Pencil (P)">Pencil</button>
-  <button id="btn-bucket" title="Bucket Fill (B)">Bucket</button>
-  <button id="btn-bucket-all" title="Recolor all matching tiles globally">Bucket All</button>
-  <button id="btn-bucket-new" title="Recolor all + rename tile type">Bucket New</button>
-  <button id="btn-picker" title="Color Picker (I)">Color Picker</button>
-  <button id="btn-tile-picker" title="Tile Picker — Inherit texture + tint from a tile">Tile Picker</button>
+  <span id="toolbar-plugin-buttons" style="display:flex;gap:4px;flex-wrap:wrap;"></span>
   <div class="sep"></div>
-  <div class="current-color" id="cur-color"></div>
-  <input type="color" id="tex-tint" value="#ffffff" title="Tint color — pick a color to tint the selected texture" style="width:24px;height:24px;border:1px solid #555;cursor:pointer;padding:0;">
-  <div class="sep"></div>
-  <div id="tex-browser-wrap">
-    <div id="tex-filter"></div>
-    <div id="tex-browser"></div>
-  </div>
-  <div class="sep"></div>
-  <button id="btn-select" title="Select Tool (H) — Select rooms">Select</button>
-  <button id="btn-eraser" title="Eraser — Remove walls, doors, tiles">Eraser</button>
-  <button id="btn-wall" title="Wall Tool — Drag to draw walls (Sims-style)">Wall</button>
-  <button id="btn-room" title="Room Tool — Drag to draw a rectangular room">Room</button>
-  <button id="btn-door" title="Door Tool — Toggle door drawing" style="color:#f40000;">Door</button>
-  <button id="btn-hill" title="Hill — Click to raise, Shift+click to lower">Hill</button>
-  <button id="btn-ledge" title="Ledge — Sharp cliff edge">Ledge</button>
-  <button id="btn-stair" title="Stair — Connect heights">Stair</button>
-  <button id="btn-roof" title="Roof Tool — Place and edit roofs">Roof</button>
-  <div class="sep"></div>
-  <button id="btn-layer-down" title="Layer Down" style="font-weight:bold;padding:2px 6px;">▼</button>
   <span id="layer-display" style="color:#fff;font-size:11px;padding:0 4px;">L:0</span>
-  <button id="btn-layer-up" title="Layer Up" style="font-weight:bold;padding:2px 6px;">▲</button>
   <div class="sep"></div>
-  <button id="btn-grid" title="Toggle Grid (G)">Grid</button>
-  <div class="sep"></div>
-  <button id="btn-screenshot" title="Screenshot (P)">Screenshot</button>
+  <input type="color" id="tex-tint" value="#ffffff" title="Tint color" style="width:24px;height:24px;border:1px solid #555;cursor:pointer;padding:0;">
   <div class="sep"></div>
   <span style="color:#666;font-size:10px">Ctrl+Z / Ctrl+Y</span>
 </div>
@@ -1842,10 +1843,28 @@
 <div id="hover-icon"></div>
 <canvas id="game"></canvas>
 <canvas id="game3d"></canvas>
+
+<!-- Lot dropdown (top-left) -->
+<div id="lot-menu" style="position:fixed;top:8px;left:8px;z-index:200;font:11px 'Courier New',monospace;">
+  <button onclick="toggleLotDropdown()" style="background:rgba(18,14,10,0.9);border:1px solid #3a7;color:#3a7;padding:4px 10px;cursor:pointer;border-radius:3px;font:inherit;">
+    Lots &#9662;
+  </button>
+  <div id="lot-dropdown" style="display:none;position:absolute;top:28px;left:0;min-width:200px;max-height:300px;overflow-y:auto;background:rgba(18,14,10,0.95);border:1px solid #3a7;border-radius:4px;scrollbar-width:thin;">
+    <div id="lot-list"></div>
+    <div style="border-top:1px solid #2a2520;padding:4px 8px;display:flex;gap:4px;">
+      <button onclick="startLotCreation()" style="flex:1;background:#2a2520;border:1px solid #3a7;color:#3a7;padding:3px;cursor:pointer;font:10px inherit;border-radius:2px;">+ New Lot</button>
+    </div>
+  </div>
+</div>
 <script src="/lib/three.min.js"></script>
 <script src="/lib/GLTFLoader.js"></script>
+<!-- PLUGIN_SCRIPTS -->
 <script>
 window.__cp=['scriptStart'];
+window.onerror = function(msg, url, line, col, err) {
+  document.title = 'ERR: ' + msg + ' @' + line;
+  console.error('GLOBAL ERROR:', msg, 'at line', line, err);
+};
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const logEl = document.getElementById('log');
@@ -1895,24 +1914,7 @@ function initPanelSystem() {
     });
   });
 
-  // Auto-retaliate toggle
-  let autoRetaliateOn = true;
-  document.getElementById('btn-auto-retaliate').addEventListener('click', () => {
-    autoRetaliateOn = !autoRetaliateOn;
-    const btn = document.getElementById('btn-auto-retaliate');
-    btn.textContent = `Auto Retaliate: ${autoRetaliateOn ? 'ON' : 'OFF'}`;
-    btn.style.background = autoRetaliateOn ? '#3a3' : '#a33';
-    sendMsg({ t: 'autoRetaliate' });
-  });
-
-  // Prayer buttons
-  document.querySelectorAll('.prayer-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      sendMsg({ t: 'toggle_prayer', v: btn.dataset.prayer });
-    });
-  });
+  // Combat UI removed — will be a plugin
 
   // Gear tier buttons (visual shell only — no server interaction yet)
   document.querySelectorAll('.tier-btn').forEach(btn => {
@@ -2653,7 +2655,7 @@ function toggleUIUnlock() {
       if (rect.height > 0) el.style.height = rect.height + 'px';
     });
     // Show pseudo dialogue so it can be repositioned/resized
-    npcDialogueName = 'Gielinor Guide';
+    npcDialogueName = 'Guide';
     npcDialogueLines = [
       'Welcome to OpenScape! I\'m here to help you get started on your adventure.',
       'Use the +/- buttons below to adjust the font size until it\'s comfortable to read.',
@@ -3165,7 +3167,7 @@ const defaultKeybinds = {
 
   // In-Game
   'game.playMode': { key: 'f3', label: 'Play Mode', category: 'In-Game' },
-  'game.map': { key: 'm', label: 'OSRS Map Overlay', category: 'In-Game' },
+  'game.map': { key: 'm', label: 'Map Overlay', category: 'In-Game' },
   'game.settings': { key: 'escape', label: 'Settings', category: 'In-Game' },
   'game.chat': { key: 'enter', label: 'Open Chat', category: 'In-Game' },
   'game.debug': { key: '`', label: 'Debug Info', category: 'In-Game' },
@@ -4153,37 +4155,12 @@ const EXAMINE = {
   [T.DARK_GRASS]: 'Thick, overgrown grass.', [T.CUSTOM]: 'Someone painted this.',
 };
 
-// ── OSRS World Map Background ────────────────────────────────────────────────
-let showOsrsMap = false;
-const osrsTileCache = new Map();
-
-function loadOsrsTile(z, fileX, fileY) {
-  const key = `${z}_${fileX}_${fileY}`;
-  if (osrsTileCache.has(key)) return osrsTileCache.get(key);
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.src = `https://raw.githubusercontent.com/mejrs/layers_osrs/refs/heads/master/mapsquares/-1/${z}/0_${fileX}_${fileY}.png`;
-  img.onload = () => { osrsTileCache.set(key, img); };
-  img.onerror = () => { osrsTileCache.set(key, 'err'); };
-  osrsTileCache.set(key, 'loading');
-  return 'loading';
-}
-
-function osrsTileInfo(osrsX, osrsY, z) {
-  const tilesPerImg = 256 / Math.pow(2, z);
-  const leafX = Math.floor(osrsX / tilesPerImg);
-  const leafY = Math.floor(-osrsY / tilesPerImg);
-  const fileX = leafX;
-  const fileY = -(1 + leafY);
-  return { fileX, fileY, tilesPerImg };
-}
-
 window.__cp=(window.__cp||[]);window.__cp.push('Chunk'); // ── Chunk-based World Cache ──────────────────────────────────────────────────
 let CHUNK_SIZE = 64; // overwritten by server welcome
 const chunkCache = new Map(); // "cx_cy" -> { tiles: Uint8Array, colors: Map }
 let myId = 0;
-let myX = 3222, myY = 3218;
-let mySmX = 3222, mySmY = 3218;
+let myX = 100, myY = 100;
+let mySmX = 100, mySmY = 100;
 let otherPlayers = [];
 let npcList = [];
 let lastTickTime = 0;
@@ -4195,11 +4172,8 @@ let targetGlow = null;
 let currentLayer = 0;
 let myStats = { hp: 10, maxHp: 10, skills: {}, inv: [] };
 let myGender = 'male';
-let tutorialHint = null;
-let skipTutorialBtn = null;
 let freeCam2d = false;
 let freeCamX = 100, freeCamY = 100;
-let osrsMapOffX = 0, osrsMapOffY = 0; // offset to slide OSRS map under game world (set by dragging)
 let npcDialogueLines = [];
 let npcDialogueTimer = null;
 let npcDialogueName = '';
@@ -4207,6 +4181,118 @@ let customNameMap = {};
 let groundItemList = [];
 let openDoorList = [];
 let connected = false;
+
+// ── Lots ────────────────────────────────────────────────────────────────────
+const gameLots = []; // [{id, name, layer, tiles:[{x,y}], color, cx, cy}]
+let showLotBoundaries = true; // visible in build mode, toggleable in play
+let lotDropdownOpen = false;
+let lotCreating = false; // true when next shape placement creates a lot
+
+function updateLotDropdown() {
+  const list = document.getElementById('lot-list');
+  if (!list) return;
+  list.innerHTML = '';
+  if (gameLots.length === 0) {
+    list.innerHTML = '<div style="padding:6px 10px;color:#555;font-size:10px;">No lots yet</div>';
+    return;
+  }
+  for (const lot of gameLots) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 10px;cursor:pointer;';
+    row.onmouseenter = () => row.style.background = '#2a2520';
+    row.onmouseleave = () => row.style.background = '';
+    // Color dot
+    const dot = document.createElement('span');
+    dot.style.cssText = `width:8px;height:8px;border-radius:50%;background:${lot.color};flex-shrink:0;`;
+    row.appendChild(dot);
+    // Name
+    const name = document.createElement('span');
+    name.textContent = lot.name;
+    name.style.cssText = 'flex:1;font-size:11px;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    row.appendChild(name);
+    // Tile count
+    const count = document.createElement('span');
+    count.textContent = lot.tiles.length;
+    count.style.cssText = 'font-size:9px;color:#555;';
+    row.appendChild(count);
+    // Delete button
+    const del = document.createElement('span');
+    del.textContent = '\u2715';
+    del.style.cssText = 'color:#644;font-size:10px;cursor:pointer;padding:0 2px;';
+    del.onclick = (e) => { e.stopPropagation(); sendMsg({ t: 'delete_lot', id: lot.id }); };
+    row.appendChild(del);
+    // Click to teleport
+    row.onclick = () => {
+      sendMsg({ t: 'teleport', x: lot.cx, y: lot.cy, layer: lot.layer });
+      myX = lot.cx; myY = lot.cy; mySmX = lot.cx; mySmY = lot.cy;
+      currentLayer = lot.layer;
+      lotDropdownOpen = false;
+      document.getElementById('lot-dropdown').style.display = 'none';
+      showChat(`Teleported to "${lot.name}"`, '#3a7');
+    };
+    list.appendChild(row);
+  }
+}
+
+function toggleLotDropdown() {
+  lotDropdownOpen = !lotDropdownOpen;
+  const dd = document.getElementById('lot-dropdown');
+  dd.style.display = lotDropdownOpen ? 'block' : 'none';
+}
+window.toggleLotDropdown = toggleLotDropdown;
+
+function startLotCreation() {
+  lotCreating = true;
+  lotDropdownOpen = false;
+  document.getElementById('lot-dropdown').style.display = 'none';
+  showChat('Draw a shape for the lot boundary, then release to create it.', '#3a7');
+  // Auto-activate filled rect if no shape tool selected
+  if (!shapeTool) setShapeTool('rect');
+}
+window.startLotCreation = startLotCreation;
+
+function showLotNamer(tiles) {
+  // Remove any existing namer
+  const old = document.getElementById('lot-namer');
+  if (old) old.remove();
+  const div = document.createElement('div');
+  div.id = 'lot-namer';
+  div.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(18,14,10,0.95);border:2px solid #3a7;border-radius:6px;padding:12px;z-index:300;font:12px Courier New,monospace;color:#ccc;text-align:center;';
+  div.innerHTML = `
+    <div style="margin-bottom:8px;color:#3a7;">Name this lot (${tiles.length} tiles)</div>
+    <input id="lot-name-input" type="text" placeholder="Lot name..." style="width:180px;padding:4px 8px;background:#2a2520;border:1px solid #3a7;color:#fff;font:12px Courier New,monospace;border-radius:3px;" autofocus>
+    <div style="margin-top:8px;display:flex;gap:6px;justify-content:center;">
+      <button onclick="confirmLotName()" style="padding:4px 12px;background:#3a7;border:none;color:#000;cursor:pointer;border-radius:3px;font:inherit;">Create</button>
+      <button onclick="document.getElementById('lot-namer').remove()" style="padding:4px 12px;background:#333;border:1px solid #555;color:#999;cursor:pointer;border-radius:3px;font:inherit;">Cancel</button>
+    </div>`;
+  document.body.appendChild(div);
+  const input = document.getElementById('lot-name-input');
+  input.focus();
+  input.addEventListener('keydown', (e) => {
+    e.stopPropagation(); // prevent game keybinds
+    if (e.key === 'Enter') confirmLotName();
+    if (e.key === 'Escape') div.remove();
+  });
+  // Store tiles for the confirm handler
+  window._pendingLotTiles = tiles;
+}
+
+function confirmLotName() {
+  const input = document.getElementById('lot-name-input');
+  const name = input ? input.value.trim() : '';
+  const tiles = window._pendingLotTiles;
+  const namer = document.getElementById('lot-namer');
+  if (namer) namer.remove();
+  console.log('[lots] confirmLotName:', { name, hasTiles: !!tiles, tileCount: tiles ? tiles.length : 0, wsOpen: ws && ws.readyState === WebSocket.OPEN });
+  if (!name) { showChat('Lot needs a name', '#f44'); return; }
+  if (!tiles || tiles.length === 0) { showChat('No tiles captured for lot', '#f44'); return; }
+  const colors = ['#3a7','#7a3','#37a','#a73','#73a','#a37','#77a','#a77','#7aa'];
+  const color = colors[gameLots.length % colors.length];
+  sendMsg({ t: 'create_lot', name, tiles, color });
+  showChat(`Creating lot "${name}" (${tiles.length} tiles)...`, '#3a7');
+  window._pendingLotTiles = null;
+}
+window.confirmLotName = confirmLotName;
 
 // Wall textures: per-tile texture for wall rendering
 const wallTexMap = new Map(); // "layer_x_y" → "type_variant" (e.g. "6_2" for T.WALL brick)
@@ -4528,7 +4614,7 @@ function isTerrainBlocked(x, y) {
 
 function getTileColor(x, y, tile) {
   if (tile === T.CUSTOM) return getColor(x, y) || '#ff00ff';
-  // For unmodified grass tiles, use OSRS terrain color if available
+  // For unmodified grass tiles, use terrain color if available
   if (tile === T.GRASS) {
     if (showTerrainColors) {
       const tc = getTerrainColor(x, y);
@@ -4557,7 +4643,7 @@ let loginMuted = false;
 var playerUsername = '';
 
 const WORLDS = [
-  { id: 1, activity: 'Tutorial Island', location: 'United States (East)', type: 'Free', members: false },
+  { id: 1, activity: '-', location: 'United States (East)', type: 'Free', members: false },
   { id: 2, activity: '-', location: 'United States (West)', type: 'Free', members: false },
   { id: 3, activity: 'Trade — Free', location: 'United States (East)', type: 'Free', members: false },
   { id: 4, activity: '-', location: 'United Kingdom', type: 'Free', members: false },
@@ -4666,8 +4752,8 @@ document.getElementById('login-input').addEventListener('keydown', (e) => {
 });
 
 // ── Character Creation ──────────────────────────────────────────────────────────
-// Kit model map from OSRS cache dump — kitModels[bodyType][slot] = array of model name arrays
-const KIT_MODELS = {"A":{"HEAD":[["kit_model_230"],["kit_model_232"],["kit_model_234"],["kit_model_236"],["kit_model_238"],["kit_model_240"],["kit_model_242"],["kit_model_244"],["kit_model_248"]],"TORSO":[["kit_model_28515"],["kit_model_28515","kit_model_322"],["kit_model_28515","kit_model_326"],["kit_model_28515","kit_model_320"],["kit_model_28515","kit_model_327"],["kit_model_28515","kit_model_324"],["kit_model_28551"],["kit_model_28582"],["kit_model_28581"],["kit_model_28719"],["kit_model_28519"],["kit_model_28714"],["kit_model_28786"],["kit_model_28554"],["kit_model_28774"],["kit_model_28550"],["kit_model_28650"],["kit_model_28548"],["kit_model_28586"],["kit_model_28547"]],"ARMS":[["kit_model_26632"],["kit_model_26634"],["kit_model_26619"],["kit_model_26630"],["kit_model_27154"],["kit_model_26618"],["kit_model_28342"],["kit_model_28345"],["kit_model_28343"],["kit_model_28340"],["kit_model_28344"],["kit_model_28341"],["kit_model_27139"],["kit_model_26644"],["kit_model_27140"],["kit_model_26616"],["kit_model_26633"]],"HANDS":[["kit_model_176"],["kit_model_10218"]],"LEGS":[["kit_model_28285"],["kit_model_28337"],["kit_model_27639"],["kit_model_28346"],["kit_model_28212"],["kit_model_28336"],["kit_model_28512"],["kit_model_28349"],["kit_model_28335"],["kit_model_28338"],["kit_model_28436"],["kit_model_27623"],["kit_model_27563"],["kit_model_27610"],["kit_model_28373"],["kit_model_28449"],["kit_model_28220"],["kit_model_28348"],["kit_model_28347"],["kit_model_28374"],["kit_model_28339"],["kit_model_28334"]],"FEET":[["kit_model_181"],["kit_model_183"]],"JAW":[["kit_model_246"]]},"B":{"HEAD":[["kit_model_217"],["kit_model_219"],["kit_model_221"],["kit_model_223"],["kit_model_225"],["kit_model_227"],["kit_model_229"],["kit_model_231"],["kit_model_233"]],"TORSO":[["kit_model_18554"],["kit_model_15945"],["kit_model_15939"],["kit_model_18914"],["kit_model_18560"],["kit_model_28375"],["kit_model_28372"],["kit_model_28370"],["kit_model_28371"],["kit_model_18555"],["kit_model_18559"],["kit_model_18914","kit_model_15936"],["kit_model_18914","kit_model_15937"],["kit_model_18914","kit_model_15934"],["kit_model_18914","kit_model_15927"],["kit_model_18914","kit_model_15931"],["kit_model_15944"],["kit_model_18346"],["kit_model_18557"],["kit_model_18553"]],"ARMS":[["kit_model_3476"],["kit_model_10685"],["kit_model_10692"],["kit_model_3848"],["kit_model_487"],["kit_model_28364"],["kit_model_28365"],["kit_model_28368"],["kit_model_28366"],["kit_model_28367"],["kit_model_28369"],["kit_model_2732"],["kit_model_10482"],["kit_model_482"],["kit_model_498"],["kit_model_484"],["kit_model_480"]],"HANDS":[["kit_model_353"],["kit_model_10706"]],"LEGS":[["kit_model_14423"],["kit_model_433"],["kit_model_15925"],["kit_model_14421"],["kit_model_14397"],["kit_model_14424"],["kit_model_14395"],["kit_model_429"],["kit_model_28358"],["kit_model_28362"],["kit_model_28360"],["kit_model_28361"],["kit_model_28357"],["kit_model_28363"],["kit_model_28359"],["kit_model_14396"],["kit_model_14422"],["kit_model_14425"],["kit_model_14398"],["kit_model_11024"],["kit_model_14426"],["kit_model_15926"]],"FEET":[["kit_model_358"],["kit_model_360"]],"JAW":[["kit_model_437"]]}};
+// Kit model map — TODO: populate with original character models
+const KIT_MODELS = {};
 
 // Derive slot counts from kit data
 function getSlotCount(bodyType, slot) {
@@ -5030,20 +5116,11 @@ function hexToRgb(hex) {
 // Focus the username input on load
 setTimeout(() => document.getElementById('login-input').focus(), 100);
 
-// Auto-login if name provided via URL (from codex character creator)
+// Auto-login if name provided via URL
 if (window.autoLoginName) {
-  // Hide login screen immediately — no flash
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('conn').style.display = 'block';
   document.getElementById('login-input').value = window.autoLoginName;
-  // Check for character data from codex
-  try {
-    const charData = sessionStorage.getItem('openscape_character');
-    if (charData) {
-      window.codexCharacter = JSON.parse(charData);
-      sessionStorage.removeItem('openscape_character');
-    }
-  } catch(e) {}
   playerUsername = window.autoLoginName;
   connect();
 }
@@ -5069,7 +5146,7 @@ function sendMsg(msg) {
 
 function handleServerMsg(msg) {
   switch (msg.t) {
-    case 'welcome':
+    case 'welcome': try {
       myId = msg.id; myX = msg.x; myY = msg.y;
       mySmX = msg.x; mySmY = msg.y;
       if (msg.chunkSize) CHUNK_SIZE = msg.chunkSize;
@@ -5098,26 +5175,12 @@ function handleServerMsg(msg) {
       showChat('Welcome to OpenScape!', '#0000cc');
       showChat('Click to move. Click NPCs to attack.', '#0000cc');
       showChat('Click trees to chop, rocks to mine.', '#0000cc');
-      showChat('Press M to toggle OSRS map overlay.', '#0000cc');
       // Set name from login and update display
       if (msg.name) { document.getElementById('my-name-val').textContent = msg.name; myDisplayName = msg.name; }
       if (typeof playerUsername !== 'undefined' && playerUsername) {
         sendMsg({ t: 'set_name', name: playerUsername });
       }
-      // Send codex character data if coming from character creator
-      if (window.codexCharacter) {
-        const cc = window.codexCharacter;
-        sendMsg({ t: 'set_appearance', appearance: {
-          bodyType: cc.gender === 'female' ? 'B' : 'A',
-          head: 0, jaw: 0, torso: 0, arms: 0, hands: 0, legs: 0, feet: 0,
-          hairColor: '#6B3A2A', torsoColor: '#8B7355', legsColor: '#4A5568',
-          feetColor: '#5C4033', skinColor: '#D4A574',
-          codexModelIds: cc.modelIds || [],
-        }});
-        // Store model IDs for 3D rendering
-        window.codexModelIds = cc.modelIds || [];
-        window.codexCharacter = null;
-      }
+    } catch(e) { console.error('WELCOME CRASH:', e); }
       break;
     case 'chunk': {
       const key = chunkKey(msg.cx, msg.cy);
@@ -5222,7 +5285,24 @@ function handleServerMsg(msg) {
         for (const [k, v] of Object.entries(msg.roofs)) { roofPlacements.set(k, v); if (v.id >= nextRoofId) nextRoofId = v.id + 1; }
       }
       if (msg.wallTextures) for (const [k, v] of Object.entries(msg.wallTextures)) wallTexMap.set(k, v);
+      if (msg.lots) { gameLots.length = 0; for (const lot of msg.lots) gameLots.push(lot); updateLotDropdown(); }
       break;
+    case 'lot_created':
+      gameLots.push(msg.lot); updateLotDropdown();
+      console.log('[lots] Created:', msg.lot.name, 'id:', msg.lot.id, 'tiles:', msg.lot.tiles.length, 'total lots:', gameLots.length);
+      break;
+    case 'lot_updated': {
+      const idx = gameLots.findIndex(l => l.id === msg.lot.id);
+      if (idx >= 0) gameLots[idx] = msg.lot; else gameLots.push(msg.lot);
+      updateLotDropdown();
+      break;
+    }
+    case 'lot_deleted': {
+      const li = gameLots.findIndex(l => l.id === msg.id);
+      if (li >= 0) gameLots.splice(li, 1);
+      updateLotDropdown();
+      break;
+    }
     case 'place_roof':
       roofPlacements.set(`${msg.roof.layer}_${msg.roof.id}`, msg.roof);
       if (msg.roof.id >= nextRoofId) nextRoofId = msg.roof.id + 1;
@@ -5241,7 +5321,7 @@ function handleServerMsg(msg) {
       if (msg.layer !== undefined) { currentLayer = msg.layer; document.getElementById('layer-display').textContent = `L:${currentLayer}`; chunkCache.clear(); }
       break;
     case 'need_chargen':
-      // Old chargen disabled — codex at /codex/ handles this now
+      // Character creation handled by chargen screen
       break;
     case 'appearance':
       myAppearance = msg.appearance;
@@ -5279,7 +5359,6 @@ function handleServerMsg(msg) {
       if (msg.equip) myEquip = msg.equip;
       if (msg.bonuses) myBonuses = msg.bonuses;
       if ('activePrayer' in msg) updatePrayerUI(msg.activePrayer);
-      tutorialHint = msg.tutorialHint || null;
       updateStatsUI();
       break;
     case 'prayer':
@@ -5290,7 +5369,7 @@ function handleServerMsg(msg) {
       break;
     case 'chat':
       showChat(msg.msg, msg.color);
-      // Show NPC dialogue overlay for tutorial NPC messages
+      // Show NPC dialogue overlay for NPC messages
       const dlgMatch = msg.msg && msg.msg.match(/^\[([^\]]+)\] (.+)$/);
       if (dlgMatch && msg.color === '#0ff') {
         if (npcDialogueName !== dlgMatch[1]) {
@@ -5539,15 +5618,7 @@ function showChat(msg, color = '#000') {
 let combatTargetId = null;
 let activePrayer = null;
 const PRAYER_ICONS = { melee: '\u2694', ranged: '\uD83C\uDFF9', magic: '\u272A' };
-function updatePrayerUI(style) {
-  activePrayer = style;
-  document.querySelectorAll('.prayer-btn').forEach(btn => {
-    const active = btn.dataset.prayer === style;
-    btn.style.background = active ? '#2a6e2a' : '#1a1a1a';
-    btn.style.borderColor = active ? '#4f4' : '#444';
-    btn.style.color = active ? '#fff' : '#ccc';
-  });
-}
+function updatePrayerUI(style) {} // stub — prayer plugin will handle
 
 const ALL_SKILLS = [
   'attack','hitpoints','mining',
@@ -5566,7 +5637,7 @@ function updateStatsUI() {
   const s = myStats.skills;
   const hpPct = myStats.hp / myStats.maxHp;
   const statsEl = document.getElementById('stats');
-  // OSRS-style 3-column skill display
+  // 3-column skill display
   const _sc = (c) => smartColor(c, 'panel-sidebar');
   let html = `<div class="stat">HP: <span style="color:${_sc(hpPct < 0.3 ? '#ff4444' : '#00ff00')}">${myStats.hp}/${myStats.maxHp}</span></div>`;
   html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;margin-top:4px">';
@@ -5597,7 +5668,7 @@ function updateStatsUI() {
     equipEl.innerHTML = ehtml;
   }
 
-  // Inventory: 4x7 grid (28 slots like OSRS)
+  // Inventory: 4x7 grid (28 slots)
   let invHtml = '<div class="inv-grid">';
   for (let i = 0; i < 28; i++) {
     const item = myStats.inv[i];
@@ -5756,20 +5827,12 @@ let dlgNpcId = null; // which NPC we're currently talking to
 let dlgConvo = []; // [{speaker: 'npc'|'player', name: string, text: string}]
 let myDisplayName = 'You';
 
-const chatheadCache = {}; // name -> url or null
-
-function getChatheadUrl(name) {
-  // OSRS Wiki chathead URL pattern
-  const encoded = name.replace(/ /g, '_');
-  return `https://oldschool.runescape.wiki/images/${encoded}_chathead.png`;
-}
-
 function renderChathead(name, isNpc) {
+  // TODO: replace with original character portrait system
   if (!isNpc) {
-    return `<img class="dlg-chathead" src="https://oldschool.runescape.wiki/images/Broken_Handz_chathead.png" alt="You" onerror="this.outerHTML='<div class=\\'dlg-chathead-placeholder\\'>👤</div>'">`;
+    return `<div class='dlg-chathead-placeholder'>👤</div>`;
   }
-  const url = getChatheadUrl(name);
-  return `<img class="dlg-chathead" src="${url}" alt="${name}" onerror="this.outerHTML='<div class=\\'dlg-chathead-placeholder\\'>👹</div>'">`;
+  return `<div class='dlg-chathead-placeholder'>👹</div>`;
 }
 
 function renderDlgBubbles() {
@@ -6660,11 +6723,8 @@ function initTabDragPopout() {
   });
 }
 
-// ── Paint Tools ────────────────────────────────────────────────────────────────
-let showGrid = false;
-let showChunkGrid = false;
-let showElevation = false;
-let showCollision = false;
+// ── Tool System (minimal stubs — real tools live in plugins) ─────────────────
+const tileTints = new Map();
 let showTerrainColors = true;
 let paintTool = null;
 let paintTile = T.GRASS;
@@ -6672,937 +6732,119 @@ let paintVariant = 0;
 let customBrushColor = '#ff00ff';
 let painting = false;
 let strokeBuffer = [];
-
-const undoStack = [];
-const redoStack = [];
-const MAX_UNDO = 100;
-
-function undo() {
-  if (undoStack.length === 0) { showChat('Nothing to undo.', '#666'); return; }
-  const stroke = undoStack.pop();
-  if (stroke[0] && (stroke[0].type === 'wall' || stroke[0].type === 'door')) {
-    for (const s of stroke) {
-      if (s.type === 'wall') { setWallEdge(s.x, s.y, s.oldMask); sendMsg({ t: 'wall_edge', x: s.x, y: s.y, mask: s.oldMask }); }
-      else { setDoorEdge(s.x, s.y, s.oldMask); sendMsg({ t: 'door_edge', x: s.x, y: s.y, mask: s.oldMask }); }
-    }
-  } else {
-    sendMsg({ t: 'paint', tiles: stroke.map(s => ({ x: s.x, y: s.y, tile: s.oldTile, color: s.oldColor, variant: s.oldVariant || 0 })) });
-    for (const s of stroke) {
-      setLocalTile(s.x, s.y, s.oldTile);
-      tileVariants.set(`${currentLayer}_${s.x}_${s.y}`, s.oldVariant || 0);
-      if (s.oldTile === T.CUSTOM && s.oldColor) setLocalColor(s.x, s.y, s.oldColor);
-      else setLocalColor(s.x, s.y, null);
-    }
-  }
-  redoStack.push(stroke);
-  showChat(`Undo (${stroke.length} ${stroke[0]?.type === 'wall' ? 'wall' : 'tile'}${stroke.length > 1 ? 's' : ''})`, '#333');
-}
-
-function redo() {
-  if (redoStack.length === 0) { showChat('Nothing to redo.', '#666'); return; }
-  const stroke = redoStack.pop();
-  if (stroke[0] && (stroke[0].type === 'wall' || stroke[0].type === 'door')) {
-    for (const s of stroke) {
-      if (s.type === 'wall') { setWallEdge(s.x, s.y, s.newMask); sendMsg({ t: 'wall_edge', x: s.x, y: s.y, mask: s.newMask }); }
-      else { setDoorEdge(s.x, s.y, s.newMask); sendMsg({ t: 'door_edge', x: s.x, y: s.y, mask: s.newMask }); }
-    }
-  } else {
-    sendMsg({ t: 'paint', tiles: stroke.map(s => ({ x: s.x, y: s.y, tile: s.newTile, color: s.newColor, variant: s.newVariant || 0 })) });
-    for (const s of stroke) {
-      setLocalTile(s.x, s.y, s.newTile);
-      tileVariants.set(`${currentLayer}_${s.x}_${s.y}`, s.newVariant || 0);
-      if (s.newTile === T.CUSTOM && s.newColor) setLocalColor(s.x, s.y, s.newColor);
-      else setLocalColor(s.x, s.y, null);
-    }
-  }
-  undoStack.push(stroke);
-  showChat(`Redo (${stroke.length} ${stroke[0]?.type === 'wall' ? 'wall' : 'tile'}${stroke.length > 1 ? 's' : ''})`, '#333');
-}
-
-const tileTints = new Map(); // "layer_x_y" → hex color or null
-function getTileTint(x, y) { return tileTints.get(`${currentLayer}_${x}_${y}`) || null; }
-
-function recordAndPaint(x, y) {
-  const oldTile = tileAt(x, y);
-  const oldColor = oldTile === T.CUSTOM ? (getColor(x, y) || null) : null;
-  const vKey = `${currentLayer}_${x}_${y}`;
-  const oldVariant = tileVariants.get(vKey) || 0;
-  const tintEl = document.getElementById('tex-tint');
-  const tint = tintEl && tintEl.value !== '#ffffff' ? tintEl.value : null;
-  const newColor = paintTile === T.CUSTOM ? customBrushColor : tint;
-  if (oldTile === paintTile && oldColor === newColor && oldVariant === paintVariant) return;
-  strokeBuffer.push({ x, y, oldTile, oldColor, oldVariant, newTile: paintTile, newColor, newVariant: paintVariant });
-  setLocalTile(x, y, paintTile);
-  tileVariants.set(vKey, paintVariant);
-  if (tint) tileTints.set(vKey, tint);
-  else tileTints.delete(vKey);
-  if (paintTile === T.CUSTOM && customBrushColor) setLocalColor(x, y, customBrushColor);
-  else if (tint) setLocalColor(x, y, tint);
-  else setLocalColor(x, y, null);
-}
-
-function flushStroke() {
-  if (strokeBuffer.length === 0) return;
-  sendMsg({ t: 'paint', tiles: strokeBuffer.map(s => ({ x: s.x, y: s.y, tile: s.newTile, color: s.newColor, variant: s.newVariant || 0 })) });
-  undoStack.push([...strokeBuffer]);
-  if (undoStack.length > MAX_UNDO) undoStack.shift();
-  redoStack.length = 0;
-  strokeBuffer = [];
-}
-
-// Texture Browser
-const texBrowserEl = document.getElementById('tex-browser');
-const texFilterEl = document.getElementById('tex-filter');
-const curColorEl = document.getElementById('cur-color');
-let texFilterCategory = 'All';
-
-// Build category filter buttons
-const categories = ['All', ...new Set(allTextures.map(t => t.category))];
-for (const cat of categories) {
-  const btn = document.createElement('button');
-  btn.textContent = cat;
-  btn.className = cat === 'All' ? 'active' : '';
-  btn.addEventListener('click', () => { texFilterCategory = cat; rebuildTexBrowser(); });
-  texFilterEl.appendChild(btn);
-}
-
-function rebuildTexBrowser() {
-  texBrowserEl.innerHTML = '';
-  texFilterEl.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.textContent === texFilterCategory));
-  // Hide object tile types from palette — these will be placeable objects later
-  const objectTypes = new Set([T.TREE, T.BUSH, T.FLOWER, T.FISH_SPOT, T.DOOR, T.CUSTOM]);
-  const base = allTextures.filter(t => !objectTypes.has(t.type));
-  const filtered = texFilterCategory === 'All' ? base : base.filter(t => t.category === texFilterCategory);
-  for (const tex of filtered) {
-    const thumb = document.createElement('canvas');
-    thumb.width = 32; thumb.height = 32;
-    thumb.className = 'tex-thumb';
-    thumb.title = `${tex.name} (${TILE_NAMES[tex.type] || tex.type} v${tex.variant})`;
-    thumb.dataset.type = tex.type;
-    thumb.dataset.variant = tex.variant;
-    const tctx = thumb.getContext('2d');
-    tctx.imageSmoothingEnabled = false;
-    tctx.drawImage(tex.canvas, 0, 0, 32, 32);
-    if (paintTile === tex.type && paintVariant === tex.variant) thumb.classList.add('selected');
-    thumb.addEventListener('click', () => {
-      paintTile = tex.type; paintVariant = tex.variant;
-      if (paintTool !== 'pencil' && paintTool !== 'bucket' && paintTool !== 'bucket_all' && paintTool !== 'bucket_new') paintTool = 'pencil';
-      updatePaintUI();
-    });
-    texBrowserEl.appendChild(thumb);
-  }
-}
-rebuildTexBrowser();
-
-curColorEl.addEventListener('contextmenu', (e) => {
-  e.preventDefault(); e.stopPropagation();
-  const c = paintTile === T.CUSTOM ? customBrushColor : (COLORS[paintTile] || '#000');
-  navigator.clipboard.writeText(c).then(() => showChat(`Copied ${c}`, '#ff981f'));
-});
-document.getElementById('toolbar').addEventListener('contextmenu', (e) => e.preventDefault());
-
-function setTool(tool) {
-  paintTool = (paintTool === tool) ? null : tool;
-  if (paintTool) {
-    wallToolActive = false; roomToolActive = false; doorToolActive = false; eraserActive = false; activeElevTool = null;
-    deactivateSelectTool(); deactivateRoofTool();
-    var w = document.getElementById('btn-wall'); if (w) w.classList.remove('active');
-    var r = document.getElementById('btn-room'); if (r) r.classList.remove('active');
-    var d = document.getElementById('btn-door'); if (d) d.classList.remove('active');
-    var e = document.getElementById('btn-eraser'); if (e) e.classList.remove('active');
-  }
-  updatePaintUI();
-}
-function updatePaintUI() {
-  // Draw the selected texture on the current-color swatch
-  const texKey = `${paintTile}_${paintVariant}`;
-  const texCanvas = tileTexCanvases[texKey] || tileTexCanvases[paintTile];
-  if (texCanvas && !(paintTile === T.CUSTOM)) {
-    curColorEl.style.background = 'none';
-    curColorEl.style.backgroundImage = `url(${texCanvas.toDataURL()})`;
-    curColorEl.style.backgroundSize = 'cover';
-    curColorEl.style.imageRendering = 'pixelated';
-  } else {
-    curColorEl.style.backgroundImage = 'none';
-    curColorEl.style.background = paintTile === T.CUSTOM ? customBrushColor : (COLORS[paintTile] || '#000');
-  }
-  document.querySelectorAll('#tex-browser .tex-thumb').forEach(s => {
-    s.classList.toggle('selected', parseInt(s.dataset.type) === paintTile && parseInt(s.dataset.variant) === paintVariant);
-  });
-  document.getElementById('btn-pencil').classList.toggle('active', paintTool === 'pencil');
-  document.getElementById('btn-bucket').classList.toggle('active', paintTool === 'bucket');
-  document.getElementById('btn-bucket-all').classList.toggle('active', paintTool === 'bucket_all');
-  document.getElementById('btn-bucket-new').classList.toggle('active', paintTool === 'bucket_new');
-  document.getElementById('btn-picker').classList.toggle('active', paintTool === 'picker');
-  document.getElementById('btn-tile-picker').classList.toggle('active', paintTool === 'tile_picker');
-  canvas.style.cursor = (paintTool === 'picker' || paintTool === 'tile_picker') ? 'copy' : paintTool ? 'cell' : 'crosshair';
-}
-
-// Build vs Play mode
-var buildMode = true;
+let wallToolActive = false, roomToolActive = false, doorToolActive = false, eraserActive = false;
+let shapeTool = null, shapeDragging = false, shapeDragStart = null, shapePreviewTiles = [];
+let shapeFill = true, shapeStroke = 1;
+let sprayActive = false, noiseFillActive = false, gradientActive = false;
+let stampMode = null, rulerActive = false;
+let activeElevTool = null;
+let wallDragStart = null, wallDragging = false, wallPreview = [];
+let eraserDragStart = null, eraserDragging = false, eraserPreview = null;
+let activeWallCategory = 'walls';
+let buildMode = true;
 let activeBuildPanel = null;
-let buildTexFilterCategory = 'All';
 
-function populateBuildTaskbar(taskbar) {
-  taskbar.innerHTML = '';
-  const buildTabs = [
-    { id: 'terrain', label: 'Terrain', icon: '\u25A6' },
-    { id: 'walls', label: 'Walls', icon: '\u2B1C' },
-    { id: 'objects', label: 'Objects', icon: '\u2618' },
-    { id: 'roofs', label: 'Roofs', icon: '\u2302' },
-    { id: 'layers', label: 'Layers', icon: '\u2261' },
-    { id: 'npcs', label: 'NPCs', icon: '\u263A' },
-    { id: 'items', label: 'Items', icon: '\u2726' },
-  ];
-  for (const tab of buildTabs) {
-    const b = document.createElement('button');
-    b.className = 'taskbar-btn build-tab';
-    b.dataset.panel = 'build-' + tab.id;
-    b.innerHTML = tab.icon + ' ' + tab.label;
-    b.addEventListener('click', () => toggleBuildPanel(tab.id));
-    taskbar.appendChild(b);
-  }
-  // Add separator and play mode toggle
-  const sep = document.createElement('div');
-  sep.className = 'taskbar-sep';
-  sep.style.marginLeft = 'auto';
-  taskbar.appendChild(sep);
-  const playBtn = document.createElement('button');
-  playBtn.className = 'taskbar-btn';
-  playBtn.innerHTML = '\u25B6 PLAY';
-  playBtn.style.background = '#a53';
-  playBtn.style.color = '#fff';
-  playBtn.style.borderColor = '#832';
-  playBtn.title = 'Switch to Play mode (F3)';
-  playBtn.addEventListener('click', () => toggleBuildMode());
-  taskbar.appendChild(playBtn);
+function clearAllTools() {
+  if (activeTool && activeTool.onDeactivate) activeTool.onDeactivate();
+  activeTool = null;
+  paintTool = null; wallToolActive = false; roomToolActive = false; doorToolActive = false;
+  eraserActive = false; activeElevTool = null;
+  sprayActive = false; noiseFillActive = false; gradientActive = false;
+  stampMode = null; rulerActive = false;
+  shapeTool = null; shapeDragStart = null; shapeDragging = false; shapePreviewTiles = [];
+  wallDragging = false; wallDragStart = null; wallPreview = [];
+  eraserDragging = false; eraserDragStart = null; eraserPreview = null;
+  roofToolActive = false; roofDragging = false; roofDragStart = null; roofPreview = null;
+  selectToolActive = false;
+  canvas.style.cursor = 'crosshair';
 }
+
+function setTool(t) { clearAllTools(); paintTool = t; }
+function activateBuildTool(t) { clearAllTools(); if (t === 'wall') wallToolActive = true; else if (t === 'room') roomToolActive = true; else if (t === 'door') doorToolActive = true; else if (t === 'eraser') eraserActive = true; }
+function updatePaintUI() {}
+function recordAndPaint(x, y) {}
+function recordAndPaintSym(x, y) {}
+function flushStroke() {}
+window.clearAllTools = clearAllTools;
+window.activateBuildTool = activateBuildTool;
+window.setTool = setTool;
+
+function toggleBuildPanel(panel) {
+  activeBuildPanel = panel;
+  const panelEl = document.getElementById('build-panel');
+  const content = document.getElementById('build-panel-content');
+  if (!panelEl) return;
+  panelEl.style.display = 'block';
+  // Render plugin-registered build tabs
+  content.innerHTML = '';
+  for (const tab of registeredBuildTabs) {
+    if (tab.id === panel && tab.render) { tab.render(content); return; }
+  }
+  content.innerHTML = '<div style="padding:20px;color:#555;text-align:center;">No plugins loaded for this tab.</div>';
+}
+function closeBuildPanel() {
+  const p = document.getElementById('build-panel'); if (p) p.style.display = 'none';
+  activeBuildPanel = null;
+}
+window.toggleBuildPanel = toggleBuildPanel;
+window.closeBuildPanel = closeBuildPanel;
 
 function toggleBuildMode() {
   buildMode = !buildMode;
-  const btn = document.getElementById('btn-mode-toggle');
-  btn.textContent = buildMode ? 'BUILD' : 'PLAY';
-  btn.style.background = buildMode ? '#3a7' : '#a53';
-  btn.style.borderColor = buildMode ? '#2a5' : '#832';
-  // Hide/show build tools
-  const buildTools = document.querySelectorAll('#btn-pencil,#btn-bucket,#btn-bucket-all,#btn-bucket-new,#btn-picker,#btn-tile-picker,#btn-select,#btn-eraser,#btn-wall,#btn-room,#btn-door,#btn-hill,#btn-ledge,#btn-stair,#btn-roof,#tex-browser-wrap,#cur-color,#tex-tint');
-  buildTools.forEach(el => { if (el) el.style.display = buildMode ? '' : 'none'; });
-
-  const c2d = document.getElementById('game');
-  const c3d = document.getElementById('game3d');
-
-  // Close settings when switching modes
-  closeSettings();
-
-  // Hide/show old toolbar
-  document.getElementById('toolbar').style.display = buildMode ? 'none' : 'flex';
-
+  const toolbar = document.getElementById('toolbar');
   if (buildMode) {
-    // Build mode: full screen 2D, hide play panels
-    if (mode3d) toggle3D(); // exit 3D if active
-    const sidebar = document.getElementById('panel-sidebar');
-    const combat = document.getElementById('combat-overlay');
-    if (sidebar) sidebar.style.display = 'none';
-    if (combat) combat.style.display = 'none';
-
-    // Swap taskbar to build tabs
+    if (toolbar) toolbar.style.display = 'flex';
     const taskbar = document.getElementById('taskbar');
-    if (taskbar) {
-      taskbar.dataset.originalHtml = taskbar.innerHTML;
-      populateBuildTaskbar(taskbar);
-    }
+    if (taskbar) { taskbar.dataset.originalHtml = taskbar.innerHTML; populateBuildTaskbar(taskbar); }
   } else {
-    // Play mode: close build panel, restore taskbar
-    const buildPanel = document.getElementById('build-panel');
-    if (buildPanel) buildPanel.style.display = 'none';
-    activeBuildPanel = null;
-
-    // Restore play tabs
+    clearAllTools();
+    closeBuildPanel();
     const taskbar = document.getElementById('taskbar');
-    if (taskbar && taskbar.dataset.originalHtml) {
-      taskbar.innerHTML = taskbar.dataset.originalHtml;
-      delete taskbar.dataset.originalHtml;
-      taskbarPanels.clear();
-      initTaskbar();
-    }
-
-    // Show toolbar again then restore play panels and reset tools
-    const sidebar = document.getElementById('panel-sidebar');
-    const combat = document.getElementById('combat-overlay');
-    if (sidebar) sidebar.style.display = 'flex';
-    if (combat) combat.style.display = '';
-    panOffX = 0; panOffY = 0; setTool(null); wallToolActive = false; doorToolActive = false; roomToolActive = false; eraserActive = false; activeElevTool = null; deactivateRoofTool();
+    if (taskbar && taskbar.dataset.originalHtml) { taskbar.innerHTML = taskbar.dataset.originalHtml; delete taskbar.dataset.originalHtml; }
+    if (toolbar) toolbar.style.display = 'none';
   }
-
-  showChat(buildMode ? 'Build Mode — F3 for Play' : 'Play Mode — F2 for Build', buildMode ? '#3a7' : '#a53');
 }
-document.getElementById('btn-mode-toggle').addEventListener('click', toggleBuildMode);
 
-// ── Build Panel System ───────────────────────────────────────────────────────
-function toggleBuildPanel(panel) {
-  const panelEl = document.getElementById('build-panel');
-  const content = document.getElementById('build-panel-content');
-
-  if (activeBuildPanel === panel) {
-    panelEl.style.display = 'none';
-    activeBuildPanel = null;
-    document.querySelectorAll('#taskbar .taskbar-btn.build-tab').forEach(t => t.classList.remove('active'));
-    return;
+function populateBuildTaskbar(taskbar) {
+  taskbar.innerHTML = '';
+  // Add plugin-registered build tabs
+  for (const tab of registeredBuildTabs) {
+    const b = document.createElement('button');
+    b.className = 'taskbar-btn build-tab';
+    b.dataset.panel = 'build-' + tab.id;
+    b.textContent = (tab.icon || '') + ' ' + tab.label;
+    b.addEventListener('click', () => toggleBuildPanel(tab.id));
+    taskbar.appendChild(b);
   }
+  // Play mode button
+  const play = document.createElement('button');
+  play.textContent = 'PLAY';
+  play.style.cssText = 'margin-left:auto;background:#a53;color:#fff;border:1px solid #c64;padding:4px 12px;cursor:pointer;font:inherit;border-radius:3px;';
+  play.addEventListener('click', toggleBuildMode);
+  taskbar.appendChild(play);
+}
 
-  activeBuildPanel = panel;
-  panelEl.style.display = 'block';
-
-  document.querySelectorAll('#taskbar .taskbar-btn.build-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.panel === 'build-' + panel);
+// Build panel drag
+(function() {
+  let dragging = false, offX = 0, offY = 0;
+  const drag = document.getElementById('build-panel-drag');
+  const panel = document.getElementById('build-panel');
+  if (!drag || !panel) return;
+  drag.addEventListener('mousedown', (e) => {
+    if (e.target.classList.contains('bp-close')) return;
+    dragging = true; offX = e.clientX - panel.offsetLeft; offY = e.clientY - panel.offsetTop; e.preventDefault();
   });
-
-  switch (panel) {
-    case 'terrain': renderTerrainBuildPanel(content); break;
-    case 'walls': renderWallsBuildPanel(content); break;
-    case 'objects': content.innerHTML = renderObjectsBuildPanel(); break;
-    case 'roofs': content.innerHTML = renderRoofsBuildPanel(); break;
-    case 'layers': content.innerHTML = renderLayersBuildPanel(); break;
-    case 'npcs': content.innerHTML = renderNPCsBuildPanel(); break;
-    case 'items': content.innerHTML = renderItemsBuildPanel(); break;
-  }
-}
-window.toggleBuildPanel = toggleBuildPanel;
-
-function renderTerrainBuildPanel(container) {
-  const objectTypes = new Set([T.TREE, T.BUSH, T.FLOWER, T.FISH_SPOT, T.DOOR, T.CUSTOM]);
-  const base = allTextures.filter(t => !objectTypes.has(t.type));
-  const categories = ['All', ...new Set(base.map(t => t.category))];
-
-  let html = '<h3>Terrain</h3>';
-  html += '<div class="bp-section"><div class="bp-section-title">Tools</div><div class="bp-tools">';
-  html += '<button class="bp-btn' + (paintTool === 'pencil' ? ' active' : '') + '" onclick="setTool(\'pencil\');renderTerrainBuildPanel(document.getElementById(\'build-panel-content\'))">Pencil</button>';
-  html += '<button class="bp-btn' + (paintTool === 'bucket' ? ' active' : '') + '" onclick="setTool(\'bucket\');renderTerrainBuildPanel(document.getElementById(\'build-panel-content\'))">Bucket</button>';
-  html += '<button class="bp-btn' + (paintTool === 'bucket_all' ? ' active' : '') + '" onclick="setTool(\'bucket_all\');renderTerrainBuildPanel(document.getElementById(\'build-panel-content\'))">Bucket All</button>';
-  html += '<button class="bp-btn' + (paintTool === 'picker' ? ' active' : '') + '" onclick="setTool(\'picker\');renderTerrainBuildPanel(document.getElementById(\'build-panel-content\'))">Color Picker</button>';
-  html += '<button class="bp-btn' + (paintTool === 'tile_picker' ? ' active' : '') + '" onclick="setTool(\'tile_picker\');renderTerrainBuildPanel(document.getElementById(\'build-panel-content\'))">Tile Picker</button>';
-  html += '</div></div>';
-
-  // Tint color
-  html += '<div class="bp-section"><div class="bp-section-title">Tint</div>';
-  html += '<input type="color" id="build-tex-tint" value="' + (document.getElementById('tex-tint') ? document.getElementById('tex-tint').value : '#ffffff') + '" style="width:32px;height:24px;border:1px solid #555;cursor:pointer;padding:0;vertical-align:middle;">';
-  html += '</div>';
-
-  // Category filter
-  html += '<div class="bp-section"><div class="bp-section-title">Textures</div>';
-  html += '<div class="bp-tex-filter">';
-  for (const cat of categories) {
-    html += '<button class="' + (buildTexFilterCategory === cat ? 'active' : '') + '" onclick="buildTexFilterCategory=\'' + cat + '\';renderTerrainBuildPanel(document.getElementById(\'build-panel-content\'))">' + cat + '</button>';
-  }
-  html += '</div>';
-  html += '<div class="bp-tex-grid" id="build-tex-grid"></div>';
-  html += '</div>';
-
-  container.innerHTML = html;
-
-  // Sync tint picker
-  const buildTint = document.getElementById('build-tex-tint');
-  if (buildTint) {
-    buildTint.addEventListener('input', (e) => {
-      document.getElementById('tex-tint').value = e.target.value;
-      document.getElementById('tex-tint').dispatchEvent(new Event('input'));
-    });
-  }
-
-  // Render texture thumbnails as canvas elements
-  const grid = document.getElementById('build-tex-grid');
-  const filtered = buildTexFilterCategory === 'All' ? base : base.filter(t => t.category === buildTexFilterCategory);
-  for (const tex of filtered) {
-    const thumb = document.createElement('canvas');
-    thumb.width = 32; thumb.height = 32;
-    thumb.title = (tex.name || TILE_NAMES[tex.type] || tex.type) + ' v' + tex.variant;
-    const tctx = thumb.getContext('2d');
-    tctx.imageSmoothingEnabled = false;
-    tctx.drawImage(tex.canvas, 0, 0, 32, 32);
-    if (paintTile === tex.type && paintVariant === tex.variant) thumb.classList.add('selected');
-    thumb.addEventListener('click', () => {
-      paintTile = tex.type; paintVariant = tex.variant;
-      if (paintTool !== 'pencil' && paintTool !== 'bucket' && paintTool !== 'bucket_all' && paintTool !== 'bucket_new') paintTool = 'pencil';
-      updatePaintUI();
-      renderTerrainBuildPanel(container);
-    });
-    grid.appendChild(thumb);
-  }
-}
-window.renderTerrainBuildPanel = renderTerrainBuildPanel;
-
-function activateBuildTool(tool) {
-  // Clear everything first
-  paintTool = null; wallToolActive = false; roomToolActive = false; doorToolActive = false; eraserActive = false; activeElevTool = null;
-  deactivateSelectTool(); deactivateRoofTool();
-  // Activate the requested tool
-  if (tool === 'wall') wallToolActive = true;
-  else if (tool === 'room') roomToolActive = true;
-  else if (tool === 'door') doorToolActive = true;
-  else if (tool === 'eraser') eraserActive = true;
-  else if (tool === 'select') { selectToolActive = true; }
-  else if (tool === 'pencil') paintTool = 'pencil';
-  else if (tool === 'bucket') paintTool = 'bucket';
-  else if (tool === 'roof') roofToolActive = true;
-  updatePaintUI();
-}
-window.activateBuildTool = activateBuildTool;
-
-function renderWallsBuildPanel(container) {
-  // Get wall-category textures (T.WALL variants)
-  const wallTextures = allTextures.filter(t => t.type === T.WALL);
-
-  let html = '<h3>Walls</h3>' +
-    '<div class="bp-section"><div class="bp-section-title">Tools</div><div class="bp-tools">' +
-    '<button class="bp-btn' + (wallToolActive ? ' active' : '') + '" onclick="activateBuildTool(\'wall\');setTimeout(()=>toggleBuildPanel(\'walls\'),50)">Wall</button>' +
-    '<button class="bp-btn' + (roomToolActive ? ' active' : '') + '" onclick="activateBuildTool(\'room\');setTimeout(()=>toggleBuildPanel(\'walls\'),50)">Room</button>' +
-    '<button class="bp-btn' + (doorToolActive ? ' active' : '') + '" onclick="activateBuildTool(\'door\');setTimeout(()=>toggleBuildPanel(\'walls\'),50)">Door</button>' +
-    '<button class="bp-btn' + (eraserActive ? ' active' : '') + '" onclick="activateBuildTool(\'eraser\');setTimeout(()=>toggleBuildPanel(\'walls\'),50)">Eraser</button>' +
-    '<button class="bp-btn' + (selectToolActive ? ' active' : '') + '" onclick="activateBuildTool(\'select\');setTimeout(()=>toggleBuildPanel(\'walls\'),50)">Select</button>' +
-    '</div></div>' +
-    '<div class="bp-section"><div class="bp-section-title">Wall Texture</div>' +
-    '<div class="bp-tex-grid" id="wall-tex-grid"></div></div>' +
-    '<div style="color:#777;font-size:11px;margin-top:4px;">Drag on the map to draw walls or rooms. Click walls to place doors.</div>';
-
-  if (container) {
-    container.innerHTML = html;
-    // Render texture thumbnails
-    const grid = document.getElementById('wall-tex-grid');
-    if (grid) {
-      for (const tex of wallTextures) {
-        const thumb = document.createElement('canvas');
-        thumb.width = 32; thumb.height = 32;
-        thumb.title = tex.name + ' v' + tex.variant;
-        const tctx = thumb.getContext('2d');
-        tctx.imageSmoothingEnabled = false;
-        tctx.drawImage(tex.canvas, 0, 0, 32, 32);
-        if (selectedWallTex.type === tex.type && selectedWallTex.variant === tex.variant) thumb.classList.add('selected');
-        thumb.addEventListener('click', () => {
-          selectedWallTex = { type: tex.type, variant: tex.variant };
-          renderWallsBuildPanel(container);
-        });
-        grid.appendChild(thumb);
-      }
-    }
-    return;
-  }
-  return html;
-}
-
-function renderObjectsBuildPanel() {
-  return '<h3>Objects</h3>' +
-    '<div class="bp-placeholder">' +
-    '<div class="bp-title">Coming Soon — Object Placement System</div>' +
-    'Place trees, rocks, furniture, and interactive objects on the map.' +
-    '<div class="bp-categories">' +
-    '<span class="bp-cat">Trees</span><span class="bp-cat">Rocks</span><span class="bp-cat">Furniture</span><span class="bp-cat">Decorations</span><span class="bp-cat">Interactive</span>' +
-    '</div></div>';
-}
-
-function renderRoofsBuildPanel() {
-  const isActive = roofToolActive;
-  return '<h3>Roofs</h3>' +
-    '<div class="bp-section"><div class="bp-section-title">Roof Tool</div><div class="bp-tools">' +
-    '<button class="bp-btn' + (isActive ? ' active' : '') + '" onclick="document.getElementById(\'btn-roof\').click();setTimeout(()=>toggleBuildPanel(\'roofs\'),50)">Roof Tool ' + (isActive ? 'ON' : 'OFF') + '</button>' +
-    '</div></div>' +
-    '<div class="bp-section"><div class="bp-section-title">Type</div><div class="bp-tools">' +
-    '<button class="bp-btn' + (selectedRoofType === 'gabled' ? ' active' : '') + '" onclick="selectedRoofType=\'gabled\';document.querySelectorAll(\'.roof-type-btn\').forEach(b=>{b.style.background=b.dataset.type===selectedRoofType?\'#555\':\'#333\';b.style.borderColor=b.dataset.type===selectedRoofType?\'#ff981f\':\'#555\'});toggleBuildPanel(\'roofs\')">Gabled</button>' +
-    '<button class="bp-btn' + (selectedRoofType === 'hipped' ? ' active' : '') + '" onclick="selectedRoofType=\'hipped\';document.querySelectorAll(\'.roof-type-btn\').forEach(b=>{b.style.background=b.dataset.type===selectedRoofType?\'#555\':\'#333\';b.style.borderColor=b.dataset.type===selectedRoofType?\'#ff981f\':\'#555\'});toggleBuildPanel(\'roofs\')">Hipped</button>' +
-    '<button class="bp-btn' + (selectedRoofType === 'halfGabled' ? ' active' : '') + '" onclick="selectedRoofType=\'halfGabled\';document.querySelectorAll(\'.roof-type-btn\').forEach(b=>{b.style.background=b.dataset.type===selectedRoofType?\'#555\':\'#333\';b.style.borderColor=b.dataset.type===selectedRoofType?\'#ff981f\':\'#555\'});toggleBuildPanel(\'roofs\')">Half Gabled</button>' +
-    '<button class="bp-btn' + (selectedRoofType === 'flat' ? ' active' : '') + '" onclick="selectedRoofType=\'flat\';document.querySelectorAll(\'.roof-type-btn\').forEach(b=>{b.style.background=b.dataset.type===selectedRoofType?\'#555\':\'#333\';b.style.borderColor=b.dataset.type===selectedRoofType?\'#ff981f\':\'#555\'});toggleBuildPanel(\'roofs\')">Flat</button>' +
-    '</div></div>' +
-    '<div class="bp-section"><div class="bp-section-title">Pitch & Eaves</div>' +
-    '<label style="color:#999;">Pitch: <input type="range" min="0" max="100" value="' + (document.getElementById('roof-pitch') ? document.getElementById('roof-pitch').value : '50') + '" style="width:120px;vertical-align:middle;" oninput="document.getElementById(\'roof-pitch\').value=this.value;document.getElementById(\'roof-pitch\').dispatchEvent(new Event(\'input\'))"> <span style="font-size:10px;">' + (document.getElementById('roof-pitch-val') ? document.getElementById('roof-pitch-val').textContent : '0.5') + '</span></label><br>' +
-    '<label style="color:#999;margin-top:4px;display:inline-block;">Eaves: <input type="range" min="0" max="3" value="' + (document.getElementById('roof-eaves') ? document.getElementById('roof-eaves').value : '1') + '" style="width:80px;vertical-align:middle;" oninput="document.getElementById(\'roof-eaves\').value=this.value;document.getElementById(\'roof-eaves\').dispatchEvent(new Event(\'input\'))"> <span style="font-size:10px;">' + (document.getElementById('roof-eaves-val') ? document.getElementById('roof-eaves-val').textContent : '1') + '</span></label>' +
-    '</div>' +
-    '<div class="bp-section"><div class="bp-section-title">Edit Selected</div><div class="bp-tools">' +
-    '<button class="bp-btn" onclick="document.getElementById(\'roof-delete\').click()" style="color:#f44;">Delete Roof</button>' +
-    '<button class="bp-btn" onclick="document.getElementById(\'roof-rotate\').click()">Rotate</button>' +
-    '</div></div>';
-}
-
-function renderLayersBuildPanel() {
-  return '<h3>Layers</h3>' +
-    '<div class="bp-layer-current">Layer ' + currentLayer + '</div>' +
-    '<div class="bp-section"><div class="bp-tools" style="justify-content:center;">' +
-    '<button class="bp-btn" onclick="changeLayer(-1);setTimeout(()=>toggleBuildPanel(\'layers\'),50)" style="font-size:16px;padding:6px 16px;">&#x25BC; Down</button>' +
-    '<button class="bp-btn" onclick="changeLayer(1);setTimeout(()=>toggleBuildPanel(\'layers\'),50)" style="font-size:16px;padding:6px 16px;">&#x25B2; Up</button>' +
-    '</div></div>' +
-    '<div class="bp-section"><div class="bp-section-title">Layer Visibility</div>' +
-    '<div style="color:#777;font-size:11px;">Layer visibility controls coming soon.</div>' +
-    '</div>';
-}
-
-function renderNPCsBuildPanel() {
-  return '<h3>NPCs</h3>' +
-    '<div class="bp-placeholder">' +
-    '<input type="text" class="bp-search" placeholder="Search NPCs..." disabled>' +
-    '<div class="bp-title">Coming Soon — NPC Placement</div>' +
-    'Place and configure NPCs on the map with patrol routes and dialogue.' +
-    '<div class="bp-categories">' +
-    '<span class="bp-cat">Humanoid</span><span class="bp-cat">Monster</span><span class="bp-cat">Animal</span><span class="bp-cat">Boss</span>' +
-    '</div></div>';
-}
-
-function renderItemsBuildPanel() {
-  return '<h3>Items</h3>' +
-    '<div class="bp-placeholder">' +
-    '<input type="text" class="bp-search" placeholder="Search items..." disabled>' +
-    '<div class="bp-title">Coming Soon — Item Placement</div>' +
-    'Place item spawns, loot tables, and ground items on the map.' +
-    '<div class="bp-categories">' +
-    '<span class="bp-cat">Weapons</span><span class="bp-cat">Armor</span><span class="bp-cat">Food</span><span class="bp-cat">Materials</span>' +
-    '</div></div>';
-}
-
-document.getElementById('btn-pencil').addEventListener('click', () => setTool('pencil'));
-document.getElementById('btn-bucket').addEventListener('click', () => setTool('bucket'));
-document.getElementById('btn-bucket-all').addEventListener('click', () => setTool('bucket_all'));
-document.getElementById('btn-bucket-new').addEventListener('click', () => setTool('bucket_new'));
-document.getElementById('btn-picker').addEventListener('click', () => setTool('picker'));
-document.getElementById('btn-tile-picker').addEventListener('click', () => setTool('tile_picker'));
-let wallToolActive = false;
-let roomToolActive = false;
-let doorToolActive = false;
-let eraserActive = false;
-let eraserDragStart = null;
-let eraserDragging = false;
-let eraserPreview = null; // {x, y, w, h}
-let wallDragStart = null;
-let wallDragging = false;
-let wallPreview = [];
-
-// Calculate wall edges along a straight line between two vertices (grid corners)
-// Returns array of {x, y, side} for each wall segment to place
-function calcWallLine(vx1, vy1, vx2, vy2) {
-  const edges = [];
-  const dx = vx2 - vx1, dy = vy2 - vy1;
-  const adx = Math.abs(dx), ady = Math.abs(dy);
-
-  if (adx === 0 && ady === 0) return edges;
-
-  // Determine direction: horizontal, vertical, or diagonal
-  // If both axes moved at least 1, and they're within 2x of each other, it's diagonal
-  const isDiag = adx >= 1 && ady >= 1 && adx <= ady * 1.5 && ady <= adx * 1.5;
-
-  if (isDiag) {
-    const steps = Math.min(adx, ady); // use the shorter axis for clean diagonal
-    const sx = dx > 0 ? 1 : -1;
-    const sy = dy > 0 ? 1 : -1;
-    for (let i = 0; i < steps; i++) {
-      const tx = vx1 + i * sx;
-      const ty = vy1 + i * sy;
-      if ((sx > 0 && sy > 0) || (sx < 0 && sy < 0)) {
-        edges.push({ x: tx, y: ty, side: WALL_DIAG_NE });
-      } else {
-        edges.push({ x: tx, y: ty, side: WALL_DIAG_NW });
-      }
-    }
-  } else if (adx >= ady) {
-    // Horizontal line
-    const startX = Math.min(vx1, vx2), endX = Math.max(vx1, vx2);
-    for (let vx = startX; vx < endX; vx++) {
-      edges.push({ x: vx, y: vy1, side: WALL_S });
-    }
-  } else {
-    // Vertical line
-    const startY = Math.min(vy1, vy2), endY = Math.max(vy1, vy2);
-    for (let vy = startY; vy < endY; vy++) {
-      edges.push({ x: vx1, y: vy, side: WALL_W });
-    }
-  }
-  return edges;
-}
-
-// Calculate wall edges for a rectangular room between two corner vertices
-function calcRoomWalls(vx1, vy1, vx2, vy2) {
-  const edges = [];
-  const minX = Math.min(vx1, vx2), maxX = Math.max(vx1, vx2);
-  const minY = Math.min(vy1, vy2), maxY = Math.max(vy1, vy2);
-  if (minX === maxX || minY === maxY) return calcWallLine(vx1, vy1, vx2, vy2);
-  // Top wall (north): WALL_N on tiles along the top row (maxY - 1)
-  for (let x = minX; x < maxX; x++) {
-    edges.push({ x, y: maxY - 1, side: WALL_N });
-  }
-  // Bottom wall (south): WALL_S on tiles along the bottom row (minY)
-  for (let x = minX; x < maxX; x++) {
-    edges.push({ x, y: minY, side: WALL_S });
-  }
-  // Left wall (west): WALL_W on tiles along the left column (minX)
-  for (let y = minY; y < maxY; y++) {
-    edges.push({ x: minX, y, side: WALL_W });
-  }
-  // Right wall (east): WALL_E on tiles along the right column (maxX - 1)
-  for (let y = minY; y < maxY; y++) {
-    edges.push({ x: maxX - 1, y, side: WALL_E });
-  }
-  return edges;
-}
-
-// Snap mouse position to nearest grid vertex (corner of tiles)
-function getNearestVertex(e) {
-  const rect = canvas.getBoundingClientRect();
-  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
-  const my = (e.clientY - rect.top) * (canvas.height / rect.height);
-  const vtx = Math.ceil(canvas.width / TILE) + 2, vty = Math.ceil(canvas.height / TILE) + 2;
-  const camFX = mySmX - Math.floor((vtx - 2) / 2);
-  const camFTopY = mySmY + Math.floor((vty - 2) / 2);
-  const camX = Math.floor(camFX);
-  const camTopY = Math.ceil(camFTopY);
-  const offX = -(camFX - camX) * TILE;
-  const offY = (camFTopY - camTopY) * TILE;
-  // Vertex coordinates: round to nearest integer in world space
-  const worldX = camX + (mx - offX) / TILE;
-  const worldVY = (my - offY) / TILE;
-  const vxSnap = Math.round(worldX);
-  const vySnap = camTopY - Math.round(worldVY) + 1;
-  return { vx: vxSnap, vy: vySnap };
-}
-function deactivateWallRoomTools() {
-  wallToolActive = false; roomToolActive = false; wallDragging = false; wallDragStart = null; wallPreview = [];
-  document.getElementById('btn-wall').classList.remove('active');
-  document.getElementById('btn-room').classList.remove('active');
-}
-document.getElementById('btn-eraser').addEventListener('click', () => {
-  eraserActive = !eraserActive;
-  if (eraserActive) { deactivateWallRoomTools(); deactivateSelectTool(); deactivateRoofTool(); doorToolActive = false; setTool(null); document.getElementById('btn-door').classList.remove('active'); }
-  document.getElementById('btn-eraser').classList.toggle('active', eraserActive);
-  showChat(eraserActive ? 'Eraser ON — click to remove walls/doors/tiles' : 'Eraser OFF', '#333');
-});
-document.getElementById('btn-wall').addEventListener('click', () => {
-  wallToolActive = !wallToolActive;
-  if (wallToolActive) { roomToolActive = false; doorToolActive = false; setTool(null); deactivateSelectTool(); deactivateRoofTool(); document.getElementById('btn-door').classList.remove('active'); document.getElementById('btn-room').classList.remove('active'); }
-  wallDragging = false; wallDragStart = null; wallPreview = [];
-  document.getElementById('btn-wall').classList.toggle('active', wallToolActive);
-  showChat(wallToolActive ? 'Wall tool ON — drag to draw walls' : 'Wall tool OFF', '#fff');
-});
-document.getElementById('btn-room').addEventListener('click', () => {
-  roomToolActive = !roomToolActive;
-  if (roomToolActive) { wallToolActive = false; doorToolActive = false; setTool(null); deactivateSelectTool(); deactivateRoofTool(); document.getElementById('btn-door').classList.remove('active'); document.getElementById('btn-wall').classList.remove('active'); }
-  wallDragging = false; wallDragStart = null; wallPreview = [];
-  document.getElementById('btn-room').classList.toggle('active', roomToolActive);
-  showChat(roomToolActive ? 'Room tool ON — drag to draw a rectangular room' : 'Room tool OFF', '#fff');
-});
-document.getElementById('btn-door').addEventListener('click', () => {
-  doorToolActive = !doorToolActive;
-  if (doorToolActive) { deactivateWallRoomTools(); deactivateSelectTool(); deactivateRoofTool(); setTool(null); }
-  document.getElementById('btn-door').classList.toggle('active', doorToolActive);
-  showChat(doorToolActive ? 'Door tool ON — click near tile edges to place doors' : 'Door tool OFF', '#f40000');
-});
-let activeElevTool = null; // 'hill', 'ledge', 'stair'
-function setElevTool(tool) {
-  activeElevTool = (activeElevTool === tool) ? null : tool;
-  deactivateWallRoomTools(); deactivateSelectTool(); deactivateRoofTool(); doorToolActive = false; eraserActive = false; setTool(null);
-  document.getElementById('btn-door').classList.remove('active');
-  document.getElementById('btn-eraser').classList.remove('active');
-  document.getElementById('btn-hill').classList.toggle('active', activeElevTool === 'hill');
-  document.getElementById('btn-ledge').classList.toggle('active', activeElevTool === 'ledge');
-  document.getElementById('btn-stair').classList.toggle('active', activeElevTool === 'stair');
-  if (activeElevTool === 'hill') showChat('Hill tool — Click to raise, Shift+click to lower', '#333');
-  else if (activeElevTool === 'ledge') showChat('Ledge tool — Click edge to create cliff', '#333');
-  else if (activeElevTool === 'stair') showChat('Stair tool — Click to place stairs between heights', '#333');
-}
-document.getElementById('btn-hill').addEventListener('click', () => setElevTool('hill'));
-document.getElementById('btn-ledge').addEventListener('click', () => setElevTool('ledge'));
-document.getElementById('btn-stair').addEventListener('click', () => setElevTool('stair'));
-
-// ── Roof Tool ─────────────────────────────────────────────────────────
-function deactivateRoofTool() {
-  roofToolActive = false;
-  roofDragging = false;
-  roofDragStart = null;
-  roofPreview = null;
-  selectedRoof = null;
-  document.getElementById('btn-roof').classList.remove('active');
-  document.getElementById('roof-panel').style.display = 'none';
-  document.getElementById('roof-edit-controls').style.display = 'none';
-}
-
-document.getElementById('btn-roof').addEventListener('click', () => {
-  roofToolActive = !roofToolActive;
-  if (roofToolActive) {
-    deactivateWallRoomTools(); deactivateSelectTool(); doorToolActive = false; eraserActive = false; activeElevTool = null; setTool(null);
-    document.getElementById('btn-door').classList.remove('active');
-    document.getElementById('btn-eraser').classList.remove('active');
-    document.getElementById('btn-hill').classList.remove('active');
-    document.getElementById('btn-ledge').classList.remove('active');
-    document.getElementById('btn-stair').classList.remove('active');
-    document.getElementById('roof-panel').style.display = 'block';
-  } else {
-    deactivateRoofTool();
-  }
-  document.getElementById('btn-roof').classList.toggle('active', roofToolActive);
-  showChat(roofToolActive ? 'Roof tool ON — drag to place a roof rectangle' : 'Roof tool OFF', '#fff');
-});
-
-// Roof type selection buttons
-document.querySelectorAll('.roof-type-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    selectedRoofType = btn.dataset.type;
-    document.querySelectorAll('.roof-type-btn').forEach(b => {
-      b.style.background = b.dataset.type === selectedRoofType ? '#555' : '#333';
-      b.style.borderColor = b.dataset.type === selectedRoofType ? '#ff981f' : '#555';
-    });
-    // If editing a selected roof, update its type
-    if (selectedRoof) {
-      selectedRoof.type = selectedRoofType;
-      sendMsg({ t: 'update_roof', roof: selectedRoof });
-      terrain3dBuilt.clear(); roofs3dDirty = true;
-    }
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    panel.style.left = Math.max(0, e.clientX - offX) + 'px';
+    panel.style.top = Math.max(0, e.clientY - offY) + 'px';
+    panel.style.right = 'auto';
   });
-});
-
-// Roof pitch/eaves sliders
-document.getElementById('roof-pitch').addEventListener('input', (e) => {
-  const val = parseInt(e.target.value) / 100;
-  document.getElementById('roof-pitch-val').textContent = val.toFixed(2);
-  if (selectedRoof) {
-    selectedRoof.pitch = val;
-    sendMsg({ t: 'update_roof', roof: selectedRoof });
-    terrain3dBuilt.clear(); roofs3dDirty = true;
-  }
-});
-document.getElementById('roof-eaves').addEventListener('input', (e) => {
-  const val = parseInt(e.target.value);
-  document.getElementById('roof-eaves-val').textContent = val;
-  if (selectedRoof) {
-    selectedRoof.eaveLength = val;
-    sendMsg({ t: 'update_roof', roof: selectedRoof });
-    terrain3dBuilt.clear(); roofs3dDirty = true;
-  }
-});
-
-// Roof delete button
-document.getElementById('roof-delete').addEventListener('click', () => {
-  if (!selectedRoof) return;
-  sendMsg({ t: 'delete_roof', layer: selectedRoof.layer, id: selectedRoof.id });
-  roofPlacements.delete(`${selectedRoof.layer}_${selectedRoof.id}`);
-  selectedRoof = null;
-  document.getElementById('roof-edit-controls').style.display = 'none';
-  terrain3dBuilt.clear(); roofs3dDirty = true;
-  showChat('Roof deleted', '#f44');
-});
-
-// Roof rotate button
-document.getElementById('roof-rotate').addEventListener('click', () => {
-  if (!selectedRoof) return;
-  selectedRoof.rotation = ((selectedRoof.rotation || 0) + 90) % 360;
-  sendMsg({ t: 'update_roof', roof: selectedRoof });
-  terrain3dBuilt.clear(); roofs3dDirty = true;
-  showChat(`Roof rotated to ${selectedRoof.rotation}°`, '#ff981f');
-});
-
-// ── Select Tool (Room Selection) ──────────────────────────────────────
-function deactivateSelectTool() {
-  selectToolActive = false;
-  deselectRoom();
-  document.getElementById('btn-select').classList.remove('active');
-}
-
-document.getElementById('btn-select').addEventListener('click', () => {
-  selectToolActive = !selectToolActive;
-  if (selectToolActive) {
-    deactivateWallRoomTools(); deactivateRoofTool(); doorToolActive = false; eraserActive = false; activeElevTool = null; setTool(null);
-    document.getElementById('btn-door').classList.remove('active');
-    document.getElementById('btn-eraser').classList.remove('active');
-    document.getElementById('btn-hill').classList.remove('active');
-    document.getElementById('btn-ledge').classList.remove('active');
-    document.getElementById('btn-stair').classList.remove('active');
-  } else {
-    deselectRoom();
-  }
-  document.getElementById('btn-select').classList.toggle('active', selectToolActive);
-  showChat(selectToolActive ? 'Select tool ON — click inside a room to select it' : 'Select tool OFF', '#fff');
-});
-
-// Room panel buttons
-document.getElementById('room-copy-up').addEventListener('click', () => {
-  if (!selectedRoom) return;
-  const boundary = getRoomBoundaryWalls(selectedRoom);
-  if (boundary.length === 0) { showChat('No boundary walls found', '#f44'); return; }
-  const targetLayer = currentLayer + 1;
-  const undoOps = [];
-  for (const w of boundary) {
-    const key = `${targetLayer}_${w.x}_${w.y}`;
-    if (w.isDoor) {
-      const oldMask = doorEdges.get(key) || 0;
-      const newMask = oldMask | w.side;
-      doorEdges.set(key, newMask);
-      undoOps.push({ type: 'door_layer', layer: targetLayer, x: w.x, y: w.y, oldMask, newMask });
-    } else {
-      const oldMask = wallEdges.get(key) || 0;
-      const newMask = oldMask | w.side;
-      wallEdges.set(key, newMask);
-      undoOps.push({ type: 'wall_layer', layer: targetLayer, x: w.x, y: w.y, oldMask, newMask });
-    }
-  }
-  // Send to server: temporarily switch layer, send wall messages, switch back
-  const savedLayer = currentLayer;
-  sendMsg({ t: 'set_layer', layer: targetLayer });
-  for (const w of boundary) {
-    const key = `${targetLayer}_${w.x}_${w.y}`;
-    if (w.isDoor) {
-      sendMsg({ t: 'door_edge', x: w.x, y: w.y, mask: doorEdges.get(key) || 0 });
-    } else {
-      sendMsg({ t: 'wall_edge', x: w.x, y: w.y, mask: wallEdges.get(key) || 0 });
-    }
-  }
-  sendMsg({ t: 'set_layer', layer: savedLayer });
-  if (undoOps.length > 0) {
-    undoStack.push(undoOps);
-    if (undoStack.length > MAX_UNDO) undoStack.shift();
-    redoStack.length = 0;
-  }
-  terrain3dBuilt.clear(); roofs3dDirty = true;
-  showChat(`Copied ${boundary.length} wall edges to L:${targetLayer}`, '#ff981f');
-});
-
-document.getElementById('room-toggle-ceiling').addEventListener('click', () => {
-  if (!selectedRoom) return;
-  // Check if room currently has ceiling (check first tile)
-  const firstKey = selectedRoom.values().next().value;
-  const [fx, fy] = firstKey.split('_').map(Number);
-  const hasCeiling = roomCeilings.has(`${currentLayer}_${fx}_${fy}`);
-  const btn = document.getElementById('room-toggle-ceiling');
-  if (hasCeiling) {
-    // Remove ceiling from all room tiles
-    for (const key of selectedRoom) {
-      const [x, y] = key.split('_').map(Number);
-      roomCeilings.delete(`${currentLayer}_${x}_${y}`);
-    }
-    btn.textContent = 'Ceiling: OFF';
-    showChat('Ceiling removed', '#ff981f');
-  } else {
-    // Add ceiling to all room tiles
-    for (const key of selectedRoom) {
-      const [x, y] = key.split('_').map(Number);
-      roomCeilings.set(`${currentLayer}_${x}_${y}`, true);
-    }
-    btn.textContent = 'Ceiling: ON';
-    showChat('Ceiling added', '#ff981f');
-  }
-  terrain3dBuilt.clear(); roofs3dDirty = true;
-});
-
-document.getElementById('room-delete').addEventListener('click', () => {
-  if (!selectedRoom) return;
-  const boundary = getRoomBoundaryWalls(selectedRoom);
-  const undoOps = [];
-  for (const w of boundary) {
-    if (w.isDoor) {
-      const oldMask = getDoorEdge(w.x, w.y);
-      const newMask = oldMask & ~w.side;
-      setDoorEdge(w.x, w.y, newMask);
-      sendMsg({ t: 'door_edge', x: w.x, y: w.y, mask: newMask });
-      undoOps.push({ type: 'door', x: w.x, y: w.y, oldMask, newMask });
-    } else {
-      const oldMask = getWallEdge(w.x, w.y);
-      const newMask = oldMask & ~w.side;
-      setWallEdge(w.x, w.y, newMask);
-      sendMsg({ t: 'wall_edge', x: w.x, y: w.y, mask: newMask });
-      undoOps.push({ type: 'wall', x: w.x, y: w.y, oldMask, newMask });
-    }
-  }
-  if (undoOps.length > 0) {
-    undoStack.push(undoOps);
-    if (undoStack.length > MAX_UNDO) undoStack.shift();
-    redoStack.length = 0;
-  }
-  terrain3dBuilt.clear(); roofs3dDirty = true;
-  showChat(`Deleted ${boundary.length} wall edges`, '#f44');
-  deselectRoom();
-});
-
-function changeLayer(delta) {
-  currentLayer = Math.max(-1000, Math.min(1000, currentLayer + delta));
-  document.getElementById('layer-display').textContent = `L:${currentLayer}`;
-  sendMsg({ t: 'set_layer', layer: currentLayer });
-  chunkCache.clear();
-  showChat(`Layer: ${currentLayer}`, '#333');
-}
-document.getElementById('btn-layer-up').addEventListener('click', () => changeLayer(1));
-document.getElementById('btn-layer-down').addEventListener('click', () => changeLayer(-1));
-document.getElementById('btn-grid').addEventListener('click', () => {
-  showGrid = !showGrid;
-  document.getElementById('btn-grid').classList.toggle('active', showGrid);
-});
-
-let lastMouseX = 0, lastMouseY = 0;
-function takeScreenshot() {
-  const cmx = lastMouseX, cmy = lastMouseY;
-  const ctx2 = canvas.getContext('2d');
-  ctx2.save();
-  // Big red circle + crosshair at cursor
-  ctx2.strokeStyle = '#f00';
-  ctx2.lineWidth = 4;
-  ctx2.beginPath(); ctx2.arc(cmx, cmy, 30, 0, Math.PI * 2); ctx2.stroke();
-  ctx2.beginPath(); ctx2.moveTo(cmx - 40, cmy); ctx2.lineTo(cmx + 40, cmy); ctx2.stroke();
-  ctx2.beginPath(); ctx2.moveTo(cmx, cmy - 40); ctx2.lineTo(cmx, cmy + 40); ctx2.stroke();
-  // White inner lines for contrast
-  ctx2.strokeStyle = '#fff';
-  ctx2.lineWidth = 1;
-  ctx2.beginPath(); ctx2.arc(cmx, cmy, 30, 0, Math.PI * 2); ctx2.stroke();
-  // Label with black shadow
-  ctx2.font = 'bold 16px Courier New';
-  ctx2.fillStyle = '#000';
-  ctx2.fillText(`Mouse: (${hoverWX}, ${hoverWY})`, cmx + 36, cmy - 10);
-  ctx2.fillStyle = '#ff0';
-  ctx2.fillText(`Mouse: (${hoverWX}, ${hoverWY})`, cmx + 35, cmy - 11);
-  ctx2.restore();
-  const link = document.createElement('a');
-  link.download = `openscape_${myX}_${myY}_${Date.now()}.png`;
-  if (mode3d && renderer3d) {
-    renderer3d.render(scene3d, camera3d);
-    link.href = document.getElementById('game3d').toDataURL('image/png');
-  } else {
-    link.href = canvas.toDataURL('image/png');
-  }
-  link.click();
-}
-document.getElementById('btn-screenshot').addEventListener('click', takeScreenshot);
-
-// ── Clip Recorder (V to record 10 seconds) ─────────────────────────────────
-let clipRecorder = null, clipChunks = [], clipRecording = false;
-
-function startRecording() {
-  if (clipRecording) { showChat('Already recording...', '#c00'); return; }
-  try {
-    const targetCanvas = mode3d ? document.getElementById('game3d') : canvas;
-    const stream = targetCanvas.captureStream(30);
-    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-      ? 'video/webm;codecs=vp9'
-      : MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
-        ? 'video/webm;codecs=vp8'
-        : 'video/webm';
-    clipRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2500000 });
-    clipChunks = [];
-    clipRecorder.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) clipChunks.push(e.data);
-    };
-    clipRecorder.onstop = () => {
-      clipRecording = false;
-      const blob = new Blob(clipChunks, { type: clipRecorder.mimeType });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = `openscape_clip_${Date.now()}.webm`;
-      link.href = url;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-      showChat('Clip saved!', '#060');
-    };
-    clipRecorder.start(500);
-    clipRecording = true;
-    showChat('Recording 10s clip...', '#c00');
-    setTimeout(() => {
-      if (clipRecorder && clipRecorder.state === 'recording') clipRecorder.stop();
-    }, 10000);
-  } catch (err) {
-    showChat('Recording failed: ' + err.message, '#c00');
-  }
-}
+  document.addEventListener('mouseup', () => { dragging = false; });
+})();
 
 // ── Input ──────────────────────────────────────────────────────────────────────
-// Y-FLIP: OSRS y increases northward (up), screen y increases downward.
+// Y-FLIP: game y increases northward (up), screen y increases downward.
 // camTopY = highest world Y visible (top of screen).
 // Screen row vy -> world Y = camTopY - vy (decreasing as we go down).
 // Entity at world (ex, ey) -> screen pixel sy = (camTopY - ey) * TILE.
@@ -7821,7 +7063,7 @@ canvas.addEventListener('contextmenu', (e) => {
 canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); return false; }, true);
 document.addEventListener('contextmenu', (e) => { if (e.target === canvas || e.target.id === 'game3d') { e.preventDefault(); e.stopPropagation(); return false; } }, true);
 
-// Drag to slide OSRS map overlay in free cam mode
+// Drag to pan in free cam mode
 let mapDragging = false, mapDragLastX = 0, mapDragLastY = 0;
 let panDragging = false, panLastX = 0, panLastY = 0;
 let panOffX = 0, panOffY = 0; // 2D camera pan offset
@@ -7845,34 +7087,26 @@ canvas.addEventListener('mousedown', (e) => {
     }
     return;
   }
-  // Allow right-click for wall/room deletion
-  if (e.button === 2 && (wallToolActive || roomToolActive)) {
-    const v = getNearestVertex(e);
-    wallDragStart = { vx: v.vx, vy: v.vy, deleting: true };
-    wallDragging = true;
-    wallPreview = [];
-    return;
+  // Right-click handled by active plugin tool
+  if (e.button === 2 && activeTool && activeTool.onRightClick) {
+    const { tx, ty } = getTileAt(e);
+    const ctx = { layer: currentLayer, camera: { camX, camTopY, TILE }, shiftKey: e.shiftKey };
+    if (activeTool.onRightClick(e, { tx, ty }, ctx) !== false) return;
   }
   if (e.button !== 0 || !connected) return;
-  // Skip tutorial button click
-  if (skipTutorialBtn && tutorialHint) {
-    const rect = canvas.getBoundingClientRect();
-    const cx = e.clientX - rect.left;
-    const cy = e.clientY - rect.top;
-    if (cx >= skipTutorialBtn.x && cx <= skipTutorialBtn.x + skipTutorialBtn.w &&
-        cy >= skipTutorialBtn.y && cy <= skipTutorialBtn.y + skipTutorialBtn.h) {
-      sendMsg({ t: 'skip_tutorial' });
-      tutorialHint = null;
-      skipTutorialBtn = null;
-      return;
-    }
-  }
   // Dismiss NPC dialogue on click
   if (npcDialogueLines.length > 0) {
     hideDialoguePanel();
     return;
   }
   const { tx, ty } = getTileAt(e);
+
+  // Plugin tool dispatch — if a registered tool is active, route to it first
+  if (activeTool && activeTool.onMouseDown) {
+    const ctx = { layer: currentLayer, camera: { camX, camTopY, TILE, vtx: Math.ceil(canvas.width / TILE), vty: Math.ceil(canvas.height / TILE) }, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey };
+    const handled = activeTool.onMouseDown(e, { tx, ty }, ctx);
+    if (handled !== false) return;
+  }
 
   // Select tool: detect room at clicked tile
   if (selectToolActive) {
@@ -7944,6 +7178,36 @@ canvas.addEventListener('mousedown', (e) => {
     input.value = ''; input.focus();
     return;
   }
+  // Ruler tool
+  if (rulerActive) {
+    if (!rulerStart) { rulerStart = { x: tx, y: ty }; showChat(`Ruler start: (${tx}, ${ty})`, '#0ff'); }
+    else {
+      const dx = tx - rulerStart.x, dy = ty - rulerStart.y;
+      const dist = Math.sqrt(dx*dx + dy*dy).toFixed(1);
+      const manhattan = Math.abs(dx) + Math.abs(dy);
+      showChat(`Distance: ${dist} tiles (${Math.abs(dx)}x${Math.abs(dy)}, manhattan: ${manhattan})`, '#0ff');
+      rulerStart = null;
+    }
+    return;
+  }
+  // Stamp tool
+  if (stampMode === 'select') {
+    stampDragStart = { x: tx, y: ty }; stampDragging = true;
+    stampPreview = { x: tx, y: ty, w: 1, h: 1 };
+    return;
+  }
+  if (stampMode === 'place' && stampBuffer.length > 0) {
+    placeStamp(tx, ty); terrain3dBuilt.clear();
+    return;
+  }
+  // Spray brush
+  if (sprayActive) {
+    sprayOnce(tx, ty);
+    sprayTimer = setInterval(() => {
+      if (hoverWX !== -1) sprayOnce(hoverWX, hoverWY);
+    }, 80);
+    return;
+  }
   if (paintTool === 'pencil') {
     painting = true;
     // Check if tile has a diagonal wall — paint only the clicked half
@@ -7964,7 +7228,7 @@ canvas.addEventListener('mousedown', (e) => {
         return;
       }
     }
-    recordAndPaint(tx, ty);
+    recordAndPaintSym(tx, ty);
     return;
   }
 
@@ -8012,12 +7276,20 @@ canvas.addEventListener('mousedown', (e) => {
     return;
   }
 
+  // Shape tool: start drag
+  if (shapeTool) {
+    shapeDragStart = { x: tx, y: ty };
+    shapeDragging = true;
+    shapePreviewTiles = calcShapeTiles(tx, ty, tx, ty, shapeTool);
+    return;
+  }
+
   // Eraser tool: remove walls, doors, or paint water
   if (eraserActive) {
-    // Start eraser drag — will clear area on release
+    // Start eraser drag — will clear area on release (default 1x1 for single click)
     eraserDragStart = { x: tx, y: ty };
     eraserDragging = true;
-    eraserPreview = null;
+    eraserPreview = { x: tx, y: ty, w: 1, h: 1 };
     return;
   }
 
@@ -8049,7 +7321,36 @@ canvas.addEventListener('mousedown', (e) => {
     return;
   }
 
-  // Wall tool: drag to draw wall line (Sims 4 style)
+  // Corner placement: single-click places edges on one tile
+  if (wallToolActive && getActiveBuildCategory() === 'corners') {
+    const edges = placeCorner(tx, ty, cornerPlaceMode);
+    const undoOps = [];
+    const texKey = `${selectedWallTex.type}_${selectedWallTex.variant}`;
+    for (const edge of edges) {
+      const oldMask = getWallEdge(edge.x, edge.y);
+      const newMask = oldMask | edge.side;
+      if (newMask !== oldMask) {
+        setWallEdge(edge.x, edge.y, newMask);
+        sendMsg({ t: 'wall_edge', x: edge.x, y: edge.y, mask: newMask });
+        undoOps.push({ type: 'wall', x: edge.x, y: edge.y, oldMask, newMask });
+        setWallTex(edge.x, edge.y, texKey);
+        sendMsg({ t: 'wall_tex', x: edge.x, y: edge.y, tex: texKey });
+      }
+    }
+    if (undoOps.length > 0) { undoStack.push(undoOps); if (undoStack.length > MAX_UNDO) undoStack.shift(); redoStack.length = 0; }
+    terrain3dBuilt.clear(); roofs3dDirty = true;
+    return;
+  }
+
+  // Floor/Platform placement: start drag
+  if (wallToolActive && (getActiveBuildCategory() === 'floors' || getActiveBuildCategory() === 'platforms')) {
+    shapeDragStart = { x: tx, y: ty };
+    shapeDragging = true;
+    shapePreviewTiles = [{x: tx, y: ty}];
+    return;
+  }
+
+  // Wall/Railing tool: drag to draw wall line
   if (wallToolActive || roomToolActive) {
     const v = getNearestVertex(e);
     wallDragStart = { vx: v.vx, vy: v.vy, deleting: false };
@@ -8139,14 +7440,49 @@ canvas.addEventListener('mousedown', (e) => {
 });
 
 canvas.addEventListener('mouseup', (e) => {
+  // Plugin tool mouseup
+  if (activeTool && activeTool.onMouseUp) {
+    const { tx, ty } = getTileAt(e);
+    const ctx = { layer: currentLayer, camera: { camX, camTopY, TILE }, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey };
+    activeTool.onMouseUp(e, { tx, ty }, ctx);
+  }
   if (painting) { flushStroke(); painting = false; }
   if (mapDragging) { mapDragging = false; canvas.style.cursor = freeCam2d ? 'grab' : 'crosshair'; }
-  // Wall/Room tool: place walls on drag end
+  // Spray brush stop
+  if (sprayTimer) { clearInterval(sprayTimer); sprayTimer = null; flushStroke(); terrain3dBuilt.clear(); }
+  // Stamp selection complete
+  if (stampDragging && stampPreview) {
+    captureStamp(stampPreview.x, stampPreview.y, stampPreview.w, stampPreview.h);
+    stampDragging = false; stampDragStart = null; stampMode = 'place';
+  }
+  // Floor/Platform drag release
+  if (shapeDragging && shapeDragStart && wallToolActive) {
+    const cat = getActiveBuildCategory();
+    if (cat === 'floors') {
+      const { tx: ex, ty: ey } = getTileAt(e);
+      const minX = Math.min(shapeDragStart.x, ex), maxX = Math.max(shapeDragStart.x, ex);
+      const minY = Math.min(shapeDragStart.y, ey), maxY = Math.max(shapeDragStart.y, ey);
+      placeFloorArea(minX, minY, maxX, maxY, floorPlaceMode);
+      showChat(`${floorPlaceMode} floor placed (${maxX-minX+1}x${maxY-minY+1})`, '#3a7');
+      shapeDragging = false; shapeDragStart = null; shapePreviewTiles = [];
+    } else if (cat === 'platforms') {
+      const { tx: ex, ty: ey } = getTileAt(e);
+      const minX = Math.min(shapeDragStart.x, ex), maxX = Math.max(shapeDragStart.x, ex);
+      const minY = Math.min(shapeDragStart.y, ey), maxY = Math.max(shapeDragStart.y, ey);
+      placePlatformArea(minX, minY, maxX, maxY, platformPlaceMode);
+      showChat(`${platformPlaceMode} platform placed`, '#3a7');
+      shapeDragging = false; shapeDragStart = null; shapePreviewTiles = [];
+    }
+  }
+  // Wall/Room/Railing tool: place walls on drag end
   if (wallDragging && wallDragStart) {
     const v = getNearestVertex(e);
+    const cat = getActiveBuildCategory();
     const line = roomToolActive
       ? calcRoomWalls(wallDragStart.vx, wallDragStart.vy, v.vx, v.vy)
-      : calcWallLine(wallDragStart.vx, wallDragStart.vy, v.vx, v.vy);
+      : (cat === 'rails')
+        ? calcRailEdges(wallDragStart.vx, wallDragStart.vy, v.vx, v.vy, railPlaceMode)
+        : calcWallModeEdges(wallDragStart.vx, wallDragStart.vy, v.vx, v.vy, wallPlaceMode);
     const deleting = wallDragStart.deleting;
     const undoOps = [];
     const texKey = `${selectedWallTex.type}_${selectedWallTex.variant}`;
@@ -8171,6 +7507,14 @@ canvas.addEventListener('mouseup', (e) => {
       undoStack.push(undoOps);
       if (undoStack.length > MAX_UNDO) undoStack.shift();
       redoStack.length = 0;
+    }
+    // Pool mode: fill interior with water
+    if (wallPlaceMode === 'pool' && !deleting) {
+      const minX = Math.min(wallDragStart.vx, v.vx), maxX = Math.max(wallDragStart.vx, v.vx);
+      const minY = Math.min(wallDragStart.vy, v.vy), maxY = Math.max(wallDragStart.vy, v.vy);
+      const savedTile = paintTile; paintTile = T.WATER;
+      for (let y = minY; y < maxY; y++) for (let x = minX; x < maxX; x++) recordAndPaintSym(x, y);
+      flushStroke(); paintTile = savedTile;
     }
     wallDragging = false;
     wallDragStart = null;
@@ -8204,13 +7548,7 @@ canvas.addEventListener('mouseup', (e) => {
     roofPreview = null;
     terrain3dBuilt.clear(); roofs3dDirty = true;
   }
-});
-canvas.addEventListener('mouseleave', () => {
-  if (painting) { flushStroke(); painting = false; }
-  mapDragging = false;
-  panDragging = false;
-  if (wallDragging) { wallDragging = false; wallDragStart = null; wallPreview = []; }
-  if (roofDragging) { roofDragging = false; roofDragStart = null; roofPreview = null; }
+  // Eraser tool: clear area on drag end
   if (eraserDragging && eraserDragStart && eraserPreview) {
     const { x, y, w, h } = eraserPreview;
     const undoOps = [];
@@ -8243,6 +7581,40 @@ canvas.addEventListener('mouseleave', () => {
     showChat(`Cleared ${w}x${h} area`, '#f44');
     eraserDragging = false; eraserDragStart = null; eraserPreview = null;
   } else if (eraserDragging) { eraserDragging = false; eraserDragStart = null; eraserPreview = null; }
+  // Shape tool: paint all preview tiles on release
+  if (shapeDragging && shapePreviewTiles.length > 0) {
+    // Lot creation intercept — use shape tiles as lot boundary
+    if (lotCreating) {
+      const tileCopy = shapePreviewTiles.map(t => ({x: t.x, y: t.y}));
+      shapeDragging = false; shapeDragStart = null; shapePreviewTiles = [];
+      lotCreating = false;
+      // Show inline naming input instead of blocking prompt()
+      showLotNamer(tileCopy);
+      return; // don't run the rest of the shape handler
+    } else if (noiseFillActive) {
+      noiseFillTiles(shapePreviewTiles);
+    } else if (gradientActive && shapeDragStart) {
+      const { tx, ty } = getTileAt(e);
+      gradientFillTiles(shapePreviewTiles, shapeDragStart.x, shapeDragStart.y, tx, ty);
+    } else {
+      for (const t of shapePreviewTiles) recordAndPaintSym(t.x, t.y);
+      flushStroke();
+    }
+    if (!lotCreating) {
+      terrain3dBuilt.clear();
+      showChat(`${getShapeLabel()} placed`, '#0f0');
+    }
+    shapeDragging = false; shapeDragStart = null; shapePreviewTiles = [];
+  } else if (shapeDragging) { shapeDragging = false; shapeDragStart = null; shapePreviewTiles = []; }
+});
+canvas.addEventListener('mouseleave', () => {
+  if (painting) { flushStroke(); painting = false; }
+  mapDragging = false;
+  panDragging = false;
+  if (wallDragging) { wallDragging = false; wallDragStart = null; wallPreview = []; }
+  if (roofDragging) { roofDragging = false; roofDragStart = null; roofPreview = null; }
+  if (eraserDragging) { eraserDragging = false; eraserDragStart = null; eraserPreview = null; }
+  if (shapeDragging) { shapeDragging = false; shapeDragStart = null; shapePreviewTiles = []; }
 });
 canvas.addEventListener('mousemove', (e) => {
   if (!panDragging) return;
@@ -8258,8 +7630,8 @@ canvas.addEventListener('mousemove', (e) => {
   if (!mapDragging) return;
   const dx = e.clientX - mapDragLastX;
   const dy = e.clientY - mapDragLastY;
-  osrsMapOffX += dx / TILE;
-  osrsMapOffY -= dy / TILE; // y-flip
+  freeCamX += dx / TILE;
+  freeCamY -= dy / TILE; // y-flip
   mapDragLastX = e.clientX;
   mapDragLastY = e.clientY;
 });
@@ -8267,9 +7639,12 @@ canvas.addEventListener('mousemove', (e) => {
   // Wall/Room tool drag preview
   if (wallDragging && wallDragStart) {
     const v = getNearestVertex(e);
+    const cat = getActiveBuildCategory();
     wallPreview = roomToolActive
       ? calcRoomWalls(wallDragStart.vx, wallDragStart.vy, v.vx, v.vy)
-      : calcWallLine(wallDragStart.vx, wallDragStart.vy, v.vx, v.vy);
+      : (cat === 'rails')
+        ? calcRailEdges(wallDragStart.vx, wallDragStart.vy, v.vx, v.vy, railPlaceMode)
+        : calcWallModeEdges(wallDragStart.vx, wallDragStart.vy, v.vx, v.vy, wallPlaceMode);
   }
   // Roof tool drag preview
   if (roofDragging && roofDragStart) {
@@ -8284,16 +7659,46 @@ canvas.addEventListener('mousemove', (e) => {
     const minY = Math.min(eraserDragStart.y, ty), maxY = Math.max(eraserDragStart.y, ty);
     eraserPreview = { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
   }
+  if (shapeDragging && shapeDragStart && shapeTool) {
+    const { tx, ty } = getTileAt(e);
+    shapePreviewTiles = calcShapeTiles(shapeDragStart.x, shapeDragStart.y, tx, ty, shapeTool);
+  }
+  // Floor/Platform drag preview (reuses shape preview)
+  if (shapeDragging && shapeDragStart && !shapeTool && wallToolActive) {
+    const { tx, ty } = getTileAt(e);
+    const minX = Math.min(shapeDragStart.x, tx), maxX = Math.max(shapeDragStart.x, tx);
+    const minY = Math.min(shapeDragStart.y, ty), maxY = Math.max(shapeDragStart.y, ty);
+    const cat = getActiveBuildCategory();
+    if (cat === 'platforms') {
+      shapePreviewTiles = calcShapeTiles(shapeDragStart.x, shapeDragStart.y, tx, ty,
+        platformPlaceMode === 'triangle' ? 'triangle' : platformPlaceMode === 'octagon' ? 'filled_circle' : 'filled_rect');
+    } else {
+      shapePreviewTiles = [];
+      for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) shapePreviewTiles.push({x, y});
+    }
+  }
+  if (stampDragging && stampDragStart) {
+    const { tx, ty } = getTileAt(e);
+    const minX = Math.min(stampDragStart.x, tx), maxX = Math.max(stampDragStart.x, tx);
+    const minY = Math.min(stampDragStart.y, ty), maxY = Math.max(stampDragStart.y, ty);
+    stampPreview = { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+  }
+  // Plugin tool mousemove
+  if (activeTool && activeTool.onMouseMove) {
+    const { tx, ty } = getTileAt(e);
+    const ctx = { layer: currentLayer, camera: { camX, camTopY, TILE }, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey };
+    activeTool.onMouseMove(e, { tx, ty }, ctx);
+  }
   if (!painting || paintTool !== 'pencil') return;
   const { tx, ty } = getTileAt(e);
-  recordAndPaint(tx, ty);
+  recordAndPaintSym(tx, ty);
 });
 // Right-click context menu for tiles
 let ctxMenu = null;
 function showCtxMenu(x, y, items) {
   hideCtxMenu();
   const menu = document.createElement('div');
-  menu.style.cssText = `position:fixed;left:${x}px;top:${y}px;background:#1a1510;border:2px solid #5c4a2a;z-index:200;min-width:160px;font:12px 'RuneScape UF',monospace;`;
+  menu.style.cssText = `position:fixed;left:${x}px;top:${y}px;background:#1a1510;border:2px solid #5c4a2a;z-index:200;min-width:160px;font:12px 'Courier New',monospace;`;
   for (const item of items) {
     const opt = document.createElement('div');
     opt.textContent = item.label;
@@ -8307,7 +7712,12 @@ function showCtxMenu(x, y, items) {
   ctxMenu = menu;
 }
 function hideCtxMenu() { if (ctxMenu) { ctxMenu.remove(); ctxMenu = null; } }
-document.addEventListener('mousedown', (e) => { if (ctxMenu && !ctxMenu.contains(e.target)) hideCtxMenu(); });
+document.addEventListener('mousedown', (e) => {
+  if (ctxMenu && !ctxMenu.contains(e.target)) hideCtxMenu();
+  if (lotDropdownOpen && !document.getElementById('lot-menu').contains(e.target)) {
+    lotDropdownOpen = false; document.getElementById('lot-dropdown').style.display = 'none';
+  }
+});
 
 // WASD state for 3D movement
 const keysDown = new Set();
@@ -8440,15 +7850,13 @@ document.addEventListener('keydown', (e) => {
 
   // Use customizable keybinds — build keys only in build mode
   if (buildMode) {
-  if (matchesKeybind(e, 'build.select')) { document.getElementById('btn-select').click(); return; }
-  if (matchesKeybind(e, 'build.eraser')) { document.getElementById('btn-eraser').click(); return; }
-  if (matchesKeybind(e, 'build.wall')) { document.getElementById('btn-wall').click(); return; }
-  if (matchesKeybind(e, 'build.room')) { document.getElementById('btn-room').click(); return; }
-  if (matchesKeybind(e, 'build.door')) { document.getElementById('btn-door').click(); return; }
+  // Tool keybinds — routed through plugin tool system
+  if (matchesKeybind(e, 'build.wall')) { engine.setActiveTool('wall-tool'); return; }
+  if (matchesKeybind(e, 'build.eraser')) { engine.setActiveTool('eraser'); return; }
   if (matchesKeybind(e, 'build.pencil') && !mode3d) { setTool('pencil'); return; }
   if (matchesKeybind(e, 'build.bucket')) { setTool('bucket'); return; }
   if (matchesKeybind(e, 'build.eyedropper')) { setTool('tile_picker'); return; }
-  if (matchesKeybind(e, 'build.roof')) { document.getElementById('btn-roof').click(); return; }
+  if (matchesKeybind(e, 'build.roof')) { engine.setActiveTool('roof-tool'); return; }
   if (matchesKeybind(e, 'build.grid')) {
     showGrid = !showGrid;
     document.getElementById('btn-grid').classList.toggle('active', showGrid);
@@ -8491,15 +7899,11 @@ document.addEventListener('keydown', (e) => {
     } else {
       freeCam2d = !freeCam2d;
       if (freeCam2d) {
-        showOsrsMap = true;
-        // Center OSRS Lumbridge (3222, 3218) on the player's current position
-        if (osrsMapOffX === 0 && osrsMapOffY === 0) {
-          osrsMapOffX = myX - 3222;
-          osrsMapOffY = myY - 3218;
-        }
+        freeCamX = myX;
+        freeCamY = myY;
       }
       canvas.style.cursor = freeCam2d ? 'grab' : 'crosshair';
-      showChat(freeCam2d ? 'Drag to slide OSRS map, F to exit' : 'Map drag OFF', '#333');
+      showChat(freeCam2d ? 'Free cam ON — drag to pan, F to exit' : 'Free cam OFF', '#333');
     }
   }
   if (mode3d && (e.key === ']' || e.key === '[')) {
@@ -8512,8 +7916,8 @@ document.addEventListener('keydown', (e) => {
     showChat(`Height scale: ${heightScale.toFixed(4)} ([ decrease, ] increase)`, '#333');
   }
   if (matchesKeybind(e, 'game.map')) {
-    showOsrsMap = !showOsrsMap;
-    showChat(showOsrsMap ? 'OSRS map overlay ON' : 'OSRS map overlay OFF', '#333');
+    // Map overlay — no external map loaded yet
+    showChat('Map overlay not available yet', '#333');
   }
   if (matchesKeybind(e, 'build.toggleMode')) { e.preventDefault(); if (!buildMode) toggleBuildMode(); }
   if (matchesKeybind(e, 'game.playMode')) { e.preventDefault(); if (buildMode) toggleBuildMode(); }
@@ -8545,20 +7949,18 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'p' || e.key === 'P') { if (mode3d || !paintTool) { e.preventDefault(); takeScreenshot(); return; } }
   if (e.key === 'v' || e.key === 'V') { e.preventDefault(); startRecording(); return; }
   if (e.key === 'Escape') {
-    // If settings is open, close it
     if (settingsOpen) { closeSettings(); return; }
-    // Close any active tool/selection first
-    let closedSomething = false;
-    if (paintTool) { paintTool = null; updatePaintUI(); closedSomething = true; }
-    if (selectedRoom) { deselectRoom(); return; }
-    if (selectToolActive) { deactivateSelectTool(); return; }
-    if (wallToolActive) { wallToolActive = false; document.getElementById('btn-wall').classList.remove('active'); closedSomething = true; }
-    if (roomToolActive) { roomToolActive = false; document.getElementById('btn-room').classList.remove('active'); closedSomething = true; }
-    if (doorToolActive) { doorToolActive = false; document.getElementById('btn-door').classList.remove('active'); closedSomething = true; }
     const modal = document.getElementById('modal-overlay');
     if (modal.classList.contains('visible')) { modal.classList.remove('visible'); return; }
-    // If nothing was active, open settings
-    if (!closedSomething) { openSettings(); }
+    // Check if any tool is active
+    const hadTool = paintTool || wallToolActive || roomToolActive || doorToolActive || eraserActive ||
+      activeElevTool || shapeTool || sprayActive || stampMode || rulerActive || roofToolActive || selectToolActive ||
+      noiseFillActive || gradientActive;
+    clearAllTools();
+    updatePaintUI();
+    // Update all toolbar button states
+    document.querySelectorAll('#toolbar button.active').forEach(b => b.classList.remove('active'));
+    if (!hadTool) { openSettings(); }
   }
 });
 document.addEventListener('keyup', (e) => { keysDown.delete(e.key.toLowerCase()); });
@@ -8593,10 +7995,15 @@ document.getElementById('modal-name').addEventListener('keydown', (e) => {
 // ── Render ─────────────────────────────────────────────────────────────────────
 function render() {
   if (!connected) { requestAnimationFrame(render); return; }
-  // Pause main render when chargen is open to save GPU
   const cgOpen = document.getElementById('chargen-screen').style.display === 'flex';
   if (cgOpen) { requestAnimationFrame(render); return; }
-
+  try { _renderInner(); } catch(e) { if (!window._renderErr) { console.error('RENDER CRASH:', e); window._renderErr = true; } }
+  try { updateCombatUI(); } catch(e) {}
+  try { updateMinimap(); } catch(e) {}
+  try { updateClonedPanels(); } catch(e) {}
+  requestAnimationFrame(render);
+}
+function _renderInner() {
   // Smooth interpolation
   const lerpSpeed = 0.15;
   mySmX += (myX - mySmX) * lerpSpeed;
@@ -8630,48 +8037,9 @@ function render() {
     return [(wx - camX) * TILE, (camTopY - wy) * TILE];
   }
 
-  // OSRS map background
-  if (showOsrsMap) {
-    ctx.save();
-    ctx.translate(offX, offY);
-    const idealZ = Math.log2(TILE);
-    const z = Math.max(-4, Math.min(4, Math.round(idealZ)));
-    const tilesPerImg = 256 / Math.pow(2, z);
-
-    // Visible OSRS coordinate range (offset to slide map independently)
-    const leftX = camX - osrsMapOffX - 1;
-    const rightX = camX - osrsMapOffX + vtx + 1;
-    const topY = camTopY - osrsMapOffY + 1;
-    const bottomY = camTopY - osrsMapOffY - vty - 1;
-
-    const info1 = osrsTileInfo(leftX, bottomY, z);
-    const info2 = osrsTileInfo(rightX, topY, z);
-    const fxMin = Math.min(info1.fileX, info2.fileX);
-    const fxMax = Math.max(info1.fileX, info2.fileX);
-    const fyMin = Math.min(info1.fileY, info2.fileY);
-    const fyMax = Math.max(info1.fileY, info2.fileY);
-
-    for (let fy = fyMin; fy <= fyMax; fy++) {
-      for (let fx = fxMin; fx <= fxMax; fx++) {
-        const img = loadOsrsTile(z, fx, fy);
-        if (!(img instanceof Image) || !img.complete) continue;
-        // Each tile image covers a square of tilesPerImg OSRS tiles
-        // fileX * tilesPerImg = leftmost OSRS X of this image
-        // fileY corresponds to OSRS Y via the mejrs convention
-        const imgLeftX = fx * tilesPerImg + osrsMapOffX;
-        const imgTopY = (1 + fy) * tilesPerImg - 1 + osrsMapOffY;
-        const [sx, sy] = toScreen(imgLeftX, imgTopY);
-        const imgW = tilesPerImg * TILE;
-        ctx.drawImage(img, sx, sy, imgW, imgW);
-      }
-    }
-    ctx.restore();
-  }
-
   // Tiles
   ctx.save();
   ctx.translate(offX, offY);
-  if (showOsrsMap) ctx.globalAlpha = freeCam2d ? 0.15 : 0.3;
   for (let vy = 0; vy < vty; vy++) {
     for (let vx = 0; vx < vtx; vx++) {
       const wx = camX + vx, wy = camTopY - vy;
@@ -8721,7 +8089,6 @@ function render() {
       }
     }
   }
-  if (showOsrsMap) ctx.globalAlpha = 1.0;
 
   // ── Room Selection Highlight ────────────────────────────────────────
   if (selectedRoom && selectedRoom.size > 0) {
@@ -8809,6 +8176,45 @@ function render() {
     ctx.stroke();
   }
 
+  // Plugin render overlays
+  if (activeTool && activeTool.renderOverlay) {
+    try { activeTool.renderOverlay(ctx, { camX, camTopY, TILE, vtx: Math.ceil(canvas.width/TILE), vty: Math.ceil(canvas.height/TILE) }); } catch(e) {}
+  }
+  for (const [id, fn] of pluginRenderHandlers) {
+    try { fn(ctx, { camX, camTopY, TILE }); } catch(e) {}
+  }
+
+  // Lot boundaries
+  if (showLotBoundaries && (buildMode || showLotBoundaries)) {
+    for (const lot of gameLots) {
+      if (lot.layer !== currentLayer) continue;
+      // Build a Set for fast lookup of edge tiles
+      const tileSet = new Set(lot.tiles.map(t => `${t.x}_${t.y}`));
+      ctx.strokeStyle = lot.color || '#3a7';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = buildMode ? 0.7 : 0.3;
+      ctx.beginPath();
+      for (const t of lot.tiles) {
+        const sx = (t.x - camX) * TILE, sy = (camTopY - t.y - 1) * TILE;
+        // Only draw edges that border non-lot tiles
+        if (!tileSet.has(`${t.x}_${t.y - 1}`)) { ctx.moveTo(sx, sy + TILE); ctx.lineTo(sx + TILE, sy + TILE); }
+        if (!tileSet.has(`${t.x}_${t.y + 1}`)) { ctx.moveTo(sx, sy); ctx.lineTo(sx + TILE, sy); }
+        if (!tileSet.has(`${t.x - 1}_${t.y}`)) { ctx.moveTo(sx, sy); ctx.lineTo(sx, sy + TILE); }
+        if (!tileSet.has(`${t.x + 1}_${t.y}`)) { ctx.moveTo(sx + TILE, sy); ctx.lineTo(sx + TILE, sy + TILE); }
+      }
+      ctx.stroke();
+      // Label at center
+      ctx.globalAlpha = buildMode ? 0.9 : 0.4;
+      ctx.font = 'bold 11px monospace';
+      ctx.fillStyle = lot.color || '#3a7';
+      ctx.textAlign = 'center';
+      const lcx = (lot.cx - camX + 0.5) * TILE, lcy = (camTopY - lot.cy - 0.5) * TILE;
+      ctx.fillText(lot.name, lcx, lcy);
+      ctx.textAlign = 'left';
+    }
+    ctx.globalAlpha = 1.0;
+  }
+
   // Wall/Room tool drag preview (cyan)
   // Eraser preview (red rectangle)
   if (eraserDragging && eraserPreview) {
@@ -8821,6 +8227,109 @@ function render() {
     ctx.strokeStyle = 'rgba(255, 40, 40, 0.8)';
     ctx.lineWidth = 2;
     ctx.strokeRect(ex1, ey1, ew, eh);
+  }
+
+  // Shape tool preview (green tiles + label)
+  if (shapeDragging && shapePreviewTiles.length > 0) {
+    ctx.fillStyle = 'rgba(80, 220, 80, 0.35)';
+    ctx.strokeStyle = 'rgba(80, 220, 80, 0.8)';
+    ctx.lineWidth = 1;
+    for (const t of shapePreviewTiles) {
+      const sx = (t.x - camX) * TILE;
+      const sy = (camTopY - t.y - 1) * TILE;
+      ctx.fillRect(sx, sy, TILE, TILE);
+      ctx.strokeRect(sx, sy, TILE, TILE);
+    }
+    // Dimension label near cursor
+    const label = getShapeLabel();
+    if (label) {
+      ctx.font = 'bold 12px monospace';
+      const tw = ctx.measureText(label).width + 12;
+      const lx = lastMouseX + 16, ly = lastMouseY - 8;
+      ctx.fillStyle = 'rgba(0,0,0,0.8)';
+      ctx.fillRect(lx, ly - 14, tw, 20);
+      ctx.fillStyle = '#0f0';
+      ctx.fillText(label, lx + 6, ly);
+    }
+  }
+
+  // Stamp selection preview (blue)
+  if (stampDragging && stampPreview) {
+    const sx = (stampPreview.x - camX) * TILE;
+    const sy = (camTopY - stampPreview.y - stampPreview.h + 1) * TILE;
+    const sw = stampPreview.w * TILE;
+    const sh = stampPreview.h * TILE;
+    ctx.fillStyle = 'rgba(60, 120, 255, 0.2)';
+    ctx.fillRect(sx, sy, sw, sh);
+    ctx.strokeStyle = 'rgba(60, 120, 255, 0.8)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(sx, sy, sw, sh);
+    ctx.font = 'bold 12px monospace';
+    const label = `Copy ${stampPreview.w}x${stampPreview.h}`;
+    const tw = ctx.measureText(label).width + 12;
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect(lastMouseX + 16, lastMouseY - 22, tw, 20);
+    ctx.fillStyle = '#6af';
+    ctx.fillText(label, lastMouseX + 22, lastMouseY - 8);
+  }
+  // Stamp placement ghost (preview at cursor)
+  if (stampMode === 'place' && stampBuffer.length > 0 && hoverWX !== -1) {
+    ctx.globalAlpha = 0.4;
+    for (const s of stampBuffer) {
+      const sx = (hoverWX + s.dx - camX) * TILE;
+      const sy = (camTopY - (hoverWY + s.dy) - 1) * TILE;
+      ctx.fillStyle = s.color || getTileColor(0, 0, s.tile) || '#888';
+      ctx.fillRect(sx, sy, TILE, TILE);
+    }
+    ctx.globalAlpha = 1.0;
+    ctx.font = 'bold 12px monospace';
+    const label = `Paste ${stampBuffer.length} tiles`;
+    const tw = ctx.measureText(label).width + 12;
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect(lastMouseX + 16, lastMouseY - 22, tw, 20);
+    ctx.fillStyle = '#6af';
+    ctx.fillText(label, lastMouseX + 22, lastMouseY - 8);
+  }
+  // Ruler line
+  if (rulerActive && rulerStart && hoverWX !== -1) {
+    const x1s = (rulerStart.x + 0.5 - camX) * TILE;
+    const y1s = (camTopY - rulerStart.y - 0.5) * TILE;
+    const x2s = (hoverWX + 0.5 - camX) * TILE;
+    const y2s = (camTopY - hoverWY - 0.5) * TILE;
+    ctx.strokeStyle = '#ff0'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+    ctx.beginPath(); ctx.moveTo(x1s, y1s); ctx.lineTo(x2s, y2s); ctx.stroke();
+    ctx.setLineDash([]);
+    const dx = hoverWX - rulerStart.x, dy = hoverWY - rulerStart.y;
+    const dist = Math.sqrt(dx*dx+dy*dy).toFixed(1);
+    ctx.font = 'bold 12px monospace';
+    const label = `${dist} tiles (${Math.abs(dx)}x${Math.abs(dy)})`;
+    const tw = ctx.measureText(label).width + 12;
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect((x1s+x2s)/2 - tw/2, (y1s+y2s)/2 - 22, tw, 20);
+    ctx.fillStyle = '#ff0';
+    ctx.fillText(label, (x1s+x2s)/2 - tw/2 + 6, (y1s+y2s)/2 - 8);
+  }
+  // Symmetry axis overlay
+  if (symmetryMode !== 'none') {
+    const ox = (symmetryOriginX - camX) * TILE;
+    const oy = (camTopY - symmetryOriginY) * TILE;
+    ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+    if (symmetryMode === 'x' || symmetryMode === 'xy' || symmetryMode === 'radial4' || symmetryMode === 'radial8') {
+      ctx.strokeStyle = 'rgba(255,100,100,0.6)';
+      ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, canvas.height); ctx.stroke();
+    }
+    if (symmetryMode === 'y' || symmetryMode === 'xy' || symmetryMode === 'radial4' || symmetryMode === 'radial8') {
+      ctx.strokeStyle = 'rgba(100,100,255,0.6)';
+      ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(canvas.width, oy); ctx.stroke();
+    }
+    if (symmetryMode === 'radial8') {
+      ctx.strokeStyle = 'rgba(100,255,100,0.4)';
+      ctx.beginPath(); ctx.moveTo(ox - 999, oy - 999); ctx.lineTo(ox + 999, oy + 999); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ox + 999, oy - 999); ctx.lineTo(ox - 999, oy + 999); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    // Origin dot
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ox, oy, 3, 0, Math.PI*2); ctx.fill();
   }
 
   if (wallDragging && wallDragStart && (wallToolActive || roomToolActive)) {
@@ -9394,7 +8903,7 @@ function render() {
   // Coordinate display (bottom-center, outside translated context)
   {
     const myH = getTerrainHeight(myX, myY);
-    let coordText = `OSRS: (${myX}, ${myY}) H:${myH} L:${currentLayer}`;
+    let coordText = `Pos: (${myX}, ${myY}) H:${myH} L:${currentLayer}`;
     if (hoverWX !== -1 && hoverWY !== -1) {
       const hH = getTerrainHeight(hoverWX, hoverWY);
       coordText += `  Hover: (${hoverWX}, ${hoverWY}) H:${hH}`;
@@ -9407,48 +8916,6 @@ function render() {
     ctx.fillStyle = '#ff981f';
     ctx.fillText(coordText, cx + 6, canvas.height - 8);
   }
-
-  // Tutorial Island hint bar
-  if (tutorialHint) {
-    ctx.font = 'bold 14px monospace';
-    const hintText = '\u25B6 ' + tutorialHint;
-    const hw = ctx.measureText(hintText).width + 20;
-    const hx = (canvas.width - hw) / 2;
-    const r = squareCorners ? 0 : 8;
-    ctx.beginPath();
-    if (r > 0 && ctx.roundRect) ctx.roundRect(hx, 4, hw, 24, r);
-    else ctx.rect(hx, 4, hw, 24);
-    ctx.fillStyle = 'rgba(0,40,80,0.85)';
-    ctx.fill();
-    ctx.strokeStyle = '#0ff';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.fillStyle = '#0ff';
-    ctx.fillText(hintText, hx + 10, 21);
-
-    // Skip tutorial button
-    const skipText = '[Skip Tutorial]';
-    ctx.font = 'bold 12px monospace';
-    const sw = ctx.measureText(skipText).width + 16;
-    const sx = hx + hw + 8;
-    ctx.beginPath();
-    if (r > 0 && ctx.roundRect) ctx.roundRect(sx, 4, sw, 24, r);
-    else ctx.rect(sx, 4, sw, 24);
-    ctx.fillStyle = 'rgba(80,0,0,0.85)';
-    ctx.fill();
-    ctx.strokeStyle = '#f44';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.fillStyle = '#f44';
-    ctx.fillText(skipText, sx + 8, 21);
-    // Store for click detection
-    skipTutorialBtn = { x: sx, y: 4, w: sw, h: 24 };
-  }
-
-  updateCombatUI();
-  updateMinimap();
-  updateClonedPanels();
-  requestAnimationFrame(render);
 }
 
 // ── 3D Mode ─────────────────────────────────────────────────────────────────────
@@ -9465,7 +8932,7 @@ let cam3dTargetX = 0, cam3dTargetZ = 0;
 const gltfLoader = typeof THREE !== 'undefined' && THREE.GLTFLoader ? new THREE.GLTFLoader() : null;
 const modelCache = {};       // name → THREE.Group (template)
 const modelLoadingSet = new Set();
-const MODEL_SCALE = 0.008;   // RS2 units → game tiles (1 tile ≈ 1 unit)
+const MODEL_SCALE = 0.008;   // model units → game tiles (1 tile ≈ 1 unit)
 
 // Build model filename from NPC/object name + defId (matches auto-exporter output)
 function npcModelName(name, defId) {
@@ -9520,7 +8987,7 @@ function makeTextSprite(text, color) {
   const ctx = c.getContext('2d');
   ctx.fillStyle = 'rgba(0,0,0,0.6)';
   ctx.fillRect(0, 0, 256, 48);
-  ctx.font = 'bold 22px RuneScape UF, Courier New, monospace';
+  ctx.font = 'bold 22px Courier New, Courier New, monospace';
   ctx.fillStyle = color || '#ffff00';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -9654,9 +9121,12 @@ function init3D() {
     if (wall3dDragging && wall3dDragStart) {
       const hit = raycastTile(e);
       if (hit) {
+        const cat3d = getActiveBuildCategory();
         wallPreview = roomToolActive
           ? calcRoomWalls(wall3dDragStart.vx, wall3dDragStart.vy, hit.vx, hit.vy)
-          : calcWallLine(wall3dDragStart.vx, wall3dDragStart.vy, hit.vx, hit.vy);
+          : (cat3d === 'rails')
+            ? calcRailEdges(wall3dDragStart.vx, wall3dDragStart.vy, hit.vx, hit.vy, railPlaceMode)
+            : calcWallModeEdges(wall3dDragStart.vx, wall3dDragStart.vy, hit.vx, hit.vy, wallPlaceMode);
         // Update 3D preview mesh
         if (wall3dPreviewMesh) { scene3d.remove(wall3dPreviewMesh); wall3dPreviewMesh = null; }
         if (wallPreview.length > 0) {
@@ -10228,22 +9698,6 @@ function updateEntities3D() {
       scene3d.add(capsule);
       npc3dMeshes.set(npc.id, capsule);
 
-      // Try to load actual RS2 model and replace capsule
-      const primaryName = npcModelName(npc.name, npc.did);
-      const fallbackName = NPC_MODEL_FALLBACK[npc.name] || null;
-      const tryName = primaryName || fallbackName;
-      if (tryName && !modelNotFound.has(tryName)) {
-        const npcId = npc.id;
-        loadModel(tryName, (template) => {
-          const old = npc3dMeshes.get(npcId);
-          if (old) scene3d.remove(old);
-          const obj = template.clone();
-          obj.userData.isFallback = false;
-          scene3d.add(obj);
-          npc3dMeshes.set(npcId, obj);
-        }, fallbackName);
-      }
-
       // Name label
       const label = makeTextSprite(npc.name || 'NPC', '#ffff00');
       label.position.set(npc.x + 0.5, h + 2.5, -(npc.y + 0.5));
@@ -10281,12 +9735,14 @@ function updateEntities3D() {
     const sh = getTerrainHeight(Math.floor(sx), Math.floor(sy));
 
     if (!player3dMeshes.has(p.id)) {
-      const group = new THREE.Group();
-      group.userData.isFallback = true;
-      scene3d.add(group);
-      player3dMeshes.set(p.id, group);
-
-      loadCodexPlayerModel(group, [230, 28515, 26632, 176, 28285, 181]);
+      // Fallback: cyan capsule for other players
+      const capsGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.4, 8);
+      const capsMat = new THREE.MeshLambertMaterial({ color: 0x00cccc });
+      const capsule = new THREE.Mesh(capsGeo, capsMat);
+      capsule.castShadow = true;
+      capsule.userData.isFallback = true;
+      scene3d.add(capsule);
+      player3dMeshes.set(p.id, capsule);
 
       const kp = knownPlayers.find(k => k.id === p.id);
       const pName = kp ? kp.name : `Player ${p.id}`;
@@ -10313,231 +9769,15 @@ function updateEntities3D() {
   // My player
   const myH = getTerrainHeight(myX, myY);
   if (!myPlayer3dMesh) {
-    myPlayer3dMesh = new THREE.Group();
+    // Fallback: white capsule for local player
+    const capsGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.4, 8);
+    const capsMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    myPlayer3dMesh = new THREE.Mesh(capsGeo, capsMat);
+    myPlayer3dMesh.castShadow = true;
     myPlayer3dMesh.userData.isFallback = true;
     scene3d.add(myPlayer3dMesh);
-
-    // Load player model from codex asset-cache
-    const codexIds = (window.codexModelIds && window.codexModelIds.length > 0)
-      ? window.codexModelIds
-      : [230, 28515, 26632, 176, 28285, 181]; // default male kit: hair, torso, arms, hands, legs, feet
-    loadCodexPlayerModel(myPlayer3dMesh, codexIds);
   }
-  myPlayer3dMesh.position.set(myX + 0.5, myH, -(myY + 0.5));
-}
-
-let playerMesh3d = null; // kept for compat
-
-// Cache for in-game kit models
-const kitModelCache = {};
-
-// Animation system
-const animGltfCache = {}; // name → { scene, clips }
-const playerAnimMixers = new Map(); // playerId → AnimationMixer
-const playerAnimState = new Map(); // playerId → { current, mixer, mesh }
-let myAnimState = null;
-let animClock = new (typeof THREE !== 'undefined' ? THREE.Clock : Object)();
-
-const ANIM_FILES = {
-  idle: 'anim_808_idle',
-  walk: 'anim_819_walk',
-  run: 'anim_824_run',
-  punch: 'anim_422_punch',
-  kick: 'anim_423_kick',
-  slash: 'anim_412_slash',
-  chop: 'anim_390_chop',
-  bow: 'anim_7618_bow',
-  magic: 'anim_711_magic',
-  death: 'anim_836_death',
-  mine: 'anim_2561_mine',
-  fish: 'anim_896_fish',
-};
-
-function loadAnimatedPlayer(playerId, group, startAnim) {
-  const animName = startAnim || 'idle';
-  const fileName = ANIM_FILES[animName];
-  if (!fileName) return;
-
-  const loader = gltfLoader || (typeof THREE !== 'undefined' && THREE.GLTFLoader ? new THREE.GLTFLoader() : null);
-  if (!loader) return;
-
-  const doLoad = (cached) => {
-    // Remove old children
-    while (group.children.length) group.remove(group.children[0]);
-
-    const model = cached.scene.clone();
-    model.traverse(child => {
-      if (child.isMesh && child.geometry) child.geometry.computeVertexNormals();
-    });
-    group.add(model);
-    group.rotation.y = Math.PI;
-    group.userData.isFallback = false;
-
-    // Set up animation mixer
-    if (cached.clips && cached.clips.length > 0) {
-      const mixer = new THREE.AnimationMixer(model);
-      const clip = cached.clips[0];
-      const action = mixer.clipAction(clip);
-      action.play();
-
-      const state = { current: animName, mixer, model, group };
-      if (playerId === 'me') {
-        myAnimState = state;
-      } else {
-        playerAnimState.set(playerId, state);
-      }
-    }
-  };
-
-  if (animGltfCache[fileName]) {
-    doLoad(animGltfCache[fileName]);
-  } else {
-    loader.load(`/models/${fileName}.gltf`, (gltf) => {
-      animGltfCache[fileName] = { scene: gltf.scene, clips: gltf.animations };
-      doLoad(animGltfCache[fileName]);
-    }, undefined, () => {
-      // Fallback to kit models if animation GLTF not found
-      loadPlayerKitModels(playerId, null, group);
-    });
-  }
-}
-
-function switchPlayerAnim(playerId, animName) {
-  const state = playerId === 'me' ? myAnimState : playerAnimState.get(playerId);
-  if (!state || state.current === animName) return;
-  if (!ANIM_FILES[animName]) return;
-
-  const group = state.group;
-  loadAnimatedPlayer(playerId, group, animName);
-}
-
-function updateAnimMixers() {
-  const delta = animClock.getDelta();
-  if (myAnimState && myAnimState.mixer) myAnimState.mixer.update(delta);
-  for (const [, state] of playerAnimState) {
-    if (state.mixer) state.mixer.update(delta);
-  }
-}
-
-// Load player model from codex cache model IDs
-function loadCodexPlayerModel(group, modelIds) {
-  group.rotation.y = Math.PI;
-
-  // Fetch each model as JSON and build meshes manually (avoids CORS issues with GLTFLoader)
-  for (const mid of modelIds) {
-    fetch('/api/model/' + mid)
-      .then(r => r.json())
-      .then(model => {
-        if (!model || !model.vertices) return;
-        const scale = 1 / 128;
-        const geo = new THREE.BufferGeometry();
-        const vc = model.vertices.length;
-        const positions = new Float32Array(vc * 3);
-        for (let i = 0; i < vc; i++) {
-          positions[i*3] = model.vertices[i][0] * scale;
-          positions[i*3+1] = -model.vertices[i][1] * scale;
-          positions[i*3+2] = model.vertices[i][2] * scale;
-        }
-        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-        // Vertex colors from face colors
-        if (model.faceColors && model.faces) {
-          const colors = new Float32Array(vc * 3);
-          const counts = new Uint8Array(vc);
-          for (let i = 0; i < model.faces.length; i++) {
-            const hsl = model.faceColors[i] || 0;
-            const rgb = rsHslToRgbThree(hsl);
-            for (const vi of model.faces[i]) {
-              if (vi >= 0 && vi < vc) {
-                colors[vi*3] += rgb[0]; colors[vi*3+1] += rgb[1]; colors[vi*3+2] += rgb[2];
-                counts[vi]++;
-              }
-            }
-          }
-          for (let i = 0; i < vc; i++) {
-            const c = counts[i] || 1;
-            colors[i*3] /= c; colors[i*3+1] /= c; colors[i*3+2] /= c;
-          }
-          geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-        }
-
-        // Faces
-        const indices = [];
-        for (const f of model.faces) indices.push(f[0], f[1], f[2]);
-        geo.setIndex(indices);
-        geo.computeVertexNormals();
-
-        const mat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
-        const mesh = new THREE.Mesh(geo, mat);
-        group.add(mesh);
-        group.userData.isFallback = false;
-      })
-      .catch(e => console.warn('Codex model', mid, 'failed:', e));
-  }
-}
-
-function rsHslToRgbThree(hsl) {
-  const h = (hsl >> 10) & 0x3F, s = (hsl >> 7) & 0x07, l = hsl & 0x7F;
-  const hue = h / 63, sat = s / 7, lit = l / 127;
-  const c = (1 - Math.abs(2 * lit - 1)) * sat;
-  const x = c * (1 - Math.abs((hue * 6) % 2 - 1));
-  const m = lit - c / 2;
-  let r, g, b;
-  const hi = Math.floor(hue * 6) % 6;
-  if (hi === 0) { r=c; g=x; b=0; } else if (hi === 1) { r=x; g=c; b=0; }
-  else if (hi === 2) { r=0; g=c; b=x; } else if (hi === 3) { r=0; g=x; b=c; }
-  else if (hi === 4) { r=x; g=0; b=c; } else { r=c; g=0; b=x; }
-  return [Math.max(0,Math.min(1,r+m)), Math.max(0,Math.min(1,g+m)), Math.max(0,Math.min(1,b+m))];
-}
-
-// Load kit GLTF models into a player group based on appearance
-function loadPlayerKitModels(playerId, appearance, group) {
-  const bt = (appearance && appearance.bodyType) || 'A';
-  const kits = KIT_MODELS[bt];
-  if (!kits) {
-    loadModel('npc_man', (template) => {
-      const obj = template.clone();
-      group.add(obj);
-      group.userData.isFallback = false;
-    });
-    return;
-  }
-
-  // Rotate 180 so character faces forward (OSRS models face -Z, Three.js faces +Z)
-  group.rotation.y = Math.PI;
-
-  const slots = ['HEAD', 'TORSO', 'ARMS', 'HANDS', 'LEGS', 'FEET', 'JAW'];
-  const stateKeys = { HEAD: 'head', TORSO: 'torso', ARMS: 'arms', HANDS: 'hands', LEGS: 'legs', FEET: 'feet', JAW: 'jaw' };
-  const loader = gltfLoader || (typeof THREE !== 'undefined' && THREE.GLTFLoader ? new THREE.GLTFLoader() : null);
-  if (!loader) return;
-
-  for (const slot of slots) {
-    const options = kits[slot];
-    if (!options || options.length === 0) continue;
-    const idx = Math.min((appearance && appearance[stateKeys[slot]]) || 0, options.length - 1);
-    const modelNames = options[idx];
-
-    for (const modelName of modelNames) {
-      if (kitModelCache[modelName]) {
-        const part = kitModelCache[modelName].clone();
-        part.userData.kitSlot = slot;
-        group.add(part);
-        group.userData.isFallback = false;
-      } else {
-        loader.load(`/models/${modelName}.gltf`, (gltf) => {
-          const template = gltf.scene;
-          template.traverse(child => {
-            if (child.isMesh && child.geometry) child.geometry.computeVertexNormals();
-          });
-          kitModelCache[modelName] = template;
-          const part = template.clone();
-          part.userData.kitSlot = slot;
-          group.add(part);
-          group.userData.isFallback = false;
-          }, undefined, () => {});
-      }
-    }
-  }
+  myPlayer3dMesh.position.set(myX + 0.5, myH + 0.7, -(myY + 0.5));
 }
 
 function update3D() {
@@ -10671,7 +9911,7 @@ function toggle3D() {
     camera3d.updateProjectionMatrix();
     cam3dTargetX = myX; cam3dTargetZ = -myY;
     clearScene3D();
-    showChat('3D Mode ON — RS2 models loaded! (WASD, drag orbit, scroll zoom)', '#333');
+    showChat('3D Mode ON (WASD, drag orbit, scroll zoom)', '#333');
     (function animate3d() {
       if (!mode3d) return;
       update3D();
@@ -10760,8 +10000,6 @@ window.game = {
   getHeight: (x, y) => getTileHeight(x, y),
 
   // Map overlay
-  osrsMap: (on) => { showOsrsMap = on !== false; return `OSRS map: ${showOsrsMap}`; },
-  slideMap: (dx, dy) => { osrsMapOffX += dx; osrsMapOffY += dy; return `Map offset: (${osrsMapOffX}, ${osrsMapOffY})`; },
 
   // Roof
   placeRoof: (x, y, w, h, type, pitch) => {
@@ -10806,6 +10044,128 @@ window.game = {
     return 'Logging in as ' + (name || 'Claude');
   },
 };
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── Client Plugin System ────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+const clientLoadedPlugins = new Map();
+const registeredTools = new Map();
+const registeredBuildTabs = [];
+const registeredPanels = [];
+const pluginRenderHandlers = new Map();
+const clientPluginEventHandlers = new Map();
+const clientPluginMessageHandlers = new Map();
+let activeTool = null;
+
+const clientEngine = {
+  side: 'client',
+  T,
+  // Network
+  send: sendMsg,
+  onMessage(type, handler) {
+    if (!clientPluginMessageHandlers.has(type)) clientPluginMessageHandlers.set(type, []);
+    clientPluginMessageHandlers.get(type).push(handler);
+  },
+  // Tool system
+  registerTool(def) {
+    registeredTools.set(def.id, def);
+    if (def.keybind) {
+      defaultKeybinds[def.keybind.action] = { key: def.keybind.key, label: def.keybind.label, category: def.keybind.category || 'Plugins' };
+      if (!keybinds[def.keybind.action]) keybinds[def.keybind.action] = { ...defaultKeybinds[def.keybind.action] };
+    }
+  },
+  getActiveTool() { return activeTool; },
+  setActiveTool(toolId) {
+    if (activeTool && activeTool.onDeactivate) activeTool.onDeactivate();
+    clearAllTools();
+    activeTool = registeredTools.get(toolId) || null;
+    if (activeTool && activeTool.onActivate) activeTool.onActivate();
+    if (activeTool && activeTool.cursor) canvas.style.cursor = activeTool.cursor;
+  },
+  clearTool() {
+    if (activeTool && activeTool.onDeactivate) activeTool.onDeactivate();
+    clearAllTools();
+    activeTool = null;
+    canvas.style.cursor = 'crosshair';
+  },
+  // Build tabs
+  registerBuildTab(def) { registeredBuildTabs.push(def); },
+  // Panels
+  registerPanel(def) { registeredPanels.push(def); },
+  openPanel(id) { /* TODO */ },
+  closePanel(id) { /* TODO */ },
+  // Keybinds
+  registerKeybind(action, def) {
+    defaultKeybinds[action] = def;
+    if (!keybinds[action]) keybinds[action] = { ...def };
+  },
+  // Render overlay
+  onRender(id, fn) { pluginRenderHandlers.set(id, fn); },
+  offRender(id) { pluginRenderHandlers.delete(id); },
+  // World read/write
+  tileAt: (x, y) => tileAt(x, y),
+  getColor: (x, y) => getColor(x, y),
+  getWallEdge: (x, y) => getWallEdge(x, y),
+  getDoorEdge: (x, y) => getDoorEdge(x, y),
+  getTileHeight: (x, y) => getTileHeight(x, y),
+  getVariant: (x, y) => tileVariants.get(`${currentLayer}_${x}_${y}`) || 0,
+  setLocalTile, setLocalColor,
+  setVariant: (x, y, v) => { const k = `${currentLayer}_${x}_${y}`; if (v) tileVariants.set(k, v); else tileVariants.delete(k); },
+  currentLayer: () => currentLayer,
+  // Textures (read-only access to the texture system)
+  allTextures, tileTexCanvases, TILE_NAMES, T,
+  getTileAt: (e) => getTileAt(e),
+  getNearestVertex: typeof getNearestVertex !== 'undefined' ? getNearestVertex : null,
+  // Player
+  myId: () => myId,
+  myPos: () => ({ x: myX, y: myY }),
+  myLayer: () => currentLayer,
+  // Chat
+  showChat,
+  // Dependencies
+  require(id) {
+    const p = clientLoadedPlugins.get(id);
+    if (!p) throw new Error(`Plugin "${id}" not loaded on client`);
+    return p.api;
+  },
+  // Events
+  on(event, handler) {
+    if (!clientPluginEventHandlers.has(event)) clientPluginEventHandlers.set(event, []);
+    clientPluginEventHandlers.get(event).push(handler);
+  },
+  emit(event, ...args) {
+    const handlers = clientPluginEventHandlers.get(event);
+    if (handlers) for (const h of handlers) try { h(...args); } catch(e) { console.error(`[plugin:event] ${event}:`, e.message); }
+  },
+};
+
+// Route plugin messages from server
+const _origHandleServerMsg = handleServerMsg;
+handleServerMsg = function(msg) {
+  _origHandleServerMsg(msg);
+  const handlers = clientPluginMessageHandlers.get(msg.t);
+  if (handlers) for (const h of handlers) try { h(msg); } catch(e) { console.error(`[plugin:msg] ${msg.t}:`, e.message); }
+};
+
+// Load client-side plugins
+function loadClientPlugins() {
+  const plugins = window.__plugins || {};
+  for (const [id, plugin] of Object.entries(plugins)) {
+    if (!plugin.client || !plugin.client.init) continue;
+    try {
+      for (const dep of (plugin.meta.depends || [])) {
+        if (!clientLoadedPlugins.has(dep)) throw new Error(`Missing dependency: ${dep}`);
+      }
+      plugin.client.init(clientEngine);
+      clientLoadedPlugins.set(id, { meta: plugin.meta, api: (plugin.client.api) || {} });
+      console.log(`[plugin] Client loaded: ${plugin.meta.name}`);
+    } catch (e) { console.error(`[plugin] Client error loading ${id}:`, e.message); }
+  }
+}
+loadClientPlugins();
+
+// Expose engine for debugging
+window.engine = clientEngine;
 </script>
 </body>
 </html>

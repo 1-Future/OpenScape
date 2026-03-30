@@ -1,13 +1,14 @@
 {
   "name": "openscape",
   "version": "1.0.0",
-  "description": "Open source browser RPG engine inspired by OSRS",
+  "description": "Open source browser RPG world builder and game engine",
   "private": true,
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "fastify": "^5.8.4",
+    "sharp": "^0.34.5",
     "ws": "^8.16.0"
   }
 }

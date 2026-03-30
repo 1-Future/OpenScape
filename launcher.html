@@ -345,7 +345,7 @@ html, body {
   background: linear-gradient(135deg, #1a1a2e 0%, #0f1929 100%);
 }
 
-/* Tutorial Island mockup */
+/* Island mockup */
 .mock-island {
   position: absolute; inset: 0;
   background: linear-gradient(180deg, #87CEEB 0%, #5BA3D9 30%, #228B22 30%, #1a6b1a 50%, #c2b280 50%, #2E8B57 60%, #1a5030 100%);
@@ -828,35 +828,6 @@ html, body {
       <div class="section-title">Devlog</div>
     </div>
     <div class="news-grid">
-      <!-- Tutorial Island -->
-      <a href="https://1-future.github.io/openscape/posts/tutorial-island.html" target="_blank" class="news-card fade-in fade-in-5">
-        <div class="news-thumb">
-          <div class="news-thumb-inner" style="background: #0a1510;">
-            <div class="thumb-mockup">
-              <div class="mock-island"></div>
-              <div class="mock-island-water"></div>
-              <!-- NPC dots -->
-              <div style="position:absolute;top:35%;left:30%;width:6px;height:6px;background:#ff0;border-radius:50%;box-shadow:0 0 4px #ff0;"></div>
-              <div style="position:absolute;top:40%;left:55%;width:6px;height:6px;background:#ff0;border-radius:50%;box-shadow:0 0 4px #ff0;"></div>
-              <div style="position:absolute;top:32%;left:70%;width:6px;height:6px;background:#ff0;border-radius:50%;box-shadow:0 0 4px #ff0;"></div>
-              <!-- Player -->
-              <div style="position:absolute;top:38%;left:42%;width:6px;height:6px;background:#fff;border-radius:50%;box-shadow:0 0 6px #fff;"></div>
-              <!-- Hint bar -->
-              <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,40,80,0.85);border:1px solid #0ff;border-radius:3px;padding:2px 8px;font-family:monospace;font-size:6px;color:#0ff;white-space:nowrap;">Talk to the Gielinor Guide</div>
-              <!-- Dialogue -->
-              <div style="position:absolute;bottom:8px;left:8px;right:8px;background:rgba(10,15,12,0.9);border:1px solid rgba(212,168,83,0.3);border-radius:4px;padding:6px;font-family:monospace;font-size:6px;color:rgba(255,255,255,0.7);line-height:1.5;">
-                <div style="color:var(--gold);margin-bottom:2px;font-weight:bold;">Gielinor Guide</div>
-                Welcome to Tutorial Island!<br>Let me show you around...
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="news-body">
-          <div class="news-tag tag-feature">Feature</div>
-          <div class="news-card-title">Tutorial Island Launch</div>
-          <div class="news-date">7 March 2026</div>
-        </div>
-      </a>
 
       <!-- Combat System -->
       <a href="https://1-future.github.io/openscape/posts/combat-system.html" target="_blank" class="news-card fade-in fade-in-5">
@@ -900,49 +871,11 @@ html, body {
         </div>
         <div class="news-body">
           <div class="news-tag tag-combat">Combat</div>
-          <div class="news-card-title">OSRS Combat Styles & Projectile Delays</div>
+          <div class="news-card-title">Combat Styles & Projectile Delays</div>
           <div class="news-date">7 March 2026</div>
         </div>
       </a>
 
-      <!-- OSRS Sync -->
-      <a href="https://1-future.github.io/openscape/posts/osrs-sync.html" target="_blank" class="news-card fade-in fade-in-6">
-        <div class="news-thumb">
-          <div class="news-thumb-inner" style="background:#0a0e18;">
-            <div class="thumb-mockup">
-              <!-- Data flow visualization -->
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:20px;">
-                <!-- OSRS side -->
-                <div style="text-align:center;">
-                  <div style="width:40px;height:40px;background:rgba(212,168,83,0.15);border:1px solid rgba(212,168,83,0.3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto 4px;">🎮</div>
-                  <div style="font-family:monospace;font-size:6px;color:var(--gold);">OSRS</div>
-                </div>
-                <!-- Arrow flow -->
-                <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
-                  <div style="width:40px;height:1px;background:linear-gradient(90deg,var(--gold),var(--cyan));"></div>
-                  <div style="font-family:monospace;font-size:5px;color:var(--cyan);">WebSocket</div>
-                  <div style="width:40px;height:1px;background:linear-gradient(90deg,var(--gold),var(--cyan));"></div>
-                </div>
-                <!-- OpenScape side -->
-                <div style="text-align:center;">
-                  <div style="width:40px;height:40px;background:rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto 4px;">🌐</div>
-                  <div style="font-family:monospace;font-size:6px;color:var(--cyan);">OpenScape</div>
-                </div>
-              </div>
-              <!-- Data labels floating -->
-              <div style="position:absolute;top:10px;left:10px;font-family:monospace;font-size:5px;color:rgba(34,197,94,0.6);">NPC stats</div>
-              <div style="position:absolute;top:20px;right:10px;font-family:monospace;font-size:5px;color:rgba(34,197,94,0.6);">item IDs</div>
-              <div style="position:absolute;bottom:20px;left:10px;font-family:monospace;font-size:5px;color:rgba(34,197,94,0.6);">animations</div>
-              <div style="position:absolute;bottom:10px;right:10px;font-family:monospace;font-size:5px;color:rgba(34,197,94,0.6);">combat data</div>
-            </div>
-          </div>
-        </div>
-        <div class="news-body">
-          <div class="news-tag tag-engine">Engine</div>
-          <div class="news-card-title">OSRS Sync — Real-Time Data Mirroring</div>
-          <div class="news-date">7 March 2026</div>
-        </div>
-      </a>
     </div>
   </div>
 
@@ -961,7 +894,7 @@ html, body {
       <div class="field-label">Game Version</div>
       <select class="field-select" id="version-select">
         <option>v0.2.0 — UI Customization</option>
-        <option>v0.1.0 — Tutorial Island</option>
+        <option>v0.1.0 — Initial Release</option>
       </select>
     </div>
 
@@ -995,7 +928,7 @@ html, body {
       </div>
       <div class="version-row">
         <span class="version-label">Data</span>
-        <span class="version-val">OSRS Cache r226</span>
+        <span class="version-val">Original</span>
       </div>
     </div>
 

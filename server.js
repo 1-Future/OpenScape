@@ -2,7 +2,6 @@ const WebSocket = require('ws');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const tutorial = require('./tutorial-island');
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const PORT = 2222;
@@ -11,7 +10,6 @@ const STATE_INTERVAL = 1;
 const SAVE_INTERVAL_MS = 30000;
 const DATA_DIR = path.join(__dirname, 'data');
 const CHUNKS_DIR = path.join(DATA_DIR, 'chunks');
-const TILE_DATA_DIR = path.join(DATA_DIR, 'tile-data');
 const NAMES_FILE = path.join(DATA_DIR, 'names.json');
 const FRIENDS_FILE = path.join(DATA_DIR, 'friends.json');
 const WALLS_FILE = path.join(DATA_DIR, 'walls.json');
@@ -31,7 +29,7 @@ const VIEW_DIST = 3;
 const ENTITY_VIEW = (VIEW_DIST + 1) * CHUNK_SIZE;
 const SPAWN_X = 100, SPAWN_Y = 100;
 
-// ── Tick Queue System (OSRS-authentic action scheduling) ─────────────────────
+// ── Tick Queue System ────────────────────────────────────────────────────────
 // Actions are scheduled for a future tick and run in priority order:
 //   0 = movement, 1 = player actions, 2 = NPC actions, 3 = world events
 // Usage: schedule(tick + 4, 1, 'player:3:attack', () => { ... })
@@ -78,81 +76,6 @@ const T = {
   FLOOR: 7, DOOR: 8, BRIDGE: 9, FISH_SPOT: 10, FLOWER: 11, BUSH: 12,
   DARK_GRASS: 13, CUSTOM: 14
 };
-
-// ── OSRS Terrain Data ─────────────────────────────────────────────────────────
-const underlayRgb = {}; // id -> '#rrggbb'
-const overlayRgb = {}; // id -> { hex, texture, hideUnderlay }
-const terrainCache = new Map(); // 'cx_cy' -> Uint8Array(64*64*3) RGB per tile
-const collisionCache = new Map(); // 'cx_cy' -> Uint8Array(64*64) settings flags per tile
-
-function loadTerrainDefs() {
-  try {
-    const ul = JSON.parse(fs.readFileSync(path.join(TILE_DATA_DIR, 'underlays-rgb.json'), 'utf8'));
-    for (const u of ul) underlayRgb[u.id] = u.hex;
-    const ol = JSON.parse(fs.readFileSync(path.join(TILE_DATA_DIR, 'overlays-rgb.json'), 'utf8'));
-    for (const o of ol) overlayRgb[o.id] = { hex: o.hex, texture: o.texture, hide: o.hideUnderlay };
-    console.log(`[terrain] Loaded ${ul.length} underlays, ${ol.length} overlays`);
-  } catch (e) {
-    console.log('[terrain] No terrain definitions found, using default colors');
-  }
-}
-
-function loadTerrainChunk(cx, cy) {
-  const key = `${cx}_${cy}`;
-  if (terrainCache.has(key)) return terrainCache.get(key);
-  const filePath = path.join(TILE_DATA_DIR, `${cx}_${cy}.json`);
-  if (!fs.existsSync(filePath)) { terrainCache.set(key, null); return null; }
-  try {
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    // Build RGB array: 64*64*3 bytes
-    const rgb = new Uint8Array(64 * 64 * 3);
-    for (let x = 0; x < 64; x++) {
-      for (let y = 0; y < 64; y++) {
-        const ul = data.underlay[x][y];
-        const ol = data.overlay[x][y];
-        const olDef = overlayRgb[ol];
-        let hex;
-        if (ol > 0 && olDef && olDef.hide) hex = olDef.hex;
-        else if (ul > 0 && underlayRgb[ul]) hex = underlayRgb[ul];
-        else hex = null;
-        if (hex) {
-          const idx = (y * 64 + x) * 3;
-          rgb[idx] = parseInt(hex.slice(1, 3), 16);
-          rgb[idx + 1] = parseInt(hex.slice(3, 5), 16);
-          rgb[idx + 2] = parseInt(hex.slice(5, 7), 16);
-        }
-        // else stays 0,0,0 (black = no data, client uses default)
-      }
-    }
-    terrainCache.set(key, rgb);
-    // Cache collision settings (bit 0 = blocked)
-    if (data.settings) {
-      const flags = new Uint8Array(64 * 64);
-      for (let x = 0; x < 64; x++)
-        for (let y = 0; y < 64; y++)
-          flags[y * 64 + x] = data.settings[x][y];
-      collisionCache.set(key, flags);
-    }
-    return rgb;
-  } catch (e) { terrainCache.set(key, null); return null; }
-}
-
-
-function loadTerrainHeights(cx, cy) {
-  const filePath = path.join(TILE_DATA_DIR, `${cx}_${cy}.json`);
-  if (!fs.existsSync(filePath)) return null;
-  try {
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    const heights = new Uint16Array(64 * 64);
-    for (let x = 0; x < 64; x++)
-      for (let y = 0; y < 64; y++)
-        heights[y * 64 + x] = data.height[x][y] || 0;
-    return heights;
-  } catch (e) { return null; }
-}
-
-
-loadTerrainDefs();
 
 
 // ── Chunk System ───────────────────────────────────────────────────────────────
@@ -240,7 +163,7 @@ function setColor(x, y, color, layer = 0) {
   chunk.dirty = true;
 }
 
-// Cardinal adjacency check — OSRS melee requires N/S/E/W, no diagonals
+// Cardinal adjacency check — melee requires N/S/E/W, no diagonals
 function isCardinalAdjacent(x1, y1, x2, y2) {
   const dx = Math.abs(x1 - x2), dy = Math.abs(y1 - y2);
   return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
@@ -277,6 +200,9 @@ const serverRoofs = new Map(); // "layer_id" → roof object
 let serverNextRoofId = 1;
 const ROOFS_FILE = path.join(DATA_DIR, 'roofs.json');
 const WALL_TEX_FILE = path.join(DATA_DIR, 'wall_textures.json');
+const LOTS_FILE = path.join(DATA_DIR, 'lots.json');
+const serverLots = new Map(); // id → {id, name, layer, tiles: [{x,y}], color, cx, cy}
+let serverNextLotId = 1;
 
 function saveWalls() {
   try {
@@ -321,6 +247,26 @@ function loadWalls() {
       console.log(`[wallTex] Loaded ${serverWallTexMap.size} wall textures`);
     }
   } catch (e) { console.warn('[walls] Load error:', e.message); }
+}
+
+function saveLots() {
+  try {
+    const lots = {}; for (const [k, v] of serverLots) lots[k] = v;
+    fs.writeFileSync(LOTS_FILE, JSON.stringify(lots));
+  } catch (e) { console.warn('[lots] Save error:', e.message); }
+}
+
+function loadLots() {
+  try {
+    if (fs.existsSync(LOTS_FILE)) {
+      const lots = JSON.parse(fs.readFileSync(LOTS_FILE, 'utf8'));
+      for (const [k, v] of Object.entries(lots)) {
+        serverLots.set(k, v);
+        if (v.id >= serverNextLotId) serverNextLotId = v.id + 1;
+      }
+      console.log(`[lots] Loaded ${serverLots.size} lots`);
+    }
+  } catch (e) { console.warn('[lots] Load error:', e.message); }
 }
 
 // Send wall/door edges for a layer to a player
@@ -546,330 +492,21 @@ function notifyFriendsOfStatus(playerId, online) {
 let seed = 42;
 function rng() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
 
-// ── Game Definitions (from OSRS cache) ──────────────────────────────────────
-const itemDefs = new Map(); // id -> def
-const npcDefs = new Map();  // id -> def
-const ITEM_BY_NAME = new Map(); // lowercase name -> def
-
-function loadDefinitions() {
-  try {
-    const items = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'items.json'), 'utf8'));
-    for (const i of items) { itemDefs.set(i.id, i); ITEM_BY_NAME.set(i.name.toLowerCase(), i); }
-    console.log(`[defs] Loaded ${itemDefs.size} items`);
-  } catch (e) { console.log('[defs] items.json error:', e.message); }
-  try {
-    const npcsData = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'npcs.json'), 'utf8'));
-    for (const n of npcsData) npcDefs.set(n.id, n);
-    console.log(`[defs] Loaded ${npcDefs.size} NPCs`);
-  } catch (e) { console.log('[defs] npcs.json error:', e.message); }
-}
-
-// Item param keys for equipment bonuses
-const EQUIP_PARAMS = {
-  0: 'astab', 1: 'aslash', 2: 'acrush', 3: 'amagic', 4: 'aranged',
-  5: 'dstab', 6: 'dslash', 7: 'dcrush', 8: 'dmagic', 9: 'dranged',
-  10: 'str', 11: 'rstr', 13: 'prayer', 14: 'aspeed'
-};
-
-function getItemBonuses(itemId) {
-  const def = itemDefs.get(itemId);
-  if (!def || !def.params) return null;
-  const b = {};
-  for (const [paramId, key] of Object.entries(EQUIP_PARAMS)) {
-    if (def.params[paramId] !== undefined) b[key] = def.params[paramId];
-  }
-  return Object.keys(b).length > 0 ? b : null;
-}
-
+// ── Stub functions for plugins to override ──────────────────────────────────
+// These exist so the engine doesn't crash if no plugin provides them yet.
+// Plugins replace these via the engine API.
+const itemDefs = new Map();
+const ITEM_BY_NAME = new Map();
 function itemName(id) { const d = itemDefs.get(id); return d ? d.name : `Item #${id}`; }
 function findItemId(name) { const d = ITEM_BY_NAME.get(name.toLowerCase()); return d ? d.id : -1; }
-
-// ── Gear Tier System ─────────────────────────────────────────────────────────
-// Every weapon/armor gets a tier (1, 2, or 3). Players can lock their account
-// to a lower tier as a self-imposed challenge (like OSRS pures but for gear).
-// p.gearTier = 1|2|3 — blocks equipping anything above that tier.
-// Tier 1: basic (bronze-level)  — low max hit, low DR
-// Tier 2: mid   (iron-level)    — moderate max hit, moderate DR
-// Tier 3: end   (steel+-level)  — full max hit, full DR
-// Items should have a `tier` field (1/2/3). On equip: if (item.tier > p.gearTier) reject.
-// TODO: add tier field to item defs, equip handler check, UI toggle to lock tier
-
-// Equipment slots
-const EQUIP_SLOTS = ['head', 'cape', 'neck', 'weapon', 'body', 'shield', 'legs', 'hands', 'feet', 'ring', 'ammo'];
-
-function calcEquipBonuses(equipment) {
-  const total = { astab:0, aslash:0, acrush:0, amagic:0, aranged:0, dstab:0, dslash:0, dcrush:0, dmagic:0, dranged:0, str:0, rstr:0, prayer:0 };
-  for (const slot of EQUIP_SLOTS) {
-    const id = equipment[slot];
-    if (!id || id < 0) continue;
-    const b = getItemBonuses(id);
-    if (!b) continue;
-    for (const k of Object.keys(total)) if (b[k]) total[k] += b[k];
-  }
-  return total;
-}
-
-// ── NPC Spawns ──────────────────────────────────────────────────────────────
-function spawnNpcs() {
-  // No OSRS NPC spawns — custom NPCs can be added here in the future
-  console.log('[npcs] No NPC spawn data loaded (OSRS data removed)');
-}
-
-// ── Tutorial Island NPC Spawns ───────────────────────────────────────────────
-function spawnTutorialNpcs() {
-  // Spawn tutorial guide NPCs (non-combat, talkable)
-  for (const tn of tutorial.TUTORIAL_NPCS) {
-    npcs.push({
-      id: npcs.length, defId: tn.defId, name: tn.name,
-      x: tn.x, y: tn.y, spawnX: tn.x, spawnY: tn.y,
-      hp: 1, maxHp: 1, attack: 1, strength: 1, defence: 1,
-      ranged: 1, magic: 1, combatLevel: 0,
-      aggressive: false, dead: false, respawnTick: 0,
-      wanderTick: 0, nextAttackTick: 0, attackSpeed: 4,
-      combatTarget: null, combatTimeout: 0,
-      drops: [], color: '#ffff00',
-      tutorialNpc: true, tutorialStep: tn.step,
-    });
-  }
-  // Spawn tutorial combat NPCs (giant rats, chickens)
-  for (const cn of tutorial.TUTORIAL_COMBAT_NPCS) {
-    npcs.push({
-      id: npcs.length, defId: cn.defId, name: cn.name,
-      x: cn.x, y: cn.y, spawnX: cn.x, spawnY: cn.y,
-      hp: cn.hp, maxHp: cn.maxHp,
-      attack: cn.attack, strength: cn.strength, defence: cn.defence,
-      ranged: 1, magic: 1, combatLevel: cn.combatLevel,
-      aggressive: false, dead: false, respawnTick: 0,
-      wanderTick: Math.floor(Math.random() * 100),
-      nextAttackTick: 0, attackSpeed: cn.attackSpeed,
-      combatTarget: null, combatTimeout: 0,
-      drops: [], color: '#8b1a1a',
-      tutorialCombatNpc: true,
-    });
-  }
-  console.log(`[tutorial] Spawned ${tutorial.TUTORIAL_NPCS.length} guide NPCs + ${tutorial.TUTORIAL_COMBAT_NPCS.length} combat NPCs on Tutorial Island`);
-}
-
-// ── Tutorial Island Logic ───────────────────────────────────────────────────
-function handleTutorialTalk(p, npc) {
-  if (p.tutorialComplete) return false;
-  if (!npc.tutorialNpc) return false;
-
-  const step = tutorial.STEPS[p.tutorialStep];
-  if (!step || !step.npc) return false;
-
-  // Check if this is the right NPC for the current step
-  if (step.npc !== npc.name) {
-    sendChat(p, `You need to talk to the ${tutorial.STEPS[p.tutorialStep].npc || 'next instructor'}.`, '#ff0');
-    return true;
-  }
-
-  // Send dialogue
-  if (step.dialogue) {
-    for (const line of step.dialogue) {
-      sendChat(p, `[${npc.name}] ${line}`, '#0ff');
-    }
-  }
-
-  // Give items
-  if (step.give) {
-    for (const item of step.give) {
-      addItemById(p, item.id, item.count);
-    }
-    sendChat(p, 'You receive some items.', '#ff0');
-  }
-
-  // Check for completion
-  if (step.complete) {
-    completeTutorial(p);
-    return true;
-  }
-
-  // Advance step
-  p.tutorialStep++;
-  const nextStep = tutorial.STEPS[p.tutorialStep];
-
-  // If next step is an action step, show what to do
-  if (nextStep && nextStep.action) {
-    sendChat(p, nextStep.message, '#0f0');
-  }
-  // If next step is also a talk step (same NPC), hint to talk again
-  else if (nextStep && nextStep.npc) {
-    // Auto-advance simple UI steps (open_tab, pray, go_underground)
-  }
-
-  sendStats(p);
-  return true;
-}
-
-function handleTutorialAction(p, action, data) {
-  if (p.tutorialComplete) return;
-  const step = tutorial.STEPS[p.tutorialStep];
-  if (!step || !step.action) return;
-
-  if (!p.tutorialProgress) p.tutorialProgress = {};
-
-  switch (step.action) {
-    case 'fish': {
-      if (action !== 'fish') return;
-      p.tutorialProgress.fishCount = (p.tutorialProgress.fishCount || 0) + 1;
-      if (p.tutorialProgress.fishCount >= (step.count || 2)) {
-        sendChat(p, 'You\'ve caught enough shrimps! Talk to the Survival Expert.', '#0f0');
-        p.tutorialStep++;
-        p.tutorialProgress = {};
-      }
-      break;
-    }
-    case 'skills': {
-      if (!p.tutorialProgress.skills) p.tutorialProgress.skills = {};
-      const sp = p.tutorialProgress.skills;
-      if (action === 'woodcutting') sp.woodcutting = (sp.woodcutting || 0) + 1;
-      if (action === 'firemaking') sp.firemaking = (sp.firemaking || 0) + 1;
-      if (action === 'cooking') sp.cooking = (sp.cooking || 0) + 1;
-      // Check all tasks done
-      const allDone = step.tasks.every(t => (sp[t.skill] || 0) >= t.count);
-      if (allDone) {
-        sendChat(p, 'Great work! Head to the Master Chef\'s building.', '#0f0');
-        p.tutorialStep++;
-        p.tutorialProgress = {};
-      }
-      break;
-    }
-    case 'cook_bread': {
-      if (action !== 'cook_bread') return;
-      sendChat(p, 'Delicious bread! Now head through the door and find the Quest Guide.', '#0f0');
-      p.tutorialStep++;
-      break;
-    }
-    case 'go_underground': {
-      // Auto-advance when player reaches underground Y coords
-      if (action === 'move' && data && data.y < 9600 && data.y > 9400) {
-        sendChat(p, 'You\'ve entered the mining area. Talk to the Mining Instructor.', '#0f0');
-        p.tutorialStep++;
-      }
-      break;
-    }
-    case 'mine_and_smelt': {
-      if (!p.tutorialProgress.mine) p.tutorialProgress.mine = {};
-      const mp = p.tutorialProgress.mine;
-      if (action === 'mine_tin') mp.tin = true;
-      if (action === 'mine_copper') mp.copper = true;
-      if (action === 'smelt') mp.smelted = true;
-      if (mp.tin && mp.copper && mp.smelted) {
-        sendChat(p, 'You made a bronze bar! Talk to the Mining Instructor.', '#0f0');
-        p.tutorialStep++;
-        p.tutorialProgress = {};
-      }
-      break;
-    }
-    case 'smith_dagger': {
-      if (action !== 'smith') return;
-      sendChat(p, 'You smithed a bronze dagger! Find the Combat Instructor.', '#0f0');
-      p.tutorialStep++;
-      break;
-    }
-    case 'kill_melee': {
-      if (action !== 'kill' || data?.target !== step.target) return;
-      sendChat(p, 'Well fought! Talk to the Combat Instructor.', '#0f0');
-      p.tutorialStep++;
-      break;
-    }
-    case 'kill_ranged': {
-      if (action !== 'kill' || data?.target !== step.target) return;
-      sendChat(p, 'Great ranged shot! Talk to the Combat Instructor.', '#0f0');
-      p.tutorialStep++;
-      break;
-    }
-    case 'open_tab': {
-      // Auto-advance
-      sendChat(p, 'Good. Now find Brother Brace at the chapel.', '#0f0');
-      p.tutorialStep++;
-      break;
-    }
-    case 'pray': {
-      // Auto-advance
-      sendChat(p, 'You feel the power of prayer. Continue south to the Ironman tutor.', '#0f0');
-      p.tutorialStep++;
-      break;
-    }
-    case 'kill_magic': {
-      if (action !== 'kill' || data?.target !== step.target) return;
-      sendChat(p, 'Magical! Talk to the Magic Instructor to complete Tutorial Island.', '#0f0');
-      p.tutorialStep++;
-      break;
-    }
-  }
-}
-
-function completeTutorial(p) {
-  p.tutorialComplete = true;
-  p.tutorialStep = -1;
-
-  // Clear inventory and give completion items
-  p.inventory = [];
-  for (const item of tutorial.COMPLETION_INVENTORY) {
-    addItemById(p, item.id, item.count);
-  }
-
-  // Teleport to Lumbridge
-  p.x = SPAWN_X;
-  p.y = SPAWN_Y;
-  p.prevX = SPAWN_X;
-  p.prevY = SPAWN_Y;
-  p.path = [];
-  p.gathering = null;
-  p.combatTarget = null;
-  p.clickedNpc = null;
-  p.sentChunks = new Set();
-
-  sendChat(p, 'Welcome to Lumbridge! Your adventure begins now.', '#ff0');
-  sendChat(p, 'You have been given starter equipment and supplies.', '#0f0');
-  sendStats(p);
-  console.log(`[tutorial] Player ${p.id} completed Tutorial Island`);
-}
-
-// Basic drop tables (expand with wiki data later)
-function getDropTable(def) {
-  const drops = [];
-  const name = def.name.toLowerCase();
-  // Bones (almost everything drops bones)
-  if (def.combatLevel > 0) drops.push({ id: findItemId('Bones'), weight: 1, always: true });
-  // Specific drops by NPC name
-  if (name.includes('chicken')) { drops.push({ id: findItemId('Feather'), weight: 3 }); drops.push({ id: findItemId('Raw chicken'), weight: 1, always: true }); }
-  if (name.includes('cow')) { drops.push({ id: findItemId('Cowhide'), weight: 1, always: true }); drops.push({ id: findItemId('Raw beef'), weight: 1, always: true }); }
-  if (name.includes('goblin')) { drops.push({ id: findItemId('Coins'), weight: 2, qty: [1, 5] }); }
-  if (name.includes('guard')) { drops.push({ id: findItemId('Coins'), weight: 2, qty: [10, 30] }); }
-  if (name === 'giant rat') { drops.push({ id: findItemId('Raw rat meat'), weight: 1, always: true }); }
-  if (name.includes('spider')) { /* spiders only drop bones */ }
-  return drops;
-}
-
-// ── All 23 OSRS Skills ─────────────────────────────────────────────────────
-const ALL_SKILLS = [
-  'attack', 'strength', 'defence', 'ranged', 'prayer', 'magic', 'runecraft',
-  'hitpoints', 'crafting', 'mining', 'smithing', 'fishing', 'cooking',
-  'firemaking', 'woodcutting', 'agility', 'herblore', 'thieving', 'fletching',
-  'slayer', 'farming', 'construction', 'hunter'
-];
-
-// ── XP ─────────────────────────────────────────────────────────────────────────
-function xpForLevel(l) {
-  let t = 0;
-  for (let i = 1; i < l; i++) t += Math.floor(i + 300 * Math.pow(2, i / 7)) / 4;
-  return Math.floor(t);
-}
-function levelForXp(xp) {
-  for (let l = 1; l < 99; l++) if (xpForLevel(l + 1) > xp) return l;
-  return 99;
-}
 function addXp(p, skill, amount) {
+  if (!p.skills || !p.skills[skill]) return;
   p.skills[skill].xp += amount;
-  const nl = levelForXp(p.skills[skill].xp);
-  if (nl > p.skills[skill].level) {
-    p.skills[skill].level = nl;
-    sendChat(p, `Congratulations! Your ${skill} level is now ${nl}!`, '#ff0');
-  }
+  // Level-up detection will be handled by a skills plugin
 }
+
+const EQUIP_SLOTS = ['head', 'cape', 'neck', 'weapon', 'body', 'shield', 'legs', 'hands', 'feet', 'ring', 'ammo'];
+function calcEquipBonuses() { return {}; }
 
 // ── Pathfinding (A*) ───────────────────────────────────────────────────────────
 function findPath(sx, sy, tx, ty, layer = 0) {
@@ -1199,11 +836,6 @@ function sendChunkToPlayer(ws, cx, cy, layer = 0) {
   const colorsObj = {};
   for (const [k, v] of chunk.colors) colorsObj[k] = v;
   const msg = { t: 'chunk', cx, cy, tiles: Buffer.from(chunk.tiles).toString('base64'), colors: colorsObj };
-  // Attach OSRS terrain data if available
-  const terrain = loadTerrainChunk(cx, cy);
-  if (terrain) msg.terrain = Buffer.from(terrain).toString('base64');
-  const heights = loadTerrainHeights(cx, cy);
-  if (heights) msg.heights = Buffer.from(heights.buffer).toString('base64');
   // Attach tile variants for this chunk
   if (global.tileVariantMap) {
     const variants = {};
@@ -1244,13 +876,7 @@ function updatePlayerChunks(p) {
 function createPlayer(ws) {
   const sx = SPAWN_X;
   const sy = SPAWN_Y;
-  const skills = {};
-  for (const s of ALL_SKILLS) skills[s] = { xp: 0, level: 1 };
-  // Combat stats start at 99 — balanced around max cb, gear is the lever
-  const XP_99 = xpForLevel(99);
-  for (const s of ['attack', 'strength', 'defence', 'ranged', 'prayer', 'magic', 'hitpoints']) {
-    skills[s] = { xp: XP_99, level: 99 };
-  }
+  const skills = {}; // Populated by skills plugin if loaded
   const equipment = {};
   for (const s of EQUIP_SLOTS) equipment[s] = -1;
   const pid = nextPlayerId++;
@@ -1267,246 +893,18 @@ function createPlayer(ws) {
     gearTier: 3, // 1-3, restricts equippable gear tier (self-imposed challenge mode)
     skills, equipment,
     inventory: [],
-    // Tutorial Island state
-    tutorialStep: 0,          // current step index in tutorial.STEPS
-    tutorialComplete: false,  // true after completing Tutorial Island
-    tutorialProgress: {},     // tracks sub-tasks (e.g. fish count, trees chopped)
   };
-}
-
-// ── Combat Style Detection ───────────────────────────────────────────────────
-// Weapon categories for attack speed and style
-const RANGED_WEAPONS = new Set(); // populated from item defs
-const MAGIC_WEAPONS = new Set();  // populated from item defs
-
-function getCombatStyle(p) {
-  const wepId = p.equipment.weapon;
-  if (!wepId || wepId < 0) return { style: 'melee', speed: 4, range: 1 };
-  const def = itemDefs.get(wepId);
-  if (!def) return { style: 'melee', speed: 4, range: 1 };
-  const name = (def.name || '').toLowerCase();
-  const params = def.params || {};
-  const aspeed = params[14]; // attack speed param
-
-  // Detect ranged weapons
-  if (name.includes('bow') || name.includes('crossbow') || name.includes('dart') ||
-      name.includes('knife') || name.includes('thrownaxe') || name.includes('javelin') ||
-      name.includes('chinchompa') || name.includes('blowpipe') || name.includes('ballista')) {
-    const speed = aspeed !== undefined ? aspeed : 4;
-    const range = name.includes('longbow') || name.includes('ballista') ? 10 : 7;
-    return { style: 'ranged', speed, range };
-  }
-
-  // Detect magic weapons (staves)
-  if (name.includes('staff') || name.includes('wand') || name.includes('trident') ||
-      name.includes('sanguinesti') || name.includes('tumeken')) {
-    return { style: 'magic', speed: 5, range: 10 };
-  }
-
-  // Melee
-  const speed = aspeed !== undefined ? aspeed : 4;
-  return { style: 'melee', speed, range: 1 };
-}
-
-function isInAttackRange(x1, y1, x2, y2, range) {
-  if (range <= 1) return isCardinalAdjacent(x1, y1, x2, y2);
-  const dx = Math.abs(x1 - x2);
-  const dy = Math.abs(y1 - y2);
-  return Math.max(dx, dy) <= range;
-}
-
-// Projectile delay: 1 tick base + 1 per 3 tiles distance (approximate OSRS formula)
-function getProjectileDelay(x1, y1, x2, y2) {
-  const dist = Math.max(Math.abs(x1 - x2), Math.abs(y1 - y2));
-  return 1 + Math.floor(dist / 3);
-}
-
-// ── Combat Helpers (scheduled via tick queue) ────────────────────────────────
-function schedulePlayerAttack(p, npcId, delay) {
-  schedule(tick + delay, 1, `patk:${p.id}`, () => playerAttackTick(p, npcId));
-}
-
-function playerAttackTick(p, npcId) {
-  const npc = npcs[npcId];
-  if (!npc || npc.dead || p.combatTarget !== npcId) {
-    sendChat(p, `[${tick}] patk:CANCEL (dead=${npc?.dead} target=${p.combatTarget}) P:${p.x},${p.y}`, '#888');
-    return;
-  }
-
-  const combat = getCombatStyle(p);
-  p.attackSpeed = combat.speed;
-
-  if (!isInAttackRange(p.x, p.y, npc.x, npc.y, combat.range)) {
-    sendChat(p, `[${tick}] patk:CHASE (P:${p.x},${p.y} N:${npc.x},${npc.y} style=${combat.style} range=${combat.range})`, '#888');
-    schedule(tick + 1, 1, `patk:${p.id}`, () => playerAttackTick(p, npcId));
-    return;
-  }
-  // Enforce attack speed cooldown — never attack before nextAttackTick
-  if (tick < p.nextAttackTick) {
-    sendChat(p, `[${tick}] patk:WAIT (next=${p.nextAttackTick}) P:${p.x},${p.y}`, '#888');
-    schedule(p.nextAttackTick, 1, `patk:${p.id}`, () => playerAttackTick(p, npcId));
-    return;
-  }
-  // Execute attack
-  npc.combatTarget = p.id;
-  const bonuses = calcEquipBonuses(p.equipment);
-
-  // Calculate hit chance based on combat style
-  let attRoll, defRoll, effStr, maxHit;
-  if (combat.style === 'magic') {
-    const effMag = p.skills.magic.level + 1 + 8;
-    attRoll = effMag * (bonuses.amagic + 64);
-    defRoll = ((npc.magic || npc.defence || 1) + 9) * (64);
-    // Magic max hit: base spell damage (simplified: magic level / 3)
-    maxHit = Math.max(1, Math.floor(p.skills.magic.level / 3));
-  } else if (combat.style === 'ranged') {
-    const effRng = p.skills.ranged.level + 1 + 8;
-    attRoll = effRng * (bonuses.aranged + 64);
-    defRoll = ((npc.defence || 1) + 9) * (64);
-    effStr = p.skills.ranged.level + 1 + 8;
-    maxHit = Math.max(1, Math.floor(0.5 + effStr * (bonuses.rstr + 64) / 640));
-  } else {
-    const effAtk = p.skills.attack.level + 1 + 8;
-    attRoll = effAtk * (bonuses.aslash + 64);
-    defRoll = ((npc.defence || 1) + 9) * 64;
-    effStr = p.skills.strength.level + 1 + 8;
-    maxHit = Math.max(1, Math.floor(0.5 + effStr * (bonuses.str + 64) / 640));
-  }
-
-  // Every attack lands — no accuracy roll, minimum 1 damage
-  const dmg = Math.max(1, Math.floor(rng() * (maxHit + 1)));
-
-  // Projectile delay for ranged/magic
-  const projDelay = combat.style !== 'melee' ? getProjectileDelay(p.x, p.y, npc.x, npc.y) : 0;
-
-  if (projDelay > 0) {
-    // Schedule damage to apply after projectile travel
-    const px = p.x, py = p.y, nx = npc.x, ny = npc.y;
-    sendChat(p, `[${tick}] You cast at ${npc.name} (${combat.style}, delay=${projDelay}t) P:${px},${py} N:${nx},${ny}`, '#f44');
-    schedule(tick + projDelay, 1, `proj:${p.id}:${tick}`, () => {
-      if (npc.dead) return;
-      npc.hp -= dmg;
-      sendChat(p, `[${tick}] You hit ${npc.name} for ${dmg} (P:${px},${py} N:${npc.x},${npc.y})`, '#f44');
-      applyKillCheck(p, npc);
-      giveXp(p, combat.style, dmg);
-    });
-  } else {
-    // Melee: instant damage
-    npc.hp -= dmg;
-    sendChat(p, `[${tick}] You hit ${npc.name} for ${dmg} (P:${p.x},${p.y} N:${npc.x},${npc.y})`, '#f44');
-    applyKillCheck(p, npc);
-    giveXp(p, combat.style, dmg);
-  }
-
-  if (!npc.dead) {
-    // Schedule next player attack and record cooldown
-    p.nextAttackTick = tick + p.attackSpeed;
-    schedulePlayerAttack(p, npcId, p.attackSpeed);
-  }
-  p.maxHp = p.skills.hitpoints.level;
-  sendStats(p);
-}
-
-function applyKillCheck(p, npc) {
-  if (npc.hp <= 0) {
-    npc.dead = true; npc.respawnTick = tick + 17; npc.combatTarget = null;
-    cancelScheduled(`natk:${npc.id}`);
-    sendChat(p, `You killed ${npc.name}!`, '#0f0');
-    // Tutorial kill tracking
-    if (!p.tutorialComplete) handleTutorialAction(p, 'kill', { target: npc.name });
-    for (const drop of npc.drops) {
-      if (drop.id < 0) continue;
-      if (drop.always || rng() < (1 / Math.max(1, drop.weight))) {
-        const qty = drop.qty ? (drop.qty[0] + Math.floor(rng() * (drop.qty[1] - drop.qty[0] + 1))) : 1;
-        dropItemGround(drop.id, npc.x, npc.y, qty);
-      }
-    }
-    p.combatTarget = null;
-  }
-}
-
-function giveXp(p, style, dmg) {
-  if (dmg <= 0) return;
-  const baseXp = Math.floor(dmg * 4);
-  if (style === 'magic') {
-    addXp(p, 'magic', baseXp);
-  } else if (style === 'ranged') {
-    addXp(p, 'ranged', baseXp);
-  } else {
-    // Melee: split between attack, strength, defence
-    const xpPerSkill = Math.floor(baseXp / 3);
-    addXp(p, 'attack', xpPerSkill);
-    addXp(p, 'strength', xpPerSkill);
-    addXp(p, 'defence', xpPerSkill);
-  }
-  addXp(p, 'hitpoints', Math.floor(dmg * 1.33));
-}
-
-function scheduleNpcAttack(npc, delay) {
-  schedule(tick + delay, 2, `natk:${npc.id}`, () => npcAttackTick(npc));
-}
-
-function npcAttackTick(npc) {
-  if (npc.dead || npc.combatTarget === null) return;
-  let combatant = null;
-  for (const [, p] of players) {
-    if (p.id === npc.combatTarget) { combatant = p; break; }
-  }
-  if (!combatant) { npc.combatTarget = null; return; }
-  const dist = Math.abs(npc.x - combatant.x) + Math.abs(npc.y - combatant.y);
-  if (dist > 16 || Math.abs(npc.x - npc.spawnX) + Math.abs(npc.y - npc.spawnY) >= 12) {
-    sendChat(combatant, `[${tick}] natk:LEASH (N:${npc.x},${npc.y} spawn:${npc.spawnX},${npc.spawnY})`, '#888');
-    npc.combatTarget = null; return;
-  }
-  if (!isCardinalAdjacent(npc.x, npc.y, combatant.x, combatant.y)) {
-    sendChat(combatant, `[${tick}] natk:CHASE (P:${combatant.x},${combatant.y} N:${npc.x},${npc.y})`, '#888');
-    schedule(tick + 1, 2, `natk:${npc.id}`, () => npcAttackTick(npc));
-    return;
-  }
-  // Enforce attack speed cooldown — never attack before nextAttackTick
-  if (tick < npc.nextAttackTick) {
-    sendChat(combatant, `[${tick}] natk:WAIT (next=${npc.nextAttackTick}) N:${npc.x},${npc.y}`, '#888');
-    schedule(npc.nextAttackTick, 2, `natk:${npc.id}`, () => npcAttackTick(npc));
-    return;
-  }
-  // Execute NPC attack — every attack lands, minimum 1 damage
-  const npcStyle = npc.combatStyle || 'melee';
-  const npcMaxHit = Math.max(1, Math.floor(0.5 + ((npc.strength || npc.attack || 1) + 9) * 64 / 640));
-  let dmg = Math.max(1, Math.floor(rng() * (npcMaxHit + 1)));
-  // Protection prayer: 100% block if correct style
-  if (combatant.activePrayer === npcStyle) dmg = 0;
-  combatant.hp -= dmg;
-  sendChat(combatant, `[${tick}] ${npc.name} hits you for ${dmg} (P:${combatant.x},${combatant.y} N:${npc.x},${npc.y})`, '#f44');
-  addXp(combatant, 'defence', Math.floor(dmg * 1.33));
-  if (combatant.hp <= 0) killPlayer(combatant);
-  combatant.maxHp = combatant.skills.hitpoints.level;
-  sendStats(combatant);
-  // Auto-retaliate: only if player is idle (no active path) and not already fighting another NPC
-  if (combatant.autoRetaliate && combatant.hp > 0 && combatant.path.length === 0) {
-    if (combatant.combatTarget === null) {
-      // Fresh retaliation — half-speed penalty per OSRS wiki
-      combatant.combatTarget = npc.id;
-      combatant.clickedNpc = null;
-      const retaliateDelay = Math.ceil(combatant.attackSpeed / 2);
-      combatant.nextAttackTick = tick + retaliateDelay;
-      schedulePlayerAttack(combatant, npc.id, retaliateDelay);
-      sendChat(combatant, `[${tick}] AUTO-RETALIATE → ${npc.name} (delay=${retaliateDelay}t)`, '#888');
-    }
-    // If already fighting (combatTarget set), don't switch — existing schedule continues
-  }
-  // Schedule next NPC attack and record cooldown
-  npc.nextAttackTick = tick + npc.attackSpeed;
-  scheduleNpcAttack(npc, npc.attackSpeed);
 }
 
 // ── Game Tick ──────────────────────────────────────────────────────────────────
 function gameTick() {
   tick++;
 
+  // Player movement
   for (const [, p] of players) {
     p.movedThisTick = false;
     if (p.path.length > 0) {
-      p.prevX = p.x; p.prevY = p.y; // track previous tile for NPC chase
+      p.prevX = p.x; p.prevY = p.y;
       const prevCX = Math.floor(p.x / CHUNK_SIZE), prevCY = Math.floor(p.y / CHUNK_SIZE);
       const next = p.path.shift();
       p.x = next.x; p.y = next.y;
@@ -1515,6 +913,7 @@ function gameTick() {
       if (newCX !== prevCX || newCY !== prevCY) updatePlayerChunks(p);
     }
 
+    // Item pickup
     if (p.pendingPickup !== null && p.path.length === 0) {
       const idx = groundItems.findIndex(g => g.id === p.pendingPickup);
       if (idx !== -1) {
@@ -1528,219 +927,9 @@ function gameTick() {
       p.pendingPickup = null;
     }
 
-    // Tutorial NPC talk — arrive adjacent and trigger dialogue
-    if (p.pendingTalk !== null && p.path.length === 0) {
-      const talkNpc = npcs[p.pendingTalk];
-      if (talkNpc && isCardinalAdjacent(p.x, p.y, talkNpc.x, talkNpc.y)) {
-        handleTutorialTalk(p, talkNpc);
-      }
-      p.pendingTalk = null;
-    }
-
-    // Auto-advance tutorial steps that trigger on movement (go_underground)
-    if (!p.tutorialComplete && p.tutorialStep >= 0) {
-      const step = tutorial.STEPS[p.tutorialStep];
-      if (step && step.action === 'go_underground') {
-        handleTutorialAction(p, 'move', { y: p.y });
-      }
-    }
-
-    if (p.gathering && p.path.length === 0) {
-      const g = p.gathering;
-      const cl = p.gatherCluster;
-      let adjacent = false;
-      if (cl) {
-        for (let dy = 0; dy < cl.h && !adjacent; dy++)
-          for (let dx = 0; dx < cl.w && !adjacent; dx++)
-            if (Math.abs(p.x - (cl.x + dx)) + Math.abs(p.y - (cl.y + dy)) <= 1) adjacent = true;
-      } else {
-        adjacent = Math.abs(p.x - g.tx) + Math.abs(p.y - g.ty) <= 1;
-      }
-      if (adjacent && tileAt(g.tx, g.ty, p.layer) === g.tile) {
-        p.actionTick++;
-        if (p.actionTick >= 4) {
-          p.actionTick = 0;
-          if (g.type === 'woodcutting') {
-            const wcChance = Math.min(0.9, 0.25 + p.skills.woodcutting.level * 0.005);
-            if (rng() >= wcChance) { sendChat(p, 'You swing at the tree...', '#ccc'); }
-            else if (addItem(p, 'Logs')) {
-              addXp(p, 'woodcutting', 25);
-              sendChat(p, 'You chop down the tree.', '#ff0');
-              if (!p.tutorialComplete) handleTutorialAction(p, 'woodcutting');
-              const cl2 = p.gatherCluster || { x: g.tx, y: g.ty, w: 1, h: 1 };
-              const changes = [];
-              for (let dy = 0; dy < cl2.h; dy++)
-                for (let dx = 0; dx < cl2.w; dx++) {
-                  setTile(cl2.x + dx, cl2.y + dy, T.GRASS, p.layer);
-                  changes.push({ x: cl2.x + dx, y: cl2.y + dy, tile: T.GRASS });
-                  respawns.push({ x: cl2.x + dx, y: cl2.y + dy, tile: T.TREE, tick: tick + 25, layer: p.layer });
-                }
-              broadcastTiles(changes, p.layer);
-              p.gathering = null; p.gatherCluster = null;
-            }
-          } else if (g.type === 'mining') {
-            const mineChance = Math.min(0.9, 0.25 + p.skills.mining.level * 0.005);
-            if (rng() >= mineChance) { sendChat(p, 'You swing at the rock...', '#ccc'); }
-            else if (addItem(p, 'Ore')) {
-              addXp(p, 'mining', 30);
-              sendChat(p, 'You mine some ore.', '#ff0');
-              setTile(g.tx, g.ty, T.GRASS, p.layer);
-              broadcastTiles([{ x: g.tx, y: g.ty, tile: T.GRASS }], p.layer);
-              respawns.push({ x: g.tx, y: g.ty, tile: T.ROCK, tick: tick + 33, layer: p.layer });
-              p.gathering = null;
-            }
-          } else if (g.type === 'fishing') {
-            const fishChance = Math.min(0.9, 0.25 + p.skills.fishing.level * 0.005);
-            if (rng() >= fishChance) { sendChat(p, 'You continue fishing...', '#ccc'); }
-            else if (addItem(p, 'Raw fish')) {
-              addXp(p, 'fishing', 20);
-              sendChat(p, 'You catch a fish.', '#ff0');
-              if (!p.tutorialComplete) handleTutorialAction(p, 'fish');
-            }
-          }
-          sendStats(p);
-        }
-      } else { p.gathering = null; }
-    }
-
-    // NPC targeting — chase and initiate combat via tick queue
-    if (p.clickedNpc !== null) {
-      const npc = npcs[p.clickedNpc];
-      if (!npc || npc.dead) {
-        p.clickedNpc = null;
-      } else {
-        const combat = getCombatStyle(p);
-        if (isInAttackRange(p.x, p.y, npc.x, npc.y, combat.range)) {
-          // In range — start combat, schedule first attacks via tick queue
-          p.combatTarget = p.clickedNpc;
-          p.clickedNpc = null;
-          p.path = [];
-          npc.combatTarget = p.id;
-          p.attackSpeed = combat.speed;
-          // Respect attack cooldowns — don't attack before nextAttackTick
-          const pDelay = Math.max(0, p.nextAttackTick - tick);
-          const nDelay = Math.max(1, npc.nextAttackTick - tick); // NPC always at least 1 tick after
-          schedulePlayerAttack(p, npc.id, pDelay);
-          scheduleNpcAttack(npc, nDelay);
-        } else if (p.path.length === 0) {
-          const adj = walkAdjacentTo(npc.x, npc.y, p.x, p.y, p.layer);
-          if (adj) { p.path = findPath(p.x, p.y, adj[0], adj[1], p.layer); }
-          else { p.clickedNpc = null; }
-        }
-      }
-    }
-
-    // Chase NPC during active combat if not in range
-    if (p.combatTarget !== null) {
-      const npc = npcs[p.combatTarget];
-      const combat = getCombatStyle(p);
-      if (!npc || npc.dead || Math.abs(p.x - npc.x) + Math.abs(p.y - npc.y) > 16) {
-        p.combatTarget = null;
-        cancelScheduled(`patk:${p.id}`);
-      } else if (!isInAttackRange(p.x, p.y, npc.x, npc.y, combat.range) && p.path.length === 0) {
-        const adj = walkAdjacentTo(npc.x, npc.y, p.x, p.y, p.layer);
-        if (adj) p.path = findPath(p.x, p.y, adj[0], adj[1], p.layer);
-      }
-      // Combat heartbeat — log every tick while in combat
-      if (npc && !npc.dead) {
-        const inRange = isInAttackRange(p.x, p.y, npc.x, npc.y, combat.range);
-        const dist = Math.max(Math.abs(p.x - npc.x), Math.abs(p.y - npc.y));
-        const pNext = p.nextAttackTick; const nNext = npc.nextAttackTick;
-        const pWait = Math.max(0, pNext - tick); const nWait = Math.max(0, nNext - tick);
-        sendChat(p, `[${tick}] cb: P:${p.x},${p.y} N:${npc.x},${npc.y} dist=${dist} range=${combat.range} style=${combat.style} pAtk=${pWait}t nAtk=${nWait}t`, '#555');
-      }
-    }
   }
 
-  // NPC AI
-  for (const npc of npcs) {
-    if (npc.dead) {
-      if (tick >= npc.respawnTick) { npc.dead = false; npc.hp = npc.maxHp; npc.x = npc.spawnX; npc.y = npc.spawnY; npc.combatTarget = null; }
-      continue;
-    }
-    // NPC combat state — check if target still valid
-    let combatant = null;
-    if (npc.combatTarget !== null) {
-      for (const [, p] of players) {
-        if (p.id === npc.combatTarget) { combatant = p; break; }
-      }
-      const distToTarget = combatant ? Math.abs(npc.x - combatant.x) + Math.abs(npc.y - combatant.y) : 999;
-      if (!combatant || distToTarget > 16 ||
-          Math.abs(npc.x - npc.spawnX) + Math.abs(npc.y - npc.spawnY) >= 12) {
-        npc.combatTarget = null;
-        cancelScheduled(`natk:${npc.id}`);
-        combatant = null;
-      }
-    }
-    const inCombat = combatant !== null;
-
-    if (inCombat) {
-      // NPC chase: move toward player's PREVIOUS tile (OSRS behavior — NPC takes your old tile)
-      // NPC moves every tick but targets where the player WAS (1-tick lag)
-      if (!isCardinalAdjacent(npc.x, npc.y, combatant.x, combatant.y)) {
-        // Target the player's previous position — NPC walks to where the player WAS
-        // OSRS tie-breaking order: West, East, South, North (then diagonals)
-        const targetX = combatant.movedThisTick ? combatant.prevX : combatant.x;
-        const targetY = combatant.movedThisTick ? combatant.prevY : combatant.y;
-        const dx = targetX - npc.x, dy = targetY - npc.y;
-        // Try cardinal directions in OSRS priority: W, E, S, N
-        // Primary: directions that reduce distance. Fallback: perpendicular directions to path around obstacles.
-        const primary = [];
-        if (dx < 0) primary.push([-1, 0]); // West
-        if (dx > 0) primary.push([1, 0]);  // East
-        if (dy < 0) primary.push([0, -1]); // South
-        if (dy > 0) primary.push([0, 1]);  // North
-        // Fallback: perpendicular directions (try to go around blocked tiles)
-        const fallback = [];
-        if (dx === 0) { fallback.push([-1, 0]); fallback.push([1, 0]); } // blocked N/S, try W/E
-        if (dy === 0) { fallback.push([0, -1]); fallback.push([0, 1]); } // blocked W/E, try S/N
-        const allMoves = [...primary, ...fallback];
-        let moved = false;
-        for (const [mx, my] of allMoves) {
-          const nx = npc.x + mx, ny = npc.y + my;
-          if (isWalkable(nx, ny) && Math.abs(nx - npc.spawnX) < 12 && Math.abs(ny - npc.spawnY) < 12) {
-            npc.x = nx; npc.y = ny; moved = true; break;
-          }
-        }
-      }
-    } else if (tick % 5 === npc.wanderTick % 5) {
-      // Wander when not in combat
-      const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
-      const [dx, dy] = dirs[Math.floor(rng() * 4)];
-      const nx = npc.x + dx, ny = npc.y + dy;
-      if (isWalkable(nx, ny) && Math.abs(nx - npc.spawnX) + Math.abs(ny - npc.spawnY) < 8) {
-        npc.x = nx; npc.y = ny;
-      }
-    }
-
-    // Aggressive NPCs initiate combat with nearby players via tick queue
-    if (npc.aggressive && !inCombat) {
-      let closest = null, closestDist = 999;
-      for (const [, p] of players) {
-        const d = Math.abs(p.x - npc.x) + Math.abs(p.y - npc.y);
-        if (d < closestDist) { closest = p; closestDist = d; }
-      }
-      if (closest && closestDist < 5 && !isCardinalAdjacent(npc.x, npc.y, closest.x, closest.y)) {
-        // OSRS tie-breaking: W, E, S, N
-        const dx = closest.x - npc.x, dy = closest.y - npc.y;
-        const moves = [];
-        if (dx < 0) moves.push([-1, 0]);
-        if (dx > 0) moves.push([1, 0]);
-        if (dy < 0) moves.push([0, -1]);
-        if (dy > 0) moves.push([0, 1]);
-        for (const [mx, my] of moves) {
-          if (isWalkable(npc.x + mx, npc.y + my)) { npc.x += mx; npc.y += my; break; }
-        }
-      }
-      if (closest && isCardinalAdjacent(npc.x, npc.y, closest.x, closest.y) && npc.combatTarget === null) {
-        // Aggro — schedule NPC attack via queue
-        npc.combatTarget = closest.id;
-        scheduleNpcAttack(npc, 0);
-      }
-    }
-  }
-
-  // Process tick queue — all scheduled actions (combat, etc.) run here in priority order
+  // Process tick queue
   processTickQueue();
 
   // Respawn resources
@@ -1765,6 +954,11 @@ function gameTick() {
     }
   }
 
+  // Plugin tick handlers
+  for (const { id, fn } of pluginTickHandlers) {
+    try { fn(tick); } catch (e) { console.error(`[plugin:${id}] tick error:`, e.message); }
+  }
+
   // Per-player state broadcast (proximity filtered)
   if (tick % STATE_INTERVAL === 0) {
     for (const [ws, p] of players) {
@@ -1778,24 +972,11 @@ function gameTick() {
         }
       }
       const nArr = npcs.filter(n => !n.dead && Math.abs(n.x - p.x) <= ENTITY_VIEW && Math.abs(n.y - p.y) <= ENTITY_VIEW)
-        .map(n => ({ id: n.id, did: n.defId, x: n.x, y: n.y, hp: n.hp, maxHp: n.maxHp, name: n.name, color: n.color, atk: n.attack || 1, def: n.defence || 1, talk: true }));
+        .map(n => ({ id: n.id, x: n.x, y: n.y, hp: n.hp, maxHp: n.maxHp, name: n.name, color: n.color, atk: n.attack || 1, def: n.defence || 1, talk: true }));
       const gArr = groundItems.filter(g => Math.abs(g.x - p.x) <= ENTITY_VIEW && Math.abs(g.y - p.y) <= ENTITY_VIEW)
         .map(g => ({ id: g.id, name: g.name, x: g.x, y: g.y }));
       const dArr = [...openDoors.values()].filter(d => Math.abs(d.ox - p.x) <= ENTITY_VIEW && Math.abs(d.oy - p.y) <= ENTITY_VIEW);
-      // Action progress for gathering skills
-      let action = null;
-      if (p.gathering && p.path.length === 0) {
-        const actionNames = { woodcutting: 'Woodcutting', mining: 'Mining', fishing: 'Fishing' };
-        const actionItems = { woodcutting: 'Logs', mining: 'Ore', fishing: 'Raw fish' };
-        action = {
-          type: p.gathering.type,
-          name: actionNames[p.gathering.type] || p.gathering.type,
-          item: actionItems[p.gathering.type] || '',
-          tick: p.actionTick,
-          total: 4,
-        };
-      }
-      send(ws, { t: 'state', players: pArr, npcs: nArr, items: gArr, doors: dArr, tick, action });
+      send(ws, { t: 'state', players: pArr, npcs: nArr, items: gArr, doors: dArr, tick });
     }
   }
 
@@ -1804,14 +985,9 @@ function gameTick() {
 }
 
 function killPlayer(p) {
-  cancelScheduled(`patk:${p.id}`);
   p.hp = p.maxHp; p.path = []; p.gathering = null; p.combatTarget = null; p.clickedNpc = null;
-  for (let r = 0; r < 50; r++)
-    for (let dx = -r; dx <= r; dx++)
-      for (let dy = -r; dy <= r; dy++)
-        if (isWalkable(SPAWN_X + dx, SPAWN_Y + dy, p.layer)) { p.x = SPAWN_X + dx; p.y = SPAWN_Y + dy; r = 999; dx = 999; break; }
+  p.x = SPAWN_X; p.y = SPAWN_Y;
   sendChat(p, 'Oh dear, you are dead!', '#f00');
-  if (p.inventory.length > 3) p.inventory.splice(3);
   sendStats(p);
   updatePlayerChunks(p);
 }
@@ -1869,7 +1045,7 @@ function handleMessage(ws, data) {
         p.gender = savedApp.bodyType === 'B' ? 'female' : 'male';
         send(ws, { t: 'appearance', appearance: savedApp });
       } else {
-        // No saved appearance — codex handles character creation now
+        // No saved appearance — character creation handles this
         send(ws, { t: 'appearance', appearance: DEFAULT_APPEARANCE });
       }
       break;
@@ -1946,27 +1122,13 @@ function handleMessage(ws, data) {
       else { sendChat(p, "I can't reach that.", '#f44'); }
       break;
     }
-    case 'gather': {
+    case 'teleport': {
       const tx = Math.floor(msg.x), ty = Math.floor(msg.y);
-      if (Math.abs(tx - p.x) + Math.abs(ty - p.y) > 200) return;
-      const tile = tileAt(tx, ty, p.layer);
-      const typeMap = { [T.TREE]: 'woodcutting', [T.ROCK]: 'mining', [T.FISH_SPOT]: 'fishing' };
-      if (!typeMap[tile]) return;
-      p.gathering = null; p.clickedNpc = null; p.combatTarget = null;
-      let adj;
-      if (tile === T.TREE || tile === T.ROCK) {
-        const cl = findCluster(tx, ty, p.layer);
-        adj = walkToClusterBase(cl.x, cl.y, cl.w, cl.h, p.x, p.y, p.layer);
-        p.gatherCluster = cl;
-      } else {
-        adj = walkAdjacentTo(tx, ty, p.x, p.y, p.layer);
-        p.gatherCluster = null;
-      }
-      if (adj) {
-        p.path = findPath(p.x, p.y, adj[0], adj[1], p.layer);
-        p.gathering = { type: typeMap[tile], tx, ty, tile };
-        p.actionTick = 0;
-      }
+      p.x = tx; p.y = ty; p.prevX = tx; p.prevY = ty;
+      p.path = []; p.gathering = null; p.clickedNpc = null; p.combatTarget = null;
+      if (msg.layer !== undefined) { p.layer = Math.floor(msg.layer); }
+      p.sentChunks = new Set();
+      updatePlayerChunks(p);
       break;
     }
     case 'gender': { p.gender = msg.v === 'female' ? 'female' : 'male'; break; }
@@ -2042,84 +1204,6 @@ function handleMessage(ws, data) {
       } else {
         p.path = findPath(p.x, p.y, gi.x, gi.y, p.layer);
         p.pendingPickup = gid;
-      }
-      break;
-    }
-    case 'autoRetaliate': {
-      p.autoRetaliate = !p.autoRetaliate;
-      sendChat(p, `Auto Retaliate: ${p.autoRetaliate ? 'ON' : 'OFF'}`, '#ff0');
-      break;
-    }
-    case 'toggle_prayer': {
-      const style = msg.v;
-      if (!['melee', 'ranged', 'magic'].includes(style)) break;
-      // Toggle off if already active, otherwise switch
-      p.activePrayer = p.activePrayer === style ? null : style;
-      if (p.activePrayer) sendChat(p, `Protect from ${style} activated.`, '#ff0');
-      else sendChat(p, 'Prayer deactivated.', '#ff0');
-      send(p.ws, { t: 'prayer', active: p.activePrayer });
-      break;
-    }
-    // case 'set_tier': TODO — wire up when gear system exists
-    case 'skip_tutorial': {
-      if (!p.tutorialComplete) completeTutorial(p);
-      break;
-    }
-    case 'talk': {
-      const npcId = Math.floor(msg.id);
-      if (npcId < 0 || npcId >= npcs.length || npcs[npcId].dead) break;
-      const npc = npcs[npcId];
-
-      // Also handle tutorial progression if applicable
-      if (npc.tutorialNpc && !p.tutorialComplete) {
-        handleTutorialTalk(p, npc);
-      }
-
-      // AI NPC talk — forward to Discord for AI response
-      const chatName = playerNames.get(p.id) || `Player ${p.id}`;
-      const npcDesc = `${npc.name} (Level ${npc.combatLevel || 0}, near ${Math.floor(npc.x)},${Math.floor(npc.y)})`;
-      const playerMsg = (msg.msg || 'Hello').trim().slice(0, 200);
-      pendingNpcTalk = { playerId: p.id, npcName: npc.name };
-      postToDiscord(`**[NPC: ${npcDesc}]** ${chatName} says: "${playerMsg}"\n_Respond in character as ${npc.name}. Keep it short (1-2 sentences). Stay in OSRS lore._`);
-      sendChat(p, `You talk to ${npc.name}...`, '#0ff');
-      break;
-    }
-    case 'attack': {
-      const npcId = Math.floor(msg.id);
-      if (npcId < 0 || npcId >= npcs.length || npcs[npcId].dead) return;
-      const npc = npcs[npcId];
-
-      // Tutorial NPC — handle as talk instead of combat
-      if (npc.tutorialNpc) {
-        // Walk to NPC first if not adjacent
-        if (!isCardinalAdjacent(p.x, p.y, npc.x, npc.y)) {
-          const adj = walkAdjacentTo(npc.x, npc.y, p.x, p.y, p.layer);
-          if (adj) {
-            p.path = findPath(p.x, p.y, adj[0], adj[1], p.layer);
-            p.pendingTalk = npcId;
-          }
-        } else {
-          handleTutorialTalk(p, npc);
-        }
-        break;
-      }
-
-      p.gathering = null;
-      if (p.combatTarget !== null) cancelScheduled(`patk:${p.id}`);
-      p.combatTarget = null;
-      const combat = getCombatStyle(p);
-      if (isInAttackRange(p.x, p.y, npc.x, npc.y, combat.range)) {
-        // Already in range — attack immediately
-        p.clickedNpc = npcId;
-      } else if (combat.range <= 1) {
-        // Melee — walk adjacent
-        const adj = walkAdjacentTo(npc.x, npc.y, p.x, p.y, p.layer);
-        if (adj) { p.path = findPath(p.x, p.y, adj[0], adj[1], p.layer); p.clickedNpc = npcId; }
-      } else {
-        // Ranged/magic — walk until in range (just walk toward, combat tick will handle range check)
-        const adj = walkAdjacentTo(npc.x, npc.y, p.x, p.y, p.layer);
-        if (adj) { p.path = findPath(p.x, p.y, adj[0], adj[1], p.layer); }
-        p.clickedNpc = npcId;
       }
       break;
     }
@@ -2307,228 +1391,197 @@ function handleMessage(ws, data) {
       p.layer = layer;
       p.sentChunks = new Set();
       updatePlayerChunks(p);
-      // Client already has all edges, no need to resend on layer change
       sendChat(p, `Layer: ${layer}`, '#ff981f');
+      break;
+    }
+    case 'create_lot': {
+      const name = (msg.name || 'Unnamed Lot').slice(0, 50);
+      const tiles = msg.tiles;
+      if (!Array.isArray(tiles) || tiles.length === 0 || tiles.length > 50000) break;
+      const color = msg.color || '#3a7';
+      const layer = p.layer;
+      // Calculate center for teleport
+      let sx = 0, sy = 0;
+      for (const t of tiles) { sx += t.x; sy += t.y; }
+      const cx = Math.round(sx / tiles.length), cy = Math.round(sy / tiles.length);
+      const id = serverNextLotId++;
+      const lot = { id, name, layer, tiles, color, cx, cy };
+      serverLots.set(String(id), lot);
+      broadcast({ t: 'lot_created', lot });
+      sendChat(p, `Lot "${name}" created (${tiles.length} tiles)`, '#3a7');
+      break;
+    }
+    case 'update_lot': {
+      const lot = serverLots.get(String(msg.id));
+      if (!lot) break;
+      if (msg.name !== undefined) lot.name = String(msg.name).slice(0, 50);
+      if (msg.color !== undefined) lot.color = msg.color;
+      serverLots.set(String(lot.id), lot);
+      broadcast({ t: 'lot_updated', lot });
+      break;
+    }
+    case 'delete_lot': {
+      const id = String(msg.id);
+      if (!serverLots.has(id)) break;
+      serverLots.delete(id);
+      broadcast({ t: 'lot_deleted', id: msg.id });
+      sendChat(p, `Lot deleted`, '#f44');
+      break;
+    }
+    default: {
+      // Route to plugin message handlers
+      const handlers = pluginMessageHandlers.get(msg.t);
+      if (handlers) for (const h of handlers) try { h(p, msg); } catch(e) { console.error(`[plugin:msg] ${msg.t}:`, e.message); }
       break;
     }
   }
 }
 
+// ── Plugin System ───────────────────────────────────────────────────────────
+const PLUGINS_DIR = path.join(__dirname, 'plugins');
+const PLUGIN_DATA_DIR = path.join(DATA_DIR, 'plugins');
+const pluginConfig = fs.existsSync(path.join(PLUGINS_DIR, 'plugins.json'))
+  ? JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, 'plugins.json'), 'utf8'))
+  : { plugins: [] };
+const loadedPlugins = new Map();
+const pluginTickHandlers = [];
+const pluginMessageHandlers = new Map();
+const pluginSaveHandlers = [];
+const pluginEventHandlers = new Map();
+
+const serverEngine = {
+  side: 'server',
+  TICK_MS, CHUNK_SIZE, T,
+  // World
+  tileAt: (x, y, layer) => tileAt(x, y, layer || 0),
+  setTile, getColor, setColor, isWalkable, isEdgeBlocked,
+  getWallEdge: (x, y, layer) => { const k = `${layer||0}_${x}_${y}`; return serverWallEdges.get(k) || 0; },
+  setWallEdge: (x, y, mask, layer) => { const k = `${layer||0}_${x}_${y}`; if (mask === 0) serverWallEdges.delete(k); else serverWallEdges.set(k, mask); },
+  getDoorEdge: (x, y, layer) => { const k = `${layer||0}_${x}_${y}`; return serverDoorEdges.get(k) || 0; },
+  setDoorEdge: (x, y, mask, layer) => { const k = `${layer||0}_${x}_${y}`; if (mask === 0) serverDoorEdges.delete(k); else serverDoorEdges.set(k, mask); },
+  getTileHeight: (x, y, layer) => serverTileHeights.get(`${layer||0}_${x}_${y}`) || 0,
+  setTileHeight: (x, y, h, layer) => { const k = `${layer||0}_${x}_${y}`; if (h === 0) serverTileHeights.delete(k); else serverTileHeights.set(k, h); },
+  getVariant: (x, y, layer) => { const k = `${layer||0}_${x}_${y}`; return global.tileVariantMap ? (global.tileVariantMap.get(k) || 0) : 0; },
+  setVariant: (x, y, v, layer) => { if (global.tileVariantMap) { const k = `${layer||0}_${x}_${y}`; if (v === 0) global.tileVariantMap.delete(k); else global.tileVariantMap.set(k, v); } },
+  // Pathfinding
+  findPath,
+  // Tick
+  getTick: () => tick,
+  schedule, cancelScheduled,
+  onTick(id, fn) { pluginTickHandlers.push({ id, fn }); },
+  offTick(id) { const i = pluginTickHandlers.findIndex(h => h.id === id); if (i >= 0) pluginTickHandlers.splice(i, 1); },
+  // Players
+  getPlayer(id) { for (const [, p] of players) if (p.id === id) return p; return null; },
+  forEachPlayer(fn) { for (const [, p] of players) fn(p); },
+  send(p, msg) { send(p.ws, msg); },
+  sendChat(p, text, color) { sendChat(p, text, color); },
+  broadcast,
+  broadcastTiles,
+  // Messages
+  onMessage(type, handler) {
+    if (!pluginMessageHandlers.has(type)) pluginMessageHandlers.set(type, []);
+    pluginMessageHandlers.get(type).push(handler);
+  },
+  // Skills/Items (proxies to existing functions)
+  addXp, getSkillLevel: (p, skill) => p.skills[skill] ? p.skills[skill].level : 1,
+  addItem, addItemById, dropItemGround, itemName, findItemId,
+  // Data persistence
+  loadData(id) {
+    const fp = path.join(PLUGIN_DATA_DIR, `${id}.json`);
+    if (fs.existsSync(fp)) return JSON.parse(fs.readFileSync(fp, 'utf8'));
+    return {};
+  },
+  saveData(id, data) {
+    fs.mkdirSync(PLUGIN_DATA_DIR, { recursive: true });
+    fs.writeFileSync(path.join(PLUGIN_DATA_DIR, `${id}.json`), JSON.stringify(data));
+  },
+  onSave(id, fn) { pluginSaveHandlers.push({ id, fn }); },
+  // Dependencies
+  require(id) {
+    const p = loadedPlugins.get(id);
+    if (!p) throw new Error(`Plugin "${id}" not loaded`);
+    return p.api;
+  },
+  // Events
+  on(event, handler) {
+    if (!pluginEventHandlers.has(event)) pluginEventHandlers.set(event, []);
+    pluginEventHandlers.get(event).push(handler);
+  },
+  emit(event, ...args) {
+    const handlers = pluginEventHandlers.get(event);
+    if (handlers) for (const h of handlers) try { h(...args); } catch(e) { console.error(`[plugin:event] ${event}:`, e.message); }
+  },
+};
+
+function loadServerPlugins() {
+  fs.mkdirSync(PLUGIN_DATA_DIR, { recursive: true });
+  for (const id of pluginConfig.plugins) {
+    const pluginPath = path.join(PLUGINS_DIR, id, 'plugin.js');
+    if (!fs.existsSync(pluginPath)) { console.warn(`[plugin] Not found: ${id}`); continue; }
+    try {
+      const plugin = require(pluginPath);
+      for (const dep of (plugin.meta.depends || [])) {
+        if (!loadedPlugins.has(dep)) throw new Error(`Missing dependency: ${dep}`);
+      }
+      if (plugin.server && plugin.server.init) plugin.server.init(serverEngine);
+      loadedPlugins.set(id, { meta: plugin.meta, api: (plugin.server && plugin.server.api) || {} });
+      console.log(`[plugin] Loaded: ${plugin.meta.name}`);
+    } catch (e) { console.error(`[plugin] Error loading ${id}:`, e.message); }
+  }
+}
+
+function generatePluginScripts() {
+  return pluginConfig.plugins
+    .map(id => `<script src="/plugins/${id}/plugin.js"></script>`)
+    .join('\n');
+}
+
+function savePluginData() {
+  for (const { id, fn } of pluginSaveHandlers) {
+    try { fn(); } catch (e) { console.error(`[plugin:${id}] save error:`, e.message); }
+  }
+}
+
+function injectPlugins(html) {
+  const scripts = generatePluginScripts();
+  return html.replace('<!-- PLUGIN_SCRIPTS -->', scripts);
+}
+
 // ── HTTP Server ────────────────────────────────────────────────────────────────
 const clientPath = path.join(__dirname, 'client.html');
-const mapPath = path.join(__dirname, 'map.html');
 const launcherPath = path.join(__dirname, 'launcher.html');
-// ── Codex cache reader ──────────────────────────────────────────────────────────
-const CODEX_DIR = path.join(__dirname, 'codex');
-const ASSET_CACHE_DIR = path.join(__dirname, 'asset-cache');
-let codexIndex = null;
-
-function loadCodexCache() {
-  try {
-    const decodedPath = path.join(ASSET_CACHE_DIR, 'index-decoded.json');
-    const indexPath = path.join(ASSET_CACHE_DIR, 'index.json');
-    if (fs.existsSync(decodedPath)) {
-      codexIndex = JSON.parse(fs.readFileSync(decodedPath, 'utf8'));
-    } else if (fs.existsSync(indexPath)) {
-      codexIndex = JSON.parse(Buffer.from(fs.readFileSync(indexPath, 'utf8'), 'base64').toString());
-    }
-    if (codexIndex) console.log(`[codex] Loaded ${codexIndex.stats.totalItems} items, ${codexIndex.stats.totalKits} kits, ${codexIndex.stats.totalModels} models`);
-  } catch (e) { console.log('[codex] Cache not available:', e.message); }
-}
-
-function readCacheFile(subdir, id) {
-  try {
-    const raw = fs.readFileSync(path.join(ASSET_CACHE_DIR, subdir, id + '.json'), 'utf8');
-    return JSON.parse(Buffer.from(raw, 'base64').toString());
-  } catch (e) { return null; }
-}
-
-function rsHslToRgb(hsl) {
-  const h = (hsl >> 10) & 0x3F, s = (hsl >> 7) & 0x07, l = hsl & 0x7F;
-  const hue = h / 63, sat = s / 7, lit = l / 127;
-  const c = (1 - Math.abs(2 * lit - 1)) * sat;
-  const x = c * (1 - Math.abs((hue * 6) % 2 - 1));
-  const m = lit - c / 2;
-  let r, g, b;
-  const hi = Math.floor(hue * 6) % 6;
-  if (hi === 0) { r = c; g = x; b = 0; } else if (hi === 1) { r = x; g = c; b = 0; }
-  else if (hi === 2) { r = 0; g = c; b = x; } else if (hi === 3) { r = 0; g = x; b = c; }
-  else if (hi === 4) { r = x; g = 0; b = c; } else { r = c; g = 0; b = x; }
-  return [Math.max(0, Math.min(1, r + m)), Math.max(0, Math.min(1, g + m)), Math.max(0, Math.min(1, b + m))];
-}
-
-function modelToGltf(model) {
-  const vc = model.vertices.length, fc = model.faces.length, scale = 1 / 128;
-  const posBytes = vc * 3 * 4, colorBytes = vc * 3 * 4;
-  const idxBytes = fc * 3 * 2, idxPadded = (idxBytes + 3) & ~3;
-  const total = posBytes + colorBytes + idxPadded;
-  const buf = Buffer.alloc(total); let off = 0;
-  let minX = Infinity, minY = Infinity, minZ = Infinity, maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
-  for (let i = 0; i < vc; i++) {
-    const v = model.vertices[i];
-    const px = v[0] * scale, py = -v[1] * scale, pz = v[2] * scale;
-    buf.writeFloatLE(px, off); buf.writeFloatLE(py, off + 4); buf.writeFloatLE(pz, off + 8); off += 12;
-    minX = Math.min(minX, px); maxX = Math.max(maxX, px);
-    minY = Math.min(minY, py); maxY = Math.max(maxY, py);
-    minZ = Math.min(minZ, pz); maxZ = Math.max(maxZ, pz);
-  }
-  const vertR = new Float32Array(vc), vertG = new Float32Array(vc), vertB = new Float32Array(vc), vertC = new Uint8Array(vc);
-  if (model.faceColors) {
-    for (let i = 0; i < fc; i++) {
-      const rgb = rsHslToRgb(model.faceColors[i] || 0);
-      for (const vi of model.faces[i]) { if (vi >= 0 && vi < vc) { vertR[vi] += rgb[0]; vertG[vi] += rgb[1]; vertB[vi] += rgb[2]; vertC[vi]++; } }
-    }
-  }
-  for (let i = 0; i < vc; i++) { const c = vertC[i] || 1; buf.writeFloatLE(vertR[i]/c, off); buf.writeFloatLE(vertG[i]/c, off+4); buf.writeFloatLE(vertB[i]/c, off+8); off += 12; }
-  for (let i = 0; i < fc; i++) { const f = model.faces[i]; buf.writeUInt16LE(f[0], off); buf.writeUInt16LE(f[1], off+2); buf.writeUInt16LE(f[2], off+4); off += 6; }
-  return JSON.stringify({
-    asset: { version: '2.0', generator: 'OpenScape' },
-    buffers: [{ uri: 'data:application/octet-stream;base64,' + buf.toString('base64'), byteLength: total }],
-    bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: posBytes, target: 34962 }, { buffer: 0, byteOffset: posBytes, byteLength: colorBytes, target: 34962 }, { buffer: 0, byteOffset: posBytes + colorBytes, byteLength: idxPadded, target: 34963 }],
-    accessors: [{ bufferView: 0, componentType: 5126, count: vc, type: 'VEC3', min: [minX, minY, minZ], max: [maxX, maxY, maxZ] }, { bufferView: 1, componentType: 5126, count: vc, type: 'VEC3' }, { bufferView: 2, componentType: 5123, count: fc * 3, type: 'SCALAR' }],
-    materials: [{ pbrMetallicRoughness: { metallicFactor: 0, roughnessFactor: 0.9 }, doubleSided: true }],
-    meshes: [{ primitives: [{ attributes: { POSITION: 0, COLOR_0: 1 }, indices: 2, material: 0 }] }],
-    nodes: [{ mesh: 0 }], scenes: [{ nodes: [0] }], scene: 0
-  });
-}
-
-loadCodexCache();
-
 const server = http.createServer((req, res) => {
-  // ── Codex routes ──
-  if (req.url === '/codex') {
-    res.writeHead(301, { 'Location': '/codex/' });
-    res.end();
-    return;
-  }
-  if (req.url === '/codex/') {
-    res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.end(fs.readFileSync(path.join(CODEX_DIR, 'index.html'), 'utf8'));
-    return;
-  }
-  if (req.url.startsWith('/codex/')) {
-    const filePath = path.join(CODEX_DIR, req.url.slice(6));
+
+  // Serve static files (lib/, assets/, plugins/)
+  if (req.url.startsWith('/lib/') || req.url.startsWith('/assets/') || req.url.startsWith('/plugins/')) {
+    const filePath = path.join(__dirname, req.url);
     if (fs.existsSync(filePath)) {
       const ext = path.extname(filePath).toLowerCase();
-      const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'application/javascript', '.json': 'application/json', '.png': 'image/png' };
-      res.writeHead(200, { 'Content-Type': types[ext] || 'application/octet-stream' });
+      const mimeTypes = { '.js': 'application/javascript', '.png': 'image/png', '.jpg': 'image/jpeg', '.gif': 'image/gif', '.svg': 'image/svg+xml', '.json': 'application/json' };
+      res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'application/octet-stream', 'Cache-Control': 'public, max-age=86400' });
       res.end(fs.readFileSync(filePath));
       return;
     }
     res.writeHead(404); res.end('Not found'); return;
   }
 
-  // ── Codex API ──
-  if (req.url.startsWith('/api/')) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Content-Type', 'application/json');
-    const url = new URL(req.url, 'http://localhost');
-
-    if (url.pathname === '/api/stats') {
-      res.end(JSON.stringify({
-        items: codexIndex ? codexIndex.stats.totalItems : 0,
-        kits: codexIndex ? codexIndex.stats.totalKits : 0,
-        models: codexIndex ? codexIndex.stats.totalModels : 0,
-        categories: codexIndex ? Object.fromEntries(Object.entries(codexIndex.categories).filter(([k]) => k !== 'All').map(([k, v]) => [k, v.length])) : {},
-      }));
-      return;
-    }
-
-    if (url.pathname === '/api/browse') {
-      const cat = url.searchParams.get('category') || 'All';
-      const q = (url.searchParams.get('q') || '').toLowerCase();
-      const page = Math.max(1, parseInt(url.searchParams.get('page')) || 1);
-      const pageSize = 60;
-      let pool = (codexIndex && codexIndex.categories[cat]) || [];
-      if (q) pool = pool.filter(i => i.name && i.name.toLowerCase().includes(q));
-      pool.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-      const total = pool.length, pages = Math.ceil(total / pageSize);
-      res.end(JSON.stringify({ results: pool.slice((page - 1) * pageSize, page * pageSize), total, page, pages }));
-      return;
-    }
-
-    const itemMatch = url.pathname.match(/^\/api\/item\/(\d+)$/);
-    if (itemMatch) {
-      const item = readCacheFile('items', itemMatch[1]);
-      res.end(JSON.stringify(item || { error: 'Not found' }));
-      return;
-    }
-
-    const modelMatch = url.pathname.match(/^\/api\/model\/(\d+)$/);
-    if (modelMatch) {
-      const model = readCacheFile('models', modelMatch[1]);
-      res.end(JSON.stringify(model || { error: 'Not found' }));
-      return;
-    }
-
-    const gltfMatch = url.pathname.match(/^\/api\/gltf\/(\d+)$/);
-    if (gltfMatch) {
-      const model = readCacheFile('models', gltfMatch[1]);
-      if (model) { res.setHeader('Content-Type', 'model/gltf+json'); res.end(modelToGltf(model)); }
-      else { res.writeHead(404); res.end(JSON.stringify({ error: 'Not found' })); }
-      return;
-    }
-
-    if (url.pathname === '/api/search') {
-      const q = (url.searchParams.get('q') || '').toLowerCase();
-      const all = codexIndex ? codexIndex.categories['All'] || [] : [];
-      res.end(JSON.stringify({ results: all.filter(i => i.name && i.name.toLowerCase().includes(q)).slice(0, 100) }));
-      return;
-    }
-
-    res.writeHead(404); res.end(JSON.stringify({ error: 'Unknown API' }));
-    return;
-  }
-
-  // Serve static lib files (Three.js etc.)
-  if (req.url.startsWith('/lib/')) {
-    const libFile = path.join(__dirname, req.url);
-    if (fs.existsSync(libFile)) {
-      res.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public, max-age=86400' });
-      res.end(fs.readFileSync(libFile));
-      return;
-    }
-    res.writeHead(404); res.end('Not found'); return;
-  }
-
-  // Serve model files from /models/
-  if (req.url.startsWith('/models/')) {
-    const modelFile = path.join(__dirname, req.url);
-    if (fs.existsSync(modelFile)) {
-      const ext = path.extname(modelFile).toLowerCase();
-      const mimeTypes = { '.gltf': 'model/gltf+json', '.glb': 'model/gltf-binary', '.bin': 'application/octet-stream', '.png': 'image/png', '.jpg': 'image/jpeg' };
-      res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'application/octet-stream', 'Cache-Control': 'public, max-age=86400', 'Access-Control-Allow-Origin': '*' });
-      res.end(fs.readFileSync(modelFile));
-      return;
-    }
-    res.writeHead(404); res.end('Not found'); return;
-  }
   // API: auto-login with name parameter
   if (req.url.startsWith('/play?')) {
     const params = new URL(req.url, 'http://localhost').searchParams;
     const name = params.get('name');
-    let html = fs.readFileSync(clientPath, 'utf8');
+    let html = injectPlugins(fs.readFileSync(clientPath, 'utf8'));
     if (name) {
-      // Inject auto-login script
       html = html.replace('<head>', `<head><script>window.autoLoginName = "${name.replace(/"/g, '')}";</script>`);
     }
     res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache' });
     res.end(html);
     return;
   }
-  if (req.url === '/play') {
+  if (req.url === '/play' || req.url === '/') {
     res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache' });
-    res.end(fs.readFileSync(clientPath, 'utf8'));
+    res.end(injectPlugins(fs.readFileSync(clientPath, 'utf8')));
     return;
   }
-  if (req.url === '/map') {
-    res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache' });
-    res.end(fs.readFileSync(mapPath, 'utf8'));
-    return;
-  }
-  // Default: redirect to codex (character creator = landing page)
-  res.writeHead(301, { 'Location': '/codex/' });
-  res.end();
 });
 
 // ── WebSocket Server ───────────────────────────────────────────────────────────
@@ -2549,7 +1602,8 @@ wss.on('connection', (ws) => {
   const allHeights = {}; for (const [k, v] of serverTileHeights) allHeights[k] = v;
   const allRoofs = {}; for (const [k, v] of serverRoofs) allRoofs[k] = v;
   const allWallTex = {}; for (const [k, v] of serverWallTexMap) allWallTex[k] = v;
-  send(ws, { t: 'all_edges', walls: allWalls, doors: allDoors, heights: allHeights, roofs: allRoofs, wallTextures: allWallTex });
+  const allLots = []; for (const [, v] of serverLots) allLots.push(v);
+  send(ws, { t: 'all_edges', walls: allWalls, doors: allDoors, heights: allHeights, roofs: allRoofs, wallTextures: allWallTex, lots: allLots });
   sendStats(p);
   sendFriendsList(p);
   sendChat(p, `Welcome to OpenScape! ${players.size} player(s) online.`, '#ff981f');
@@ -2586,13 +1640,14 @@ if (fs.existsSync(NAMES_FILE)) {
   for (const [k, v] of Object.entries(obj)) customNames.set(k, v);
   console.log(`[load] ${customNames.size} custom names`);
 }
-loadDefinitions();
 loadFriends();
 loadWalls();
+loadLots();
 loadVariants();
 loadPositions();
 loadAppearances();
 initBotPlayer();
+loadServerPlugins();
 
 // Create a small grass island at spawn so the player can stand
 for (let dx = -3; dx <= 3; dx++) {
@@ -2606,8 +1661,10 @@ setInterval(saveAllChunks, SAVE_INTERVAL_MS);
 setInterval(saveFriends, SAVE_INTERVAL_MS);
 setInterval(saveWalls, SAVE_INTERVAL_MS);
 setInterval(saveVariants, SAVE_INTERVAL_MS);
-process.on('SIGINT', () => { saveAllChunks(); saveFriends(); saveWalls(); saveVariants(); savePositions(); saveAppearances(); process.exit(); });
-process.on('SIGTERM', () => { saveAllChunks(); saveFriends(); saveWalls(); saveVariants(); savePositions(); saveAppearances(); process.exit(); });
+setInterval(saveLots, SAVE_INTERVAL_MS);
+setInterval(savePluginData, SAVE_INTERVAL_MS);
+process.on('SIGINT', () => { saveAllChunks(); saveFriends(); saveWalls(); saveLots(); saveVariants(); savePositions(); saveAppearances(); savePluginData(); process.exit(); });
+process.on('SIGTERM', () => { saveAllChunks(); saveFriends(); saveWalls(); saveLots(); saveVariants(); savePositions(); saveAppearances(); savePluginData(); process.exit(); });
 
 server.listen(PORT, () => {
   console.log(`[server] OpenScape running on http://localhost:${PORT}`);

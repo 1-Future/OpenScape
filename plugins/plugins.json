@@ -1,0 +1,7 @@
+{
+  "plugins": [
+    "terrain-painter",
+    "wall-tool",
+    "eraser"
+  ]
+}
